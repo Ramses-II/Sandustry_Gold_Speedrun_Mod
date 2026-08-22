@@ -1,27 +1,52 @@
-// Gold Speedrun Challenge
-// Die Uhr startet mit der ersten echten Spielhandlung - Bewegung, Graben,
-// Bauen, Forschen - und stoppt, sobald das Ziel der Kategorie erreicht ist.
-// Vorher steht sie gedimmt auf 00:00:00.
+// DE: Gold Speedrun Challenge
+// DE: Die Uhr startet mit der ersten echten Spielhandlung - Bewegung, Graben,
+// DE: Bauen, Forschen - und stoppt, sobald das Ziel der Kategorie erreicht ist.
+// DE: Vorher steht sie gedimmt auf 00:00:00.
 //
-// Kategorien: Gold (100k/500k/1M/eigenes), Alle Artefakte, Fabrikrang 6/7.
-// Unterwegs setzen frei waehlbare Ausloeser Zwischenzeiten - jede Forschung,
-// jeder Fabrikrang, jedes Artefakt, Gold-Marken. Jede Zwischenzeit landet in
-// der Split-Tabelle im Spiel und im Ergebnisfenster am Ende.
+// DE: Kategorien: Gold (100k/500k/1M/eigenes), Alle Artefakte, Fabrikrang 6/7.
+// DE: Unterwegs setzen frei waehlbare Ausloeser Zwischenzeiten - jede Forschung,
+// DE: jeder Fabrikrang, jedes Artefakt, Gold-Marken. Jede Zwischenzeit landet in
+// DE: der Split-Tabelle im Spiel und im Ergebnisfenster am Ende.
+//
+// EN: Gold Speedrun Challenge
+// EN: The clock starts on the first real in-game action - movement, digging,
+// EN: building, researching - and stops the moment the category goal is
+// EN: reached. Before that it sits dimmed at 00:00:00.
+//
+// EN: Categories: Gold (100k/500k/1M/custom), All Artifacts, Factory rank 6/7.
+// EN: Along the way, freely selectable triggers create splits - every research,
+// EN: every factory rank, every artifact, gold marks. Every split lands in the
+// EN: split table in-game and in the result screen at the end.
 
 const { api, enums, react } = sandkit;
 const h = react.createElement;
 
 const MOD_ID = 'gold-speedrun';
-const NS = 'goldSpeedrun';          // Namespace im Savegame
-const BEST_PREFIX = 'goldSpeedrun.best'; // localStorage, savegame-uebergreifend
-const LEGACY_BEST_KEY = 'goldSpeedrun.best'; // Bestzeit aus Version <= 1.4
+const NS = 'goldSpeedrun';          // DE: Namespace im Savegame / EN: namespace inside the save file
+const BEST_PREFIX = 'goldSpeedrun.best'; // DE: localStorage, savegame-uebergreifend / EN: localStorage, shared across save files
+const LEGACY_BEST_KEY = 'goldSpeedrun.best'; // DE: Bestzeit aus Version <= 1.4 / EN: best time from version <= 1.4
 
-const MOD_VERSION = '2.7.0';
+const MOD_VERSION = '2.8.0';
 const log = (...a) => console.log(`[${MOD_ID} v${MOD_VERSION}]`, ...a);
 
-// --- Schalter der Mod-Verwaltung ------------------------------------------
-// Traegt sich bei der Mod-Verwaltung ein und fragt deren Schalter ab.
-// Fehlt die Verwaltung, ist der Mod schlicht immer aktiv.
+// --- DE: Schalter der Mod-Verwaltung / EN: Mod-manager switch ---------------
+// DE: Traegt sich bei der Mod-Verwaltung ein und fragt deren Schalter ab.
+// DE: Fehlt die Verwaltung, ist der Mod schlicht immer aktiv.
+//
+// DE: Zusaetzlich gibt es "enabled" als eigene Einstellung direkt im Mod-Menue -
+// DE: derselbe Schalter wie der der Mod-Verwaltung, nur ohne dort erst hin
+// DE: wechseln zu muessen. Ein laufender Lauf ignoriert beide Schalter bewusst
+// DE: weiter (siehe advanceClocks()): Aus- und Wiedereinschalten waehrend eines
+// DE: Laufs darf die Echtzeit nicht anhalten, sonst liesse sich damit schummeln.
+//
+// EN: Registers with the mod manager and reads its switch back. If the
+// EN: manager is missing, the mod is simply always active.
+//
+// EN: There is also "enabled" as its own setting right in the mod's menu -
+// EN: the same switch as the mod manager's, just without having to go there
+// EN: first. A run in progress deliberately ignores both switches (see
+// EN: advanceClocks()): turning the mod off and back on during a run must not
+// EN: pause real time, or that could be used to cheat.
 const MANAGER_REGISTRY = 'sandkitManager.registry';
 
 const registerWithManager = name => {
@@ -36,12 +61,15 @@ const registerWithManager = name => {
       reg.push({ id: MOD_ID, name });
     }
     api.storage.local.set(MANAGER_REGISTRY, reg);
-  } catch (e) { /* kein localStorage */ }
+  } catch (e) { /* DE: kein localStorage / EN: no localStorage available */ }
 };
 
 const modEnabled = () => {
   try {
-    return api.storage.local.get(`sandkitManager.enabled.${MOD_ID}`) !== false;
+    if (api.storage.local.get(`sandkitManager.enabled.${MOD_ID}`) === false) return false;
+  } catch (e) { /* DE: keine Mod-Verwaltung / EN: no mod manager present */ }
+  try {
+    return api.settings.get('enabled') !== false;
   } catch (e) {
     return true;
   }
@@ -49,7 +77,7 @@ const modEnabled = () => {
 
 registerWithManager('Gold Speedrun');
 
-// --- Uebersetzungen -------------------------------------------------------
+// --- DE: Uebersetzungen / EN: Translations ----------------------------------
 api.i18n.register('en', {
   'mods|goldSpeedrun|name': 'Gold Speedrun',
   'mods|goldSpeedrun|running': 'Category: {category}',
@@ -68,7 +96,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|tainted': 'CHEATS USED - run does not count',
   'mods|goldSpeedrun|noTutorial': 'No Tutorial',
 
-  // Ausloeser und Ergebnis
+  // DE: Ausloeser und Ergebnis / EN: Triggers and result
   'mods|goldSpeedrun|split|rank': 'Factory rank {level}',
   'mods|goldSpeedrun|split|artifact': 'Artifact {index}',
   'mods|goldSpeedrun|split|gold': '{percent}% gold',
@@ -79,9 +107,11 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|result|best': 'Personal best',
   'mods|goldSpeedrun|result|noBest': 'first finish',
   'mods|goldSpeedrun|result|sim': 'Simulation time',
-  'mods|goldSpeedrun|result|simEstimated': 'Simulation time estimated - the simulation did not report its step counter, so this run is not stored as a simulation best.',
-  'mods|goldSpeedrun|result|simLegacy': 'Run carried over from an older version - the simulation time before the update is not measured, only assumed.',
+  'mods|goldSpeedrun|result|play': 'Play-clock',
+  'mods|goldSpeedrun|result|tickSourceMissing': 'No tick source - the simulation thread did not report step counts this run, so simulation time and the derived metrics are unavailable.',
   'mods|goldSpeedrun|clock|simShort': 'sim',
+  'mods|goldSpeedrun|clock|realShort': 'real',
+  'mods|goldSpeedrun|clock|playShort': 'play',
   'mods|goldSpeedrun|result|colSplit': 'Trigger',
   'mods|goldSpeedrun|result|colTime': 'Time',
   'mods|goldSpeedrun|result|colSegment': 'Segment',
@@ -89,8 +119,25 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|result|noSplits': 'No triggers fired - enable some under Splits.',
   'mods|goldSpeedrun|result|close': 'Close',
   'mods|goldSpeedrun|result|hint': 'F10 shows this again',
+  'mods|goldSpeedrun|result|expand': 'Show full statistics',
+  'mods|goldSpeedrun|result|collapse': 'Hide full statistics',
 
-  // Ausloeser-Fenster
+  // DE: Metriken (U, R, W und was sich daraus ergibt) / EN: Metrics (U, R, W and what follows from them)
+  'mods|goldSpeedrun|metric|slowdown': 'Slowdown',
+  'mods|goldSpeedrun|metric|deficit': 'Tick deficit',
+  'mods|goldSpeedrun|metric|ticks': 'Executed ticks (U)',
+  'mods|goldSpeedrun|metric|avgUps': 'Average UPS',
+  'mods|goldSpeedrun|metric|idealTicks': 'Ideal ticks (60×R)',
+  'mods|goldSpeedrun|metric|thinkMult': 'Thinking multiplier',
+  'mods|goldSpeedrun|metric|wrProbe': 'Play-clock − real time (W−R)',
+  'mods|goldSpeedrun|metric|dash': 'waiting for the run to start',
+
+  // DE: Verlaufsgrafik / EN: History graph
+  'mods|goldSpeedrun|graph|title': 'UPS over the whole run',
+  'mods|goldSpeedrun|graph|live': 'Live UPS (last 60 s)',
+  'mods|goldSpeedrun|graph|empty': 'No data yet - turn on "Record UPS history" before starting a run.',
+
+  // DE: Ausloeser-Fenster / EN: Triggers window
   'mods|goldSpeedrun|trg|title': 'Split triggers',
   'mods|goldSpeedrun|trg|key': 'Open split triggers',
   'mods|goldSpeedrun|trg|groups': 'Groups',
@@ -109,7 +156,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|trg|locked': 'A run is in progress - changes apply to the next run.',
   'mods|goldSpeedrun|trg|noGoldMarks': 'No gold marks - pick an interval under Gold marks in the mod options.',
 
-  // Einstellungen
+  // DE: Einstellungen / EN: Settings
   'mods|goldSpeedrun|cfg|goalGold': 'Custom gold target',
   'mods|goldSpeedrun|cfg|goalGold|desc': 'Only used when Category is set to Custom gold. Any whole number from 1 upwards - handy for quick tests.',
   'mods|goldSpeedrun|cfg|artifactTarget': 'Artifact target',
@@ -122,6 +169,8 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|modeNormal': 'Normal',
   'mods|goldSpeedrun|modeHard': 'Hard Mode',
   'mods|goldSpeedrun|rules|forced': 'set by the Official ruleset option',
+  'mods|goldSpeedrun|cfg|enabled': 'Mod enabled',
+  'mods|goldSpeedrun|cfg|enabled|desc': 'Turns the whole mod off without uninstalling it: no timer, no overlay, no splits, no auto-skips. A run already in progress keeps its official real-time clock running in the background while this is off, so toggling it cannot be used to pause a run.',
   'mods|goldSpeedrun|cfg|preset': 'Category',
   'mods|goldSpeedrun|cfg|preset|desc': 'Pick a common target, or Custom gold to set your own below.',
   'mods|goldSpeedrun|cfg|preset|100k': '100k Gold %',
@@ -137,11 +186,11 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|cfg|startMode|click': 'Mouse press or any progress',
   'mods|goldSpeedrun|cfg|startMode|any': 'Any action, movement included',
   'mods|goldSpeedrun|cfg|startMode|move': 'Movement only',
-  'mods|goldSpeedrun|cfg|clockMode': 'Which clock is shown',
-  'mods|goldSpeedrun|cfg|clockMode|desc': 'Both times are always measured and always recorded in the result screen - this only decides what stands large on the timer. Real time is the official one: it is the number a stopwatch next to the screen shows, and the only one a verifier can check against a video. Simulation time counts the simulation steps the world actually ran, so a run on a machine that cannot hold 60 UPS stays comparable with one that can.',
-  'mods|goldSpeedrun|cfg|clockMode|both': 'Real time, simulation time below',
-  'mods|goldSpeedrun|cfg|clockMode|rta': 'Real time only',
-  'mods|goldSpeedrun|cfg|clockMode|sim': 'Simulation time only',
+  'mods|goldSpeedrun|cfg|clockMode': 'Headline clock',
+  'mods|goldSpeedrun|cfg|clockMode|desc': 'All three times are always measured and always shown - this only decides which one stands large on the timer, the other two stay underneath. Real time (R) is the official scoring: the number a stopwatch next to the screen shows, and the only one a verifier can check against a video. Simulation time (T) counts the simulation steps the world actually ran, divided by 60 - a run on a machine that cannot hold 60 UPS stays comparable with one that can, but it also gives more real thinking time per world-tick on slow hardware. Play-clock (W) is the game\'s own save-file clock.',
+  'mods|goldSpeedrun|cfg|clockMode|real': 'Real time (R)',
+  'mods|goldSpeedrun|cfg|clockMode|sim': 'Simulation time (T)',
+  'mods|goldSpeedrun|cfg|clockMode|play': 'Play-clock (W)',
   'mods|goldSpeedrun|cfg|timeFormat': 'Timer precision',
   'mods|goldSpeedrun|cfg|timeFormat|seconds': 'Seconds (00:00:00)',
   'mods|goldSpeedrun|cfg|timeFormat|centis': 'Hundredths (00:00:00.00)',
@@ -162,7 +211,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|cfg|corner|bottomLeft': 'Bottom left',
   'mods|goldSpeedrun|cfg|corner|bottomRight': 'Bottom right',
 
-  // Ausloeser
+  // DE: Ausloeser / EN: Triggers
   'mods|goldSpeedrun|cfg|splitTech': 'Split on every research',
   'mods|goldSpeedrun|cfg|splitTech|desc': 'Each unlocked technology becomes a split, named after the research.',
   'mods|goldSpeedrun|cfg|splitRank': 'Split on every factory rank',
@@ -177,7 +226,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|cfg|splitGold|10k': 'Every 10k gold',
   'mods|goldSpeedrun|cfg|splitGold|100k': 'Every 100k gold',
 
-  // Offizielles Regelwerk
+  // DE: Offizielles Regelwerk / EN: Official ruleset
   'mods|goldSpeedrun|rules|badge': 'OFFICIAL RULESET',
   'mods|goldSpeedrun|rules|custom': 'Custom rules',
   'mods|goldSpeedrun|rules|title': 'Official speedrun ruleset',
@@ -191,6 +240,12 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|rules|modsNone': 'none',
   'mods|goldSpeedrun|cfg|showRuleset': 'Show ruleset badge',
   'mods|goldSpeedrun|cfg|showRuleset|desc': 'Marks on the timer and on the result screen whether the settings match the official ruleset: timer started by any action including movement, gold ruleset Hard Mode, tutorial skip off, and no other mod enabled.',
+  'mods|goldSpeedrun|cfg|showAdvancedMetrics': 'Show advanced metrics',
+  'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Adds the raw tick count, average UPS, the ticks a perfect 60 UPS machine would have run by now, the thinking multiplier (how many real seconds each simulated second cost) and the gap between play-clock and real time.',
+  'mods|goldSpeedrun|cfg|trackUpsHistory': 'Record UPS history',
+  'mods|goldSpeedrun|cfg|trackUpsHistory|desc': 'Keeps a UPS min/max/average graph of the whole run for the result screen, sampled once per second and stored in the save. Off by default - a very long run adds a modest amount of save data.',
+  'mods|goldSpeedrun|cfg|showLiveSparkline': 'Show live UPS graph',
+  'mods|goldSpeedrun|cfg|showLiveSparkline|desc': 'Adds a small live graph of the last 60 seconds of UPS under the timer. Sampled on the main thread only - no measurable cost to the simulation.',
 
 });
 
@@ -203,13 +258,13 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|waitingMove': 'W/A/S/D startet den Lauf',
   'mods|goldSpeedrun|waitingClick': 'Die erste Aktion startet den Lauf',
   'mods|goldSpeedrun|waitingMouse': 'Mausklick startet den Lauf',
-  'mods|goldSpeedrun|reset': 'Timer zurueckgesetzt - die naechste Aktion startet neu',
-  'mods|goldSpeedrun|resetKey': 'Speedrun-Timer zuruecksetzen',
+  'mods|goldSpeedrun|reset': 'Timer zurückgesetzt - die nächste Aktion startet neu',
+  'mods|goldSpeedrun|resetKey': 'Speedrun-Timer zurücksetzen',
   'mods|goldSpeedrun|resultKey': 'Letztes Ergebnis zeigen',
-  'mods|goldSpeedrun|tutorialSkipped': 'Tutorial automatisch uebersprungen',
+  'mods|goldSpeedrun|tutorialSkipped': 'Tutorial automatisch übersprungen',
   'mods|goldSpeedrun|artifacts': '{current} / {target} Artefakte',
   'mods|goldSpeedrun|factory': 'Rang {current} / {target}',
-  'mods|goldSpeedrun|tainted': 'CHEATS BENUTZT - Lauf zaehlt nicht',
+  'mods|goldSpeedrun|tainted': 'CHEATS BENUTZT - Lauf zählt nicht',
   'mods|goldSpeedrun|noTutorial': 'Ohne Tutorial',
 
   'mods|goldSpeedrun|split|rank': 'Fabrikrang {level}',
@@ -222,22 +277,41 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|result|best': 'Bestzeit',
   'mods|goldSpeedrun|result|noBest': 'erster Durchlauf',
   'mods|goldSpeedrun|result|sim': 'Simulationszeit',
-  'mods|goldSpeedrun|result|simEstimated': 'Simulationszeit geschaetzt - die Simulation hat ihren Schrittzaehler nicht gemeldet. Dieser Lauf wird nicht als Simulations-Bestzeit abgelegt.',
-  'mods|goldSpeedrun|result|simLegacy': 'Lauf aus einer aelteren Version uebernommen - die Simulationszeit vor dem Update ist nicht gemessen, sondern angenommen.',
+  'mods|goldSpeedrun|result|play': 'Spielzeit-Uhr',
+  'mods|goldSpeedrun|result|tickSourceMissing': 'Kein Schrittzähler - die Simulation hat diesen Lauf keine Schritte gemeldet, Simulationszeit und die daraus abgeleiteten Werte fehlen deshalb.',
   'mods|goldSpeedrun|clock|simShort': 'sim',
-  'mods|goldSpeedrun|result|colSplit': 'Ausloeser',
+  'mods|goldSpeedrun|clock|realShort': 'echt',
+  'mods|goldSpeedrun|clock|playShort': 'spiel',
+  'mods|goldSpeedrun|result|colSplit': 'Auslöser',
   'mods|goldSpeedrun|result|colTime': 'Zeit',
   'mods|goldSpeedrun|result|colSegment': 'Abschnitt',
   'mods|goldSpeedrun|result|colGold': 'Gold',
-  'mods|goldSpeedrun|result|noSplits': 'Kein Ausloeser gefeuert - unter Splits welche einschalten.',
-  'mods|goldSpeedrun|result|close': 'Schliessen',
+  'mods|goldSpeedrun|result|noSplits': 'Kein Auslöser gefeuert - unter Splits welche einschalten.',
+  'mods|goldSpeedrun|result|close': 'Schließen',
   'mods|goldSpeedrun|result|hint': 'F10 zeigt das nochmal',
+  'mods|goldSpeedrun|result|expand': 'Alle Werte zeigen',
+  'mods|goldSpeedrun|result|collapse': 'Alle Werte ausblenden',
 
-  'mods|goldSpeedrun|trg|title': 'Split-Ausloeser',
-  'mods|goldSpeedrun|trg|key': 'Split-Ausloeser oeffnen',
+  // DE: Metriken (U, R, W und Ableitungen) / EN: Metrics (U, R, W and derived values)
+  'mods|goldSpeedrun|metric|slowdown': 'Verzögerung',
+  'mods|goldSpeedrun|metric|deficit': 'Schritt-Rückstand',
+  'mods|goldSpeedrun|metric|ticks': 'Ausgeführte Schritte (U)',
+  'mods|goldSpeedrun|metric|avgUps': 'Mittlere UPS',
+  'mods|goldSpeedrun|metric|idealTicks': 'Soll-Schritte (60×R)',
+  'mods|goldSpeedrun|metric|thinkMult': 'Denk-Faktor',
+  'mods|goldSpeedrun|metric|wrProbe': 'Spielzeit-Uhr minus Echtzeit (W−R)',
+  'mods|goldSpeedrun|metric|dash': 'wartet auf den Laufstart',
+
+  // DE: Verlaufsgrafik / EN: History graph
+  'mods|goldSpeedrun|graph|title': 'UPS über den ganzen Lauf',
+  'mods|goldSpeedrun|graph|live': 'UPS live (letzte 60 s)',
+  'mods|goldSpeedrun|graph|empty': 'Noch keine Daten - "UPS-Verlauf aufzeichnen" vor Laufstart einschalten.',
+
+  'mods|goldSpeedrun|trg|title': 'Split-Auslöser',
+  'mods|goldSpeedrun|trg|key': 'Split-Auslöser öffnen',
   'mods|goldSpeedrun|trg|groups': 'Gruppen',
   'mods|goldSpeedrun|trg|tech': 'Forschungen',
-  'mods|goldSpeedrun|trg|rank': 'Fabrikraenge',
+  'mods|goldSpeedrun|trg|rank': 'Fabrikränge',
   'mods|goldSpeedrun|trg|gold': 'Gold-Marken',
   'mods|goldSpeedrun|trg|other': 'Weitere',
   'mods|goldSpeedrun|trg|artifactAll': 'Jedes Artefakt',
@@ -247,24 +321,26 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|trg|default': 'Standard',
   'mods|goldSpeedrun|trg|count': '{on} von {total}',
   'mods|goldSpeedrun|trg|filter': 'Filter',
-  'mods|goldSpeedrun|trg|hint': 'Jeder Schalter zaehlt fuer sich. Die Gruppen in den Mod-Einstellungen sind nur der Ausgangspunkt - was du hier waehlst, gilt.',
-  'mods|goldSpeedrun|trg|locked': 'Ein Lauf laeuft gerade - Aenderungen greifen beim naechsten Lauf.',
-  'mods|goldSpeedrun|trg|noGoldMarks': 'Keine Gold-Marken - in den Mod-Einstellungen unter Gold-Marken einen Abstand waehlen.',
+  'mods|goldSpeedrun|trg|hint': 'Jeder Schalter zählt für sich. Die Gruppen in den Mod-Einstellungen sind nur der Ausgangspunkt - was du hier wählst, gilt.',
+  'mods|goldSpeedrun|trg|locked': 'Ein Lauf läuft gerade - Änderungen greifen beim nächsten Lauf.',
+  'mods|goldSpeedrun|trg|noGoldMarks': 'Keine Gold-Marken - in den Mod-Einstellungen unter Gold-Marken einen Abstand wählen.',
 
   'mods|goldSpeedrun|cfg|goalGold': 'Eigenes Gold-Ziel',
-  'mods|goldSpeedrun|cfg|goalGold|desc': 'Wird nur benutzt, wenn die Kategorie auf Eigenes Gold steht. Jede ganze Zahl ab 1 - praktisch fuer schnelle Tests.',
+  'mods|goldSpeedrun|cfg|goalGold|desc': 'Wird nur benutzt, wenn die Kategorie auf Eigenes Gold steht. Jede ganze Zahl ab 1 - praktisch für schnelle Tests.',
   'mods|goldSpeedrun|cfg|artifactTarget': 'Artefakt-Ziel',
-  'mods|goldSpeedrun|cfg|artifactTarget|desc': 'Gilt nur fuer die Artefakt-Kategorie. 0 zaehlt alle Artefakte, die auf der aktuellen Karte liegen.',
+  'mods|goldSpeedrun|cfg|artifactTarget|desc': 'Gilt nur für die Artefakt-Kategorie. 0 zählt alle Artefakte, die auf der aktuellen Karte liegen.',
   'mods|goldSpeedrun|cfg|mode': 'Gold-Regelwerk',
-  'mods|goldSpeedrun|cfg|mode|desc': 'Normal zaehlt jedes eingenommene Gold, Ausgeben kostet also keinen Fortschritt. Hard Mode geht nach dem aktuellen Kontostand: Forschen wirft zurueck. Offizielles Regelwerk ist Hard Mode samt den uebrigen offiziellen Vorgaben - der Timer startet dann bei jeder Aktion inklusive Bewegung, und der automatische Tutorial-Skip bleibt aus, egal was in diesen beiden Optionen steht.',
+  'mods|goldSpeedrun|cfg|mode|desc': 'Normal zählt jedes eingenommene Gold, Ausgeben kostet also keinen Fortschritt. Hard Mode geht nach dem aktuellen Kontostand: Forschen wirft zurück. Offizielles Regelwerk ist Hard Mode samt den übrigen offiziellen Vorgaben - der Timer startet dann bei jeder Aktion inklusive Bewegung, und der automatische Tutorial-Skip bleibt aus, egal was in diesen beiden Optionen steht.',
   'mods|goldSpeedrun|cfg|mode|earned': 'Normal',
   'mods|goldSpeedrun|cfg|mode|balance': 'Hard Mode',
   'mods|goldSpeedrun|cfg|mode|official': 'Offizielles Regelwerk (Hard Mode)',
   'mods|goldSpeedrun|modeNormal': 'Normal',
   'mods|goldSpeedrun|modeHard': 'Hard Mode',
   'mods|goldSpeedrun|rules|forced': 'gesetzt durch "Offizielles Regelwerk"',
+  'mods|goldSpeedrun|cfg|enabled': 'Mod aktiviert',
+  'mods|goldSpeedrun|cfg|enabled|desc': 'Schaltet den ganzen Mod ab, ohne ihn zu deinstallieren: kein Timer, keine Einblendung, keine Splits, keine automatischen Skips. Ein bereits laufender Lauf zählt seine offizielle Echtzeit im Hintergrund weiter, solange dies aus ist - das Umschalten lässt sich also nicht zum Anhalten eines Laufs missbrauchen.',
   'mods|goldSpeedrun|cfg|preset': 'Kategorie',
-  'mods|goldSpeedrun|cfg|preset|desc': 'Ein gaengiges Ziel waehlen, oder Eigenes Gold und den Wert unten selbst setzen.',
+  'mods|goldSpeedrun|cfg|preset|desc': 'Ein gängiges Ziel wählen, oder Eigenes Gold und den Wert unten selbst setzen.',
   'mods|goldSpeedrun|cfg|preset|100k': '100k Gold %',
   'mods|goldSpeedrun|cfg|preset|500k': '500k Gold %',
   'mods|goldSpeedrun|cfg|preset|1m': '1M Gold %',
@@ -273,29 +349,29 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|cfg|preset|factory7': 'Fabrikrang 7 (max)',
   'mods|goldSpeedrun|cfg|preset|custom': 'Eigenes Gold',
   'mods|goldSpeedrun|cfg|startMode': 'Was den Timer startet',
-  'mods|goldSpeedrun|cfg|startMode|desc': 'Mausdruck ist die Speedrun-Einstellung: die Uhr startet in dem Moment, in dem du graebst, greifst, baust oder forschst. Herumlaufen ist frei, und was ohne deinen Klick weiterlaeuft - eine Grabdrohne, ein Foerderband - startet sie ebenfalls nicht.',
+  'mods|goldSpeedrun|cfg|startMode|desc': 'Mausdruck ist die Speedrun-Einstellung: die Uhr startet in dem Moment, in dem du gräbst, greifst, baust oder forschst. Herumlaufen ist frei, und was ohne deinen Klick weiterläuft - eine Grabdrohne, ein Förderband - startet sie ebenfalls nicht.',
   'mods|goldSpeedrun|cfg|startMode|mouse': 'Nur Mausdruck',
   'mods|goldSpeedrun|cfg|startMode|click': 'Mausdruck oder jeder Fortschritt',
   'mods|goldSpeedrun|cfg|startMode|any': 'Jede Aktion, auch Bewegung',
   'mods|goldSpeedrun|cfg|startMode|move': 'Nur Bewegung',
-  'mods|goldSpeedrun|cfg|clockMode': 'Welche Uhr im Bild steht',
-  'mods|goldSpeedrun|cfg|clockMode|desc': 'Beide Zeiten werden immer gemessen und stehen immer im Ergebnisfenster - das hier entscheidet nur, welche gross auf dem Timer steht. Die Echtzeit ist die offizielle: sie ist die Zahl, die auch eine Stoppuhr neben dem Bildschirm zeigt, und die einzige, die sich an einem Video nachpruefen laesst. Die Simulationszeit zaehlt die Schritte, die die Welt tatsaechlich gelaufen ist - damit bleibt ein Lauf auf einem Rechner, der keine 60 UPS haelt, mit einem vergleichbar, der sie haelt.',
-  'mods|goldSpeedrun|cfg|clockMode|both': 'Echtzeit, Simulationszeit darunter',
-  'mods|goldSpeedrun|cfg|clockMode|rta': 'Nur Echtzeit',
-  'mods|goldSpeedrun|cfg|clockMode|sim': 'Nur Simulationszeit',
+  'mods|goldSpeedrun|cfg|clockMode': 'Große Uhr',
+  'mods|goldSpeedrun|cfg|clockMode|desc': 'Alle drei Zeiten werden immer gemessen und immer gezeigt - das hier entscheidet nur, welche groß auf dem Timer steht, die anderen beiden stehen darunter. Die Echtzeit (R) ist die offizielle Wertung: die Zahl, die auch eine Stoppuhr neben dem Bildschirm zeigt, und die einzige, die sich an einem Video nachprüfen lässt. Die Simulationszeit (T) zählt die Schritte, die die Welt tatsächlich gelaufen ist, geteilt durch 60 - damit bleibt ein Lauf auf einem Rechner, der keine 60 UPS hält, mit einem vergleichbar, der sie hält, gibt auf schwacher Hardware aber auch mehr reale Bedenkzeit je Weltschritt. Die Spielzeit-Uhr (W) ist die eigene Uhr des Spielstands.',
+  'mods|goldSpeedrun|cfg|clockMode|real': 'Echtzeit (R)',
+  'mods|goldSpeedrun|cfg|clockMode|sim': 'Simulationszeit (T)',
+  'mods|goldSpeedrun|cfg|clockMode|play': 'Spielzeit-Uhr (W)',
   'mods|goldSpeedrun|cfg|timeFormat': 'Genauigkeit der Uhr',
   'mods|goldSpeedrun|cfg|timeFormat|seconds': 'Sekunden (00:00:00)',
   'mods|goldSpeedrun|cfg|timeFormat|centis': 'Hundertstel (00:00:00.00)',
   'mods|goldSpeedrun|cfg|timeFormat|millis': 'Millisekunden (00:00:00.000)',
-  'mods|goldSpeedrun|cfg|skipIntro': 'Intro und Landeanflug ueberspringen',
-  'mods|goldSpeedrun|cfg|skipIntro|desc': 'Springt bei einem neuen Spiel direkt in die Welt, genau wie der Knopf "Skip Intro" im Spiel. Die Uhr bleibt unberuehrt: der uebersprungene Landeanflug kann sie nicht starten.',
+  'mods|goldSpeedrun|cfg|skipIntro': 'Intro und Landeanflug überspringen',
+  'mods|goldSpeedrun|cfg|skipIntro|desc': 'Springt bei einem neuen Spiel direkt in die Welt, genau wie der Knopf "Skip Intro" im Spiel. Die Uhr bleibt unberührt: der übersprungene Landeanflug kann sie nicht starten.',
   'mods|goldSpeedrun|cfg|skipStory': 'Story-Textboxen wegblenden',
-  'mods|goldSpeedrun|cfg|skipStory|desc': 'Schliesst die Story-Einblendungen, sobald sie auftauchen - dasselbe wie Wegklicken, die Story zaehlt sie also weiter als gesehen. Solange eine im Bild ist, kann der Timer nicht starten.',
-  'mods|goldSpeedrun|cfg|skipTutorial': 'Tutorial automatisch ueberspringen',
+  'mods|goldSpeedrun|cfg|skipStory|desc': 'Schließt die Story-Einblendungen, sobald sie auftauchen - dasselbe wie Wegklicken, die Story zählt sie also weiter als gesehen. Solange eine im Bild ist, kann der Timer nicht starten.',
+  'mods|goldSpeedrun|cfg|skipTutorial': 'Tutorial automatisch überspringen',
   'mods|goldSpeedrun|cfg|skipTutorial|desc': 'Beendet das Tutorial beim Laden eines Spielstands, genau wie der Knopf im Spiel. Passiert nur, solange der Timer noch wartet - nie mitten im Lauf.',
   'mods|goldSpeedrun|cfg|showOverlay': 'Timer einblenden',
   'mods|goldSpeedrun|cfg|showSplits': 'Split-Tabelle zeigen',
-  'mods|goldSpeedrun|cfg|showSplits|desc': 'Listet die letzten Ausloeser unter der Uhr mit Zeit und Gold. Die vollstaendige Tabelle erscheint am Ende im Ergebnisfenster.',
+  'mods|goldSpeedrun|cfg|showSplits|desc': 'Listet die letzten Auslöser unter der Uhr mit Zeit und Gold. Die vollständige Tabelle erscheint am Ende im Ergebnisfenster.',
   'mods|goldSpeedrun|cfg|corner': 'Position des Timers',
   'mods|goldSpeedrun|cfg|corner|topCenter': 'Oben mittig',
   'mods|goldSpeedrun|cfg|corner|topLeft': 'Oben links',
@@ -317,28 +393,37 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|cfg|splitGold|10k': 'Alle 10k Gold',
   'mods|goldSpeedrun|cfg|splitGold|100k': 'Alle 100k Gold',
 
-  // Offizielles Regelwerk
+  // DE: Offizielles Regelwerk / EN: Official ruleset
   'mods|goldSpeedrun|rules|badge': 'OFFIZIELLES REGELWERK',
   'mods|goldSpeedrun|rules|custom': 'Eigene Regeln',
   'mods|goldSpeedrun|rules|title': 'Offizielles Speedrun-Regelwerk',
   'mods|goldSpeedrun|rules|ok': 'Alle Einstellungen entsprechen dem offiziellen Regelwerk.',
   'mods|goldSpeedrun|rules|bad': 'Diese Einstellungen weichen vom offiziellen Regelwerk ab:',
-  'mods|goldSpeedrun|rules|need': 'noetig: {value}',
+  'mods|goldSpeedrun|rules|need': 'nötig: {value}',
   'mods|goldSpeedrun|rules|broken': 'REGELWERK VERSTELLT',
-  'mods|goldSpeedrun|rules|brokenDesc': 'Waehrend des laufenden Laufs wurde eine Einstellung des offiziellen Regelwerks geaendert. Der Lauf gilt nicht mehr als offiziell und wird nicht als Bestzeit gespeichert.',
+  'mods|goldSpeedrun|rules|brokenDesc': 'Während des laufenden Laufs wurde eine Einstellung des offiziellen Regelwerks geändert. Der Lauf gilt nicht mehr als offiziell und wird nicht als Bestzeit gespeichert.',
   'mods|goldSpeedrun|rules|locked': 'festgehalten beim Start des Laufs',
   'mods|goldSpeedrun|rules|mods': 'Andere Mods aktiv',
   'mods|goldSpeedrun|rules|modsNone': 'keine',
   'mods|goldSpeedrun|cfg|showRuleset': 'Regelwerk-Abzeichen zeigen',
   'mods|goldSpeedrun|cfg|showRuleset|desc': 'Zeigt am Timer und im Ergebnisfenster, ob die Einstellungen dem offiziellen Regelwerk entsprechen: Start durch jede Aktion inklusive Bewegung, Gold-Regelwerk Hard Mode, Tutorial-Skip aus, und kein anderer Mod aktiv.',
+  'mods|goldSpeedrun|cfg|showAdvancedMetrics': 'Erweiterte Messwerte zeigen',
+  'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Zeigt zusätzlich die rohe Schrittzahl, die mittleren UPS, die Schritte, die eine perfekte 60-UPS-Maschine inzwischen gelaufen wäre, den Denk-Faktor (wie viele reale Sekunden jede simulierte Sekunde kostete) und den Abstand zwischen Spielzeit-Uhr und Echtzeit.',
+  'mods|goldSpeedrun|cfg|trackUpsHistory': 'UPS-Verlauf aufzeichnen',
+  'mods|goldSpeedrun|cfg|trackUpsHistory|desc': 'Hält eine Min/Max/Mittel-Grafik der UPS des ganzen Laufs für das Ergebnisfenster fest, einmal pro Sekunde abgetastet und im Spielstand gespeichert. Standardmäßig aus - ein sehr langer Lauf legt dadurch etwas mehr Spielstanddaten an.',
+  'mods|goldSpeedrun|cfg|showLiveSparkline': 'Live-UPS-Grafik zeigen',
+  'mods|goldSpeedrun|cfg|showLiveSparkline|desc': 'Zeigt eine kleine Live-Grafik der letzten 60 Sekunden UPS unter dem Timer. Wird nur im Hauptthread abgetastet - keine messbaren Kosten für die Simulation.',
 
 });
 
 const t = (key, params) => api.i18n.t(key, params);
 
-// --- Kategorien -----------------------------------------------------------
-// kind bestimmt, was gemessen wird; target ist das feste Ziel der Kategorie.
-// Kategorien ohne target holen ihn aus den Einstellungen bzw. aus der Karte.
+// --- DE: Kategorien / EN: Categories ----------------------------------------
+// DE: kind bestimmt, was gemessen wird; target ist das feste Ziel der Kategorie.
+// DE: Kategorien ohne target holen ihn aus den Einstellungen bzw. aus der Karte.
+//
+// EN: kind decides what's measured; target is the category's fixed goal.
+// EN: Categories without a target get it from the settings or from the map.
 const CATEGORIES = {
   '100000': { kind: 'gold', target: 100000 },
   '500000': { kind: 'gold', target: 500000 },
@@ -351,7 +436,7 @@ const CATEGORIES = {
 
 const MAX_FACTORY_LEVEL = 7;
 
-// 100000 -> "100k", 1000000 -> "1M"
+// DE/EN: 100000 -> "100k", 1000000 -> "1M"
 const shortGold = n => {
   if (n >= 1000000) {
     const m = n / 1000000;
@@ -364,9 +449,13 @@ const shortGold = n => {
   return String(n);
 };
 
-// Die Zahl der Artefakte haengt an der Karte: die meisten liegen in Prefabs,
-// der Rest steckt als Sensor im Gelaende. Beide Quellen liefert das Spiel erst
-// nach dem Laden, deshalb wird der Wert einmal pro Spielstand gemerkt.
+// DE: Die Zahl der Artefakte haengt an der Karte: die meisten liegen in Prefabs,
+// DE: der Rest steckt als Sensor im Gelaende. Beide Quellen liefert das Spiel erst
+// DE: nach dem Laden, deshalb wird der Wert einmal pro Spielstand gemerkt.
+//
+// EN: The number of artifacts depends on the map: most sit in prefabs, the
+// EN: rest are sensors placed in the terrain. The game only provides both
+// EN: sources after loading, so the value is cached once per save.
 let artifactTotalCache = null;
 
 const detectArtifactTotal = () => {
@@ -378,12 +467,12 @@ const detectArtifactTotal = () => {
       const list = pd.getArtifactLocations();
       if (Array.isArray(list)) total += list.length;
     }
-  } catch (e) { /* Karte ohne Prefab-Daten */ }
+  } catch (e) { /* DE: Karte ohne Prefab-Daten / EN: map has no prefab data */ }
 
   try {
     const sensors = sandkit.state.store.world.sensors;
     if (Array.isArray(sensors)) total += sensors.length;
-  } catch (e) { /* keine Sensoren im Spielstand */ }
+  } catch (e) { /* DE: keine Sensoren im Spielstand / EN: no sensors in this save */ }
 
   return total;
 };
@@ -392,8 +481,10 @@ const artifactTotal = () => {
   const override = api.settings.get('artifactTarget');
   if (Number.isFinite(override) && override > 0) return Math.floor(override);
   if (artifactTotalCache === null) artifactTotalCache = detectArtifactTotal();
-  // Liefert die Karte nichts, waere 0 sofort "geschafft" - dann lieber warten,
-  // bis der Wert von Hand gesetzt ist, und den Zaehler offen lassen.
+  // DE: Liefert die Karte nichts, waere 0 sofort "geschafft" - dann lieber warten,
+  // DE: bis der Wert von Hand gesetzt ist, und den Zaehler offen lassen.
+  // EN: If the map yields nothing, 0 would count as "done" instantly - better to
+  // EN: wait until the value is set by hand, and leave the counter open instead.
   return artifactTotalCache > 0 ? artifactTotalCache : 0;
 };
 
@@ -413,7 +504,7 @@ const category = () => {
   return { id, kind: 'factory', target: def.target };
 };
 
-// --- Messwerte ------------------------------------------------------------
+// --- DE: Messwerte / EN: Measured values ------------------------------------
 const getGold = () => {
   const st = sandkit.state;
   const g = st && st.store && st.store.resources ? st.store.resources.gold : 0;
@@ -423,19 +514,20 @@ const getGold = () => {
 const getArtifactsFound = () => {
   try {
     const a = sandkit.state.store.resources.artifacts;
-    if (Number.isFinite(a)) return a;             // sehr alte Spielstaende
+    if (Number.isFinite(a)) return a;             // DE: sehr alte Spielstaende / EN: very old save files
     return Number.isFinite(a && a.found) ? a.found : 0;
   } catch (e) {
     return 0;
   }
 };
 
-// Der wirksame Rang - die Story kann ihn zeitweise deckeln.
+// DE: Der wirksame Rang - die Story kann ihn zeitweise deckeln.
+// EN: The effective rank - the story can temporarily cap it.
 const getFactoryLevel = () => {
   try {
     const lvl = sandkit.engine.api.factory.getLevel(sandkit.state);
     if (Number.isFinite(lvl)) return lvl;
-  } catch (e) { /* interne API nicht verfuegbar */ }
+  } catch (e) { /* DE: interne API nicht verfuegbar / EN: internal API not available */ }
   try {
     const v = sandkit.state.store.viability;
     return Number.isFinite(v && v.level) ? v.level : 1;
@@ -444,23 +536,37 @@ const getFactoryLevel = () => {
   }
 };
 
-// --- Verdientes Gold ------------------------------------------------------
-// Zwei Messweisen sind moeglich:
+// --- DE: Verdientes Gold / EN: Gold earned ----------------------------------
+// DE: Zwei Messweisen sind moeglich:
 //   'balance' - der aktuelle Kontostand. Ausgeben setzt den Fortschritt zurueck.
 //   'earned'  - alles, was seit Laufbeginn eingenommen wurde. Ausgeben kostet
 //               keinen Fortschritt.
 //
-// Fuer 'earned' fuehrt der Mod selbst Buch: er vergleicht den Goldstand mit dem
-// vorigen Wert und addiert nur die Zugewinne. Bewusst nicht ueber das interne
-// viability.goldSpent des Spiels - das wird beim Laden aus Tech-Kosten
-// rekonstruiert und ist keine verlaessliche Laufzeit-Summe.
-let earnedTotal = null;   // Laufsumme im Speicher
+// DE: Fuer 'earned' fuehrt der Mod selbst Buch: er vergleicht den Goldstand mit dem
+// DE: vorigen Wert und addiert nur die Zugewinne. Bewusst nicht ueber das interne
+// DE: viability.goldSpent des Spiels - das wird beim Laden aus Tech-Kosten
+// DE: rekonstruiert und ist keine verlaessliche Laufzeit-Summe.
+//
+// EN: Two ways to measure it:
+//   'balance' - the current account balance. Spending sets progress back.
+//   'earned'  - everything taken in since the run started. Spending costs
+//               no progress.
+//
+// EN: For 'earned' the mod keeps its own ledger: it compares the gold value
+// EN: to the previous one and only adds the gains. Deliberately not via the
+// EN: game's internal viability.goldSpent - that gets reconstructed from tech
+// EN: costs on load and is not a reliable running total.
+let earnedTotal = null;   // DE: Laufsumme im Speicher / EN: running total, in memory
 let lastBalance = null;
 
-// Die dritte Wahl beim Gold-Regelwerk stellt den ganzen offiziellen Lauf ein,
-// nicht nur das Gold: sie zieht auch den Startmodus und den Tutorial-Skip auf
-// die Vorgabe. Die beiden Optionen bleiben stehen, wie sie sind - sie werden
-// nur nicht mehr gefragt, solange die offizielle Wahl aktiv ist.
+// DE: Die dritte Wahl beim Gold-Regelwerk stellt den ganzen offiziellen Lauf ein,
+// DE: nicht nur das Gold: sie zieht auch den Startmodus und den Tutorial-Skip auf
+// DE: die Vorgabe. Die beiden Optionen bleiben stehen, wie sie sind - sie werden
+// DE: nur nicht mehr gefragt, solange die offizielle Wahl aktiv ist.
+// EN: The third choice in the gold ruleset sets up the whole official run, not
+// EN: just gold: it also pulls the start mode and the tutorial skip to the
+// EN: required values. Those two options stay as they are - they just stop
+// EN: being consulted while the official choice is active.
 const officialMode = () => api.settings.get('goldMode') === 'official';
 
 const goldMode = () => {
@@ -468,15 +574,21 @@ const goldMode = () => {
   return v === 'balance' || v === 'official' ? 'balance' : 'earned';
 };
 
-// Ueberall statt api.settings.get('skipTutorial') benutzen: im offiziellen
-// Regelwerk laeuft das Tutorial mit, auch wenn der Schalter an ist.
+// DE: Ueberall statt api.settings.get('skipTutorial') benutzen: im offiziellen
+// DE: Regelwerk laeuft das Tutorial mit, auch wenn der Schalter an ist.
+// EN: Use this everywhere instead of api.settings.get('skipTutorial'): under
+// EN: the official ruleset the tutorial still plays out, even if the switch is on.
 const skipTutorialEnabled = () =>
   !officialMode() && api.settings.get('skipTutorial') === true;
 
-// Was das offizielle Regelwerk den uebrigen Optionen vorschreibt. Die drei
-// Vorgaben der Kategorieregeln stehen oben; Intro und Story kommen dazu,
-// damit der Spielanfang ablaeuft wie ohne Mod - sonst faengt der Lauf mit
-// einer uebersprungenen Sequenz an, die alle anderen mitspielen.
+// DE: Was das offizielle Regelwerk den uebrigen Optionen vorschreibt. Die drei
+// DE: Vorgaben der Kategorieregeln stehen oben; Intro und Story kommen dazu,
+// DE: damit der Spielanfang ablaeuft wie ohne Mod - sonst faengt der Lauf mit
+// DE: einer uebersprungenen Sequenz an, die alle anderen mitspielen.
+// EN: What the official ruleset dictates for the remaining options. The three
+// EN: category-rule requirements are above; intro and story are added here so
+// EN: the start of the game plays out just like without the mod - otherwise
+// EN: the run would start with a skipped sequence that everyone else plays.
 const OFFICIAL_FORCED = {
   startMode: 'any',
   skipTutorial: false,
@@ -484,14 +596,20 @@ const OFFICIAL_FORCED = {
   skipStory: false,
 };
 
-// Die Werte, die vor dem Umschalten galten - damit das Zurueckschalten die
-// eigenen Einstellungen nicht dauerhaft verbrannt hat.
+// DE: Die Werte, die vor dem Umschalten galten - damit das Zurueckschalten die
+// DE: eigenen Einstellungen nicht dauerhaft verbrannt hat.
+// EN: The values that were in effect before switching over - so switching
+// EN: back doesn't permanently burn the player's own settings.
 const OFFICIAL_BACKUP = 'goldSpeedrun.beforeOfficial';
 
-// api.settings kann nur lesen. Geschrieben wird deshalb direkt in den Topf,
-// aus dem es liest: state.session.settings.externalModSettings[<mod>]. Das
-// Spiel prueft die Werte beim naechsten Lesen gegen configSchema, ungueltiges
-// kaeme also gar nicht erst an.
+// DE: api.settings kann nur lesen. Geschrieben wird deshalb direkt in den Topf,
+// DE: aus dem es liest: state.session.settings.externalModSettings[<mod>]. Das
+// DE: Spiel prueft die Werte beim naechsten Lesen gegen configSchema, ungueltiges
+// DE: kaeme also gar nicht erst an.
+// EN: api.settings can only read. Writes therefore go straight into the pot it
+// EN: reads from: state.session.settings.externalModSettings[<mod>]. The game
+// EN: validates the values against configSchema on the next read, so an
+// EN: invalid value would never even get through.
 const settingsBag = () => {
   const session = sandkit.state && sandkit.state.session;
   const root = session && session.settings;
@@ -509,9 +627,12 @@ const settingsBag = () => {
   return mine;
 };
 
-// Schreibt einen Wert und meldet, ob er auch angekommen ist. Faellt der
-// Weg irgendwann weg, bleibt es bei den Ueberschreibungen beim Lesen - der
-// Lauf ist also auch dann korrekt, nur die Anzeige haengt hinterher.
+// DE: Schreibt einen Wert und meldet, ob er auch angekommen ist. Faellt der
+// DE: Weg irgendwann weg, bleibt es bei den Ueberschreibungen beim Lesen - der
+// DE: Lauf ist also auch dann korrekt, nur die Anzeige haengt hinterher.
+// EN: Writes a value and reports whether it actually landed. If this route
+// EN: ever breaks, the read-time overrides still apply - the run stays
+// EN: correct, only the display lags behind.
 const writeSetting = (key, value) => {
   const bag = settingsBag();
   if (!bag) return false;
@@ -525,19 +646,26 @@ const writeSetting = (key, value) => {
   return bag[key] === value;
 };
 
-// Haelt die Anzeige der Einstellungen mit dem tatsaechlichen Zustand gleich:
-// solange das offizielle Regelwerk gewaehlt ist, stehen die beiden anderen
-// Optionen auf der Vorgabe und springen sofort zurueck, wenn jemand sie
-// verstellt. Beim Verlassen kommen die alten Werte zurueck.
+// DE: Haelt die Anzeige der Einstellungen mit dem tatsaechlichen Zustand gleich:
+// DE: solange das offizielle Regelwerk gewaehlt ist, stehen die beiden anderen
+// DE: Optionen auf der Vorgabe und springen sofort zurueck, wenn jemand sie
+// DE: verstellt. Beim Verlassen kommen die alten Werte zurueck.
+// EN: Keeps the settings display in sync with the actual state: as long as the
+// EN: official ruleset is selected, the other two options sit on the required
+// EN: value and snap straight back if anyone changes them. Leaving it restores
+// EN: the old values.
 const syncOfficialSettings = () => {
   let changed = false;
   const backup = api.storage.local.get(OFFICIAL_BACKUP);
   const hasBackup = backup && typeof backup === 'object';
 
   if (officialMode()) {
-    // Fehlt die Sicherung ganz, oder kamen dem Regelwerk seit dem letzten
-    // Umschalten Schluessel dazu, wird sie erst vervollstaendigt - danach
-    // erst wird ueberschrieben, sonst sichert man den erzwungenen Wert.
+    // DE: Fehlt die Sicherung ganz, oder kamen dem Regelwerk seit dem letzten
+    // DE: Umschalten Schluessel dazu, wird sie erst vervollstaendigt - danach
+    // DE: erst wird ueberschrieben, sonst sichert man den erzwungenen Wert.
+    // EN: If the backup is missing entirely, or the ruleset gained keys since
+    // EN: the last switch-over, it gets completed first - only then does the
+    // EN: overwrite happen, otherwise the forced value would get backed up.
     const before = hasBackup ? Object.assign({}, backup) : {};
     let backupChanged = !hasBackup;
     for (const key of Object.keys(OFFICIAL_FORCED)) {
@@ -572,7 +700,8 @@ const readEarned = () => {
   return Number.isFinite(v) ? v : 0;
 };
 
-// Jeden Frame aufgerufen: nur ein Zahlenvergleich, kein Schreibzugriff.
+// DE: Jeden Frame aufgerufen: nur ein Zahlenvergleich, kein Schreibzugriff.
+// EN: Called every frame: just a number comparison, no write access.
 const sampleEarned = () => {
   const balance = getGold();
   if (earnedTotal === null) {
@@ -591,17 +720,20 @@ const resetEarned = () => {
   api.storage.set(NS, 'earned', 0);
 };
 
-// Der Goldwert, der in der Split-Tabelle steht - dieselbe Messweise wie das Ziel.
+// DE: Der Goldwert, der in der Split-Tabelle steht - dieselbe Messweise wie das Ziel.
+// EN: The gold value shown in the split table - same measurement as the goal.
 const goldProgress = () => (goldMode() === 'balance' ? getGold() : sampleEarned());
 
-// Der Wert, gegen den das Ziel der Kategorie geprueft wird.
+// DE: Der Wert, gegen den das Ziel der Kategorie geprueft wird.
+// EN: The value the category's goal is checked against.
 const progressOf = cat => {
   if (cat.kind === 'gold') return goldProgress();
   if (cat.kind === 'artifacts') return getArtifactsFound();
   return getFactoryLevel();
 };
 
-// Kategoriename fuer HUD und Stream, z.B. "100k Gold % · Hard Mode · Ohne Tutorial".
+// DE: Kategoriename fuer HUD und Stream, z.B. "100k Gold % · Hard Mode · Ohne Tutorial".
+// EN: Category name for the HUD and stream, e.g. "100k Gold % · Hard Mode · No Tutorial".
 const categoryLabel = () => {
   const cat = category();
   const parts = [];
@@ -625,25 +757,27 @@ const categoryLabel = () => {
   return parts.join(' · ');
 };
 
-// Schluessel der Bestzeit: pro Kategorie und Regelwerk getrennt, sonst
-// stehen 1M-Zeiten neben 100k-Zeiten.
-const bestKey = metric => {
+// DE: Schluessel der Bestzeit: pro Kategorie und Regelwerk getrennt, sonst
+// DE: stehen 1M-Zeiten neben 100k-Zeiten.
+// DE: Die Bestzeit ist immer die Echtzeit (R) - die einzige, die sich an einem
+// DE: Video nachpruefen laesst und deshalb die offizielle Wertung bleibt.
+// EN: Best-time key: kept separate per category and ruleset, otherwise 1M
+// EN: times would sit next to 100k times.
+// EN: The best time is always real time (R) - the only one that can be
+// EN: checked against a video, which is why it stays the official scoring.
+const bestKey = () => {
   const cat = category();
   const bits = [cat.id, cat.kind === 'gold' ? goldMode() : 'x'];
   if (cat.id === 'custom') bits.push(String(cat.target));
   if (skipTutorialEnabled()) bits.push('notut');
-  // Die Echtzeit behaelt den Schluessel aus 2.6.0 - sonst waeren mit dem
-  // Update alle bisherigen Bestzeiten weg. Die Simulationszeit bekommt einen
-  // eigenen, die beiden Zahlen duerfen sich nicht ueberschreiben.
-  if (metric === 'sim') bits.push('sim');
   return `${BEST_PREFIX}.${bits.join('.')}`;
 };
 
-const readBest = metric => {
-  const v = api.storage.local.get(bestKey(metric));
+const readBest = () => {
+  const v = api.storage.local.get(bestKey());
   if (Number.isFinite(v)) return v;
-  if (metric === 'sim') return null;
-  // Bestzeit aus Version <= 1.4: galt immer fuer 100k im Normal-Regelwerk.
+  // DE: Bestzeit aus Version <= 1.4: galt immer fuer 100k im Normal-Regelwerk.
+  // EN: Best time from version <= 1.4: it always applied to 100k under the Normal ruleset.
   const cat = category();
   if (cat.id === '100000' && goldMode() === 'earned' && !skipTutorialEnabled()) {
     const legacy = api.storage.local.get(LEGACY_BEST_KEY);
@@ -652,17 +786,22 @@ const readBest = metric => {
   return null;
 };
 
-// --- Zeitformat -----------------------------------------------------------
-// In-Game-Zeit in ms; laeuft nur waehrend das Spiel laeuft und wandert mit ins
-// Savegame. Der Wert ist eine Fliesskomma-Summe der Frame-Deltas, also auch
-// unterhalb einer Millisekunde genau.
+// --- DE: Zeitformat / EN: Time format ---------------------------------------
+// DE: Spielzeit-Uhr in ms; laeuft nur waehrend das Spiel laeuft und wandert mit
+// DE: ins Savegame. Das ist dieselbe Zahl, die auch ohne diesen Mod als playTime
+// DE: im Spielstand steht - api.time.getTimeMs() liest direkt store.meta.time.
+// EN: Play-clock in ms; only runs while the game is running and travels with
+// EN: the save. This is the same number that shows up as playTime in the save
+// EN: file even without this mod - api.time.getTimeMs() reads store.meta.time directly.
 const now = () => api.time.getTimeMs() || 0;
 
-// Welche der beiden Uhren gross im Bild steht. Auf die Wertung hat das keinen
-// Einfluss - beide Zeiten werden immer gemessen und immer festgehalten.
+// DE: Welche der drei Uhren gross im Bild steht. Auf die Wertung hat das keinen
+// DE: Einfluss - alle drei werden immer gemessen und immer festgehalten.
+// EN: Which of the three clocks stands large on screen. This has no effect on
+// EN: the scoring - all three are always measured and always recorded.
 const clockMode = () => {
   const v = api.settings.get('clockMode');
-  return v === 'rta' || v === 'sim' || v === 'both' ? v : 'both';
+  return v === 'sim' || v === 'play' ? v : 'real';
 };
 
 const timeFormat = () => {
@@ -683,17 +822,32 @@ const formatTime = (ms, fmt) => {
   return out;
 };
 
-// Kurzform fuer die Tabelle - Stunden nur, wenn es welche gibt.
+// DE: Kurzform fuer die Tabelle - Stunden nur, wenn es welche gibt.
+// EN: Short form for the table - hours only when there are any.
 const formatShort = (ms, fmt) => {
   const full = formatTime(ms, fmt);
   return full.startsWith('00:') ? full.slice(3) : full;
 };
 
+// DE: Platzhalter in Uhrenlaenge, solange der Lauf noch scharf ist und wartet.
+// EN: Placeholder the same length as the clock, while the run is armed and waiting.
+const dashTime = fmt => {
+  if (fmt === 'millis') return '--:--:--.---';
+  if (fmt === 'centis') return '--:--:--.--';
+  return '--:--:--';
+};
+
 const formatGold = n => api.i18n.formatNumber(Math.floor(n));
 
-// --- Laufzustand (im Savegame) -------------------------------------------
+// DE: Vorzeichenbehaftete Anzeige fuer Verzoegerung/Rueckstand - negativ heisst
+// DE: "hinterher", positiv heisst "kurz aufgeholt".
+// EN: Signed display for slowdown/deficit - negative means "behind", positive
+// EN: means "briefly caught up".
+const fmtSigned = (v, d) => (v >= 0 ? '+' : '') + v.toFixed(d);
+
+// --- DE: Laufzustand (im Savegame) / EN: Run state (in the save file) -------
 // { startedAt: number|null, finishedAt: number|null, splits: Split[] }
-// Split = { t: ms seit Start, kind, label, gold }
+// Split = { t: R in ms seit Start, sim: T in ms, w: W in ms, kind, label, gold }
 const readRun = () => {
   api.storage.ensure(NS);
   return {
@@ -705,15 +859,21 @@ const readRun = () => {
 const readSplits = () => {
   const v = api.storage.get(NS, 'splits');
   if (!Array.isArray(v)) return [];
-  // Laeufe aus 2.0.0 haben nur Zahlen gespeichert; die sind ohne Beschriftung
-  // wertlos und werden verworfen, statt die Tabelle kaputt anzuzeigen.
+  // DE: Laeufe aus 2.0.0 haben nur Zahlen gespeichert; die sind ohne Beschriftung
+  // DE: wertlos und werden verworfen, statt die Tabelle kaputt anzuzeigen.
+  // EN: Runs from 2.0.0 only stored bare numbers; without a label those are
+  // EN: worthless and get discarded, instead of showing a broken table.
   return v.filter(e => e && typeof e === 'object' && Number.isFinite(e.t));
 };
 
-// Der Lauf hat drei Zustaende:
+// DE: Der Lauf hat drei Zustaende:
 //   startedAt == null                  -> scharf, wartet auf die erste Aktion
 //   startedAt gesetzt, finishedAt null -> laeuft
 //   finishedAt gesetzt                 -> beendet
+// EN: The run has three states:
+//   startedAt == null                  -> armed, waiting for the first action
+//   startedAt set, finishedAt null     -> running
+//   finishedAt set                     -> finished
 const armRun = () => {
   api.storage.ensure(NS);
   const run = readRun();
@@ -732,41 +892,122 @@ const isRunning = () => {
   return typeof run.startedAt === 'number' && typeof run.finishedAt !== 'number';
 };
 
-// --- Die beiden Uhren -----------------------------------------------------
-// api.time.getTimeMs() liefert trotz des Namens keine In-Game-Zeit, sondern
-// Echtzeit: das Spiel summiert in seiner Renderschleife die Frame-Abstaende,
-// deckelt sie aber bei 50 ms.
+// --- DE: Die drei Uhren: U, R, W / EN: The three clocks: U, R, W -----------
+// DE:
+// U  Ausgefuehrte Simulationsschritte seit Laufbeginn. Kommt roh aus dem
+//    Simulations-Thread: worker.js schreibt dort bei jedem Schritt den
+//    absoluten Stand von store.meta.tick in einen gemeinsamen Speicher, den
+//    dieser Thread hier mitliest. Kein eigener Zaehler, keine Schaetzung -
+//    faellt ein Schritt aus oder laeuft er doppelt, steht trotzdem die
+//    richtige Zahl im Puffer.
 //
-//     let r = t - session.timestep.lastTime;
-//     r > 50 && (r = 50);
-//     store.meta.time += r;
+// R  Echtzeit aus performance.now(), ohne Deckel, akkumuliert nur waehrend
+//    der Lauf tatsaechlich unterwegs ist (Spiel laeuft, nicht pausiert). Das
+//    ist die Zahl, die auch eine Stoppuhr neben dem Bildschirm zeigt, und sie
+//    bleibt die offizielle Wertung: nur sie laesst sich an einem Video
+//    nachpruefen. R haengt nie an der Fabrik - sie ist eine reine
+//    Betriebssystem-Uhr. Was die Fabrik kostet, zeigt sich als Abstand
+//    zwischen R und T, nicht an R selbst.
 //
-// Dauert ein Frame laenger - also unterhalb von 20 FPS - verfaellt alles ueber
-// 50 ms, und die Uhr bleibt hinter einer Stoppuhr zurueck. Getroffen hat das
-// genau die Rechner, die die Bildrate nicht halten: dort misst der Timer eine
-// andere Groesse als auf schneller Hardware, und keine der beiden sagt, wie
-// schnell der Lauf wirklich war. Deshalb misst der Mod seit 2.7.0 selbst - und
-// zwar zwei verschiedene Groessen:
+// W  api.time.getTimeMs() - die eigene Spielzeit-Uhr des Spiels, identisch
+//    mit der playTime, die auch ohne diesen Mod im Spielstand steht. Sie
+//    summiert Frame-Abstaende, deckelt aber jeden auf 50 ms:
 //
-//   RTA  Echtzeit aus performance.now(), ohne Deckel. Das ist die Zahl, die
-//        auch eine Stoppuhr neben dem Bildschirm zeigt, und sie bleibt die
-//        offizielle Wertung: nur sie laesst sich an einem Video nachpruefen.
+//        let r = t - session.timestep.lastTime;
+//        r > 50 && (r = 50);
+//        store.meta.time += r;
 //
-//   SIM  Simulationszeit: ausgefuehrte Simulationsschritte mal 1/60 s. Die
-//        Welt laeuft mit festem Zeitschritt (be = 1/60). Schafft der Rechner
-//        keine 60 Schritte pro Sekunde, verstreicht Echtzeit, ohne dass die
-//        Fabrik vorankommt. SIM zaehlt nur den Fortschritt und haengt damit
-//        nicht an der Hardware - das ist die Zahl, nach der ein Lauf auf einem
-//        langsamen Rechner mit einem auf einem schnellen vergleichbar wird.
+//    Unterhalb von 20 FPS verfaellt alles ueber 50 ms pro Frame, W haengt
+//    dann hinter R zurueck. W laeuft nur mit, um mit dem Spielstand und
+//    frueheren Laeufen vergleichbar zu bleiben - nicht als Wertungsgrundlage.
 //
-// Beide halten an, wenn das Spiel anhaelt. SIM kann nie groesser werden als
-// RTA: der Akkumulator der Simulation bekommt nur echte Zeit gutgeschrieben.
+// T  = U / 60, in Millisekunden also U * (1000/60) - keine eigene Messung,
+//    sondern die Simulationszeit, die aus U folgt: "wie viel Welt
+//    tatsaechlich passiert ist". T zaehlt nur ausgefuehrte Schritte - auf
+//    einem langsamen Rechner gibt es dafuer mehr reale Bedenkzeit je
+//    Weltschritt, T ist also kein Mass fuer "gleich gespielt", nur fuer
+//    "gleich viel simuliert".
+//
+// EN:
+// U  Executed simulation steps since the run started. Comes raw from the
+//    simulation thread: worker.js writes the absolute value of
+//    store.meta.tick into a shared buffer on every step, which this thread
+//    reads back. No counter of its own, no estimate - if a step gets
+//    skipped or double-counted, the buffer still holds the correct number.
+//
+// R  Real time from performance.now(), uncapped, only accumulated while the
+//    run is actually under way (game running, not paused). This is the
+//    number a stopwatch next to the screen would also show, and it stays
+//    the official scoring: it's the only one that can be checked against a
+//    video. R never depends on the factory - it is a pure operating-system
+//    clock. What the factory costs shows up as the gap between R and T, not
+//    in R itself.
+//
+// W  api.time.getTimeMs() - the game's own play-clock, identical to the
+//    playTime shown in the save file even without this mod. It sums frame
+//    deltas, but caps each one at 50 ms:
+//
+//        let r = t - session.timestep.lastTime;
+//        r > 50 && (r = 50);
+//        store.meta.time += r;
+//
+//    Below 20 FPS, everything above 50 ms per frame is lost, and W then
+//    falls behind R. W only tags along to stay comparable with the save
+//    file and earlier runs - not as a basis for scoring.
+//
+// T  = U / 60, in milliseconds that's U * (1000/60) - not its own
+//    measurement, but the simulation time that follows from U: "how much
+//    world actually happened". T only counts executed steps - on a slow
+//    machine that means more real thinking time per world-tick, so T is not
+//    a measure of "played the same", only of "simulated the same amount".
 
-const SIM_STEP_MS = 1000 / 60;
-const SHARED_KEY = 'simClock';
-const SHARED_NAME = `external:${MOD_ID}:${SHARED_KEY}`;
+const TICK_HZ = 60;
+const TICK_MS = 1000 / TICK_HZ;
 
-const numberOr = (v, fallback) => (Number.isFinite(v) ? v : fallback);
+const TICK_BUF_KEY = 'goldSpeedrunTicks';
+const TICK_BUF_SPEC = { type: 'int32', length: 1 };
+
+let tickBuf = null;
+try {
+  tickBuf = api.shared.buffers.create(TICK_BUF_KEY, TICK_BUF_SPEC);
+} catch (e) {
+  tickBuf = null;
+  log('Schritt-Speicher nicht verfuegbar -', (e && e.message) || e);
+}
+// DE: Schaltet das 'update:post'-Ereignis im Simulations-Thread ein, auf das
+// DE: worker.js sich einhaengt - ohne das bleibt der Puffer leer.
+// EN: Enables the 'update:post' event in the simulation thread, which
+// EN: worker.js hooks into - without this, the buffer stays empty.
+try { api.workers.setPostUpdateEnabled(true); } catch (e) { /* DE: aeltere Version / EN: older game version */ }
+
+// DE: Roher, absoluter Schrittzaehler der Simulation - 0, solange worker.js noch
+// DE: nichts geschrieben hat (neue Welten fangen bei 1 an, 0 ist also eindeutig
+// DE: "noch nichts gehoert").
+// EN: Raw, absolute step counter of the simulation - 0 as long as worker.js
+// EN: hasn't written anything yet (new worlds start at 1, so 0 unambiguously
+// EN: means "nothing heard from yet").
+const rawTick = () => {
+  try {
+    return (tickBuf && Atomics.load(tickBuf, 0)) || 0;
+  } catch (e) {
+    return 0;
+  }
+};
+
+const rawTickSourceReady = () => tickBuf !== null && rawTick() > 0;
+
+// DE: Wie rawTickSourceReady(), aber eingefroren, sobald der Lauf beendet ist -
+// DE: sonst koennte ein voellig unbeteiligter, spaeter geladener Spielstand die
+// DE: Anzeige eines laengst abgeschlossenen Laufs nachtraeglich umschalten.
+// EN: Same as rawTickSourceReady(), but frozen once the run has finished -
+// EN: otherwise a completely unrelated save loaded later could retroactively
+// EN: flip the display of a run that finished long ago.
+const tickSourceReady = () => {
+  const run = readRun();
+  if (typeof run.startedAt !== 'number') return rawTickSourceReady();
+  if (typeof run.finishedAt === 'number') return api.storage.get(NS, 'upsTickReady') === true;
+  return rawTickSourceReady();
+};
 
 const gamePaused = () => {
   try {
@@ -776,189 +1017,179 @@ const gamePaused = () => {
   }
 };
 
-// Der exakte Weg: ein Ausloeser im Simulations-Thread schreibt dessen
-// Schrittzaehler in einen gemeinsamen Speicher, den dieser Thread mitliest.
-let simBuf = null;        // Float64Array: [0] = Schrittzaehler, [1] = Lebenszeichen
-let simLastTick = null;   // Stand beim letzten Auslesen
-let simExactSeen = false; // hat der Ausloeser jemals geschrieben?
+let u0 = 0;           // DE: Schrittzaehler-Basis bei Laufstart / EN: step-counter baseline at run start
+let w0 = 0;            // DE: W-Basis (ms) bei Laufstart / EN: W baseline (ms) at run start
+let rMs = 0;           // DE: aufsummierte Echtzeit seit Laufstart (persistiert) / EN: accumulated real time since run start (persisted)
+let lastPerf = null;   // DE: performance.now() beim letzten advanceClocks() / EN: performance.now() at the last advanceClocks()
 
-const setupSimClock = () => {
-  try {
-    simBuf = api.shared.buffers.create(SHARED_KEY, { type: 'float64', length: 2 });
-  } catch (e) {
-    simBuf = null;
-    log('Simulationsuhr: kein gemeinsamer Speicher -', (e && e.message) || e);
+const readClock = key => {
+  const v = api.storage.get(NS, key);
+  return Number.isFinite(v) ? v : 0;
+};
+
+// DE: Basiswerte synchron beim Laufstart setzen - keine kuenstliche Verzoegerung.
+// DE: Der Lauf beginnt exakt bei der ersten Aktion, wie der Startmodus es schon
+// DE: immer versprochen hat.
+// EN: Sets the baselines synchronously at run start - no artificial delay.
+// EN: The run begins exactly on the first action, just as the start mode has
+// EN: always promised.
+const startClocks = () => {
+  u0 = rawTick();
+  w0 = now();
+  rMs = 0;
+  lastPerf = performance.now();
+  api.storage.set(NS, 'upsU0', u0);
+  api.storage.set(NS, 'upsW0', w0);
+  api.storage.set(NS, 'upsRms', 0);
+};
+
+// DE: Nach dem Laden fortsetzen: die Rohwerte kommen aus dem Spielstand, nur der
+// DE: Bezugspunkt fuer performance.now() wird neu gesetzt - sonst wuerde die Zeit
+// DE: zwischen Speichern und Laden als Spielzeit mitgezaehlt. Das war der Fehler,
+// DE: der den Timer nach einem Ladevorgang bei 0 haengen liess: die alten
+// DE: Basiswerte wurden nie wiederhergestellt.
+// EN: Resumes after loading: the raw values come from the save file, only the
+// EN: reference point for performance.now() gets reset - otherwise the time
+// EN: between saving and loading would count as play time. This was the bug
+// EN: that made the timer hang at 0 after a load: the old baselines were
+// EN: never restored.
+const resumeClocks = () => {
+  const run = readRun();
+  if (typeof run.startedAt !== 'number') {
+    u0 = 0; w0 = 0; rMs = 0; lastPerf = null;
     return;
   }
-
-  // Der Ausloeser laeuft im Simulations-Thread. Das Spiel schickt ihn dorthin,
-  // indem es den Quelltext der Funktion verschickt und ihn drueben mit
-  // new Function neu baut - die Funktion darf deshalb nichts aus diesem Modul
-  // benutzen. Der Name des Puffers wird als Literal eingesetzt, alles andere
-  // kommt ueber die Argumente.
-  //
-  // Geschrieben wird der absolute Stand von store.meta.tick, kein eigener
-  // Zaehler: laeuft der Ausloeser einmal zu oft oder faellt einer aus, steht
-  // trotzdem die richtige Zahl im Puffer.
-  //
-  // Der ganze Rumpf liegt in try/catch. Das Spiel ruft Ausloeser in Se() ohne
-  // eigene Absicherung auf; eine Ausnahme von hier landet in der Schleife des
-  // Simulations-Threads und liesse die Simulation stehen.
-  const body =
-    'try {' +
-    '  var b = state && state.shared && state.shared.mods' +
-    '    && state.shared.mods[' + JSON.stringify(SHARED_NAME) + '];' +
-    '  if (b) { b[0] = state.store.meta.tick || 0; b[1] = b[1] + 1; }' +
-    '} catch (e) { /* die Simulation darf daran nicht haengen bleiben */ }';
-
-  // Nicht api.triggers.register: dessen Wrapper ist
-  //   function(e,t,i){ return r.callback(t,i) }
-  // und nimmt die Closure-Variable r mit in den verschickten Quelltext. Im
-  // Simulations-Thread gibt es kein r, der Aufruf wirft dort ReferenceError -
-  // und weil Se() nicht absichert, bliebe die Simulation stehen. Der Weg ueber
-  // engine.api schickt genau die Funktion, die hier steht.
-  try {
-    sandkit.engine.api.triggers.register(
-      sandkit.engine.state,
-      `${MOD_ID}:${SHARED_KEY}`,
-      { interval: SIM_STEP_MS, callback: new Function('state', 'trigger', 'dtMs', body) },
-    );
-  } catch (e) {
-    log('Simulationsuhr: Ausloeser abgelehnt -', (e && e.message) || e);
-  }
+  u0 = readClock('upsU0');
+  w0 = readClock('upsW0');
+  rMs = readClock('upsRms');
+  lastPerf = performance.now();
 };
 
-// Zuwachs an Simulationszeit seit dem letzten Aufruf, oder null, wenn der
-// exakte Weg (noch) nicht steht. Muss auch dann gerufen werden, wenn gerade
-// kein Lauf laeuft, damit der Bezugswert mitwandert.
-const simDeltaExact = () => {
-  if (!simBuf) return null;
-  if (!(simBuf[1] > 0)) return null;
-  simExactSeen = true;
-
-  const tick = simBuf[0];
-  if (!Number.isFinite(tick)) return null;
-
-  // Erster Aufruf, oder der Zaehler faengt von vorn an (neue Karte, Neustart
-  // des Simulations-Threads): neu einnorden statt Unsinn zu addieren.
-  if (simLastTick === null || tick < simLastTick) {
-    simLastTick = tick;
-    return 0;
-  }
-
-  const steps = tick - simLastTick;
-  simLastTick = tick;
-  return steps * SIM_STEP_MS;
+// DE: Schutznetz, falls ein Ladevorgang nicht ueber game:ready gemeldet wird:
+// DE: faellt der rohe Schrittzaehler unter die gemerkte Basis, wurde zwischendrin
+// DE: ein anderer oder frueherer Spielstand geladen - die Basiswerte werden dann
+// DE: aus dem jetzt aktuellen Spielstand neu eingelesen, statt gegen die alte
+// DE: Welt weiterzuzaehlen.
+// EN: Safety net in case a load isn't reported via game:ready: if the raw
+// EN: step counter drops below the stored baseline, a different or earlier
+// EN: save was loaded in the meantime - the baselines are then re-read from
+// EN: the now-current save instead of continuing to count against the old world.
+const ensureFreshBaseline = () => {
+  const run = readRun();
+  if (typeof run.startedAt !== 'number') return;
+  if (tickBuf && rawTick() < u0 - 1) resumeClocks();
 };
-
-// Der Rueckfallweg, falls der Ausloeser nicht ankommt: managerPerformance[1]
-// ist der reale Abstand zwischen zwei Simulationsschritten - dieselbe Zahl,
-// aus der die Anzeige im Spiel ihre UPS rechnet. Das ist eine Schaetzung: sie
-// stimmt bei gleichmaessiger Last gut und wird bei Rucklern ungenau.
-const simDeltaEstimate = dtMs => {
-  let perf = 0;
-  try {
-    perf = sandkit.state.shared.managerPerformance[1];
-  } catch (e) {
-    perf = 0;
-  }
-  if (!Number.isFinite(perf) || perf <= 0) return dtMs;
-  return dtMs * Math.max(0, Math.min(1, SIM_STEP_MS / perf));
-};
-
-// Beide Uhren stehen im Spielstand, nicht im Speicher: api.storage.set ist
-// eine Zuweisung an ein Objekt in store.mods, kostet also nichts und wandert
-// beim Speichern von allein mit. Ein Lauf uebersteht damit Speichern und Laden
-// ohne Verlust.
-const readClock = key => Math.max(0, numberOr(api.storage.get(NS, key), 0));
-
-let lastPerf = null;
 
 const advanceClocks = () => {
   const stamp = performance.now();
   const prev = lastPerf;
   lastPerf = stamp;
 
-  // Immer auslesen, damit der Bezugswert der Simulationsuhr auch dann
-  // mitlaeuft, wenn gerade nichts gezaehlt wird.
-  const exact = simDeltaExact();
+  ensureFreshBaseline();
 
   if (prev === null) return;
-  if (gamePaused()) return;
   if (!isRunning()) return;
+  if (gamePaused()) return;
 
   const dt = stamp - prev;
   if (!(dt > 0) || dt > 3600000) return;
 
-  let simDt;
-  if (exact === null) {
-    simDt = simDeltaEstimate(dt);
-    if (api.storage.get(NS, 'clockExact') !== false) api.storage.set(NS, 'clockExact', false);
-  } else {
-    simDt = exact;
-  }
-  if (!(simDt >= 0)) simDt = 0;
-  const simMax = dt + 250;
-  if (simDt > simMax) simDt = simMax;
-
-  api.storage.set(NS, 'rtaMs', readClock('rtaMs') + dt);
-  api.storage.set(NS, 'simMs', readClock('simMs') + simDt);
+  rMs += dt;
+  api.storage.set(NS, 'upsRms', rMs);
 };
 
-// Ein Lauf aus einer aelteren Version hat die beiden Summen noch nicht. Statt
-// ihn zu verwerfen, wird der bisherige Stand aus meta.time uebernommen - das
-// ist die Zahl, die bis dahin die offizielle war.
-const migrateClocks = () => {
+// DE: U - ausgefuehrte Simulationsschritte seit Laufbeginn. Ist der Lauf beendet,
+// DE: wird der bei finishRun() eingefrorene Wert geliefert - sonst wuerden T
+// DE: und der U-Wert im Ergebnisfenster immer weiterwachsen, wenn nach dem Sieg
+// DE: noch weitergespielt wird (R friert dagegen von selbst ein, siehe
+// DE: advanceClocks()).
+// EN: U - executed simulation steps since the run started. Once the run has
+// EN: finished, the value frozen in finishRun() is returned - otherwise T and
+// EN: the U value in the result screen would keep growing if the player kept
+// EN: playing after the win (R freezes on its own instead, see advanceClocks()).
+const liveU = () => {
   const run = readRun();
-  if (typeof run.startedAt !== 'number') return;
-  if (Number.isFinite(api.storage.get(NS, 'rtaMs'))) return;
-
-  const end = typeof run.finishedAt === 'number' ? run.finishedAt : now();
-  const legacy = Math.max(0, end - run.startedAt);
-  api.storage.set(NS, 'rtaMs', legacy);
-  api.storage.set(NS, 'simMs', legacy);
-  api.storage.set(NS, 'clockLegacy', true);
-  log('Laufender Lauf aus einer aelteren Version uebernommen:', formatTime(legacy, 'millis'));
+  if (typeof run.startedAt !== 'number') return 0;
+  if (typeof run.finishedAt === 'number') return Math.max(0, readClock('upsUFinal'));
+  return Math.max(0, rawTick() - u0);
 };
 
-const startClocks = () => {
-  lastPerf = performance.now();
-  api.storage.set(NS, 'rtaMs', 0);
-  api.storage.set(NS, 'simMs', 0);
-  api.storage.set(NS, 'clockExact', true);
-  api.storage.set(NS, 'clockLegacy', false);
-};
-
-// Echtzeit des Laufs - die offizielle Wertung.
+// DE: R - Echtzeit des Laufs in ms. Die offizielle Wertung.
+// EN: R - real time of the run in ms. The official scoring.
 const elapsed = () => {
   const run = readRun();
   if (typeof run.startedAt !== 'number') return 0;
-  return readClock('rtaMs');
+  return rMs;
 };
 
-// Simulationszeit des Laufs - hardwareunabhaengig, aber nicht am Video pruefbar.
-const elapsedSim = () => {
+// DE: T - Simulationszeit des Laufs in ms, aus U abgeleitet.
+// EN: T - simulation time of the run in ms, derived from U.
+const elapsedSim = () => liveU() * TICK_MS;
+
+// DE: W - Spielzeit-Uhr des Laufs in ms (api.time.getTimeMs(), gedeckelt s.o.).
+// DE: Genau wie liveU() eingefroren, sobald der Lauf beendet ist.
+// EN: W - play-clock of the run in ms (api.time.getTimeMs(), capped as above).
+// EN: Frozen exactly like liveU() once the run has finished.
+const elapsedPlay = () => {
   const run = readRun();
   if (typeof run.startedAt !== 'number') return 0;
-  return readClock('simMs');
+  if (typeof run.finishedAt === 'number') return Math.max(0, readClock('upsWFinal'));
+  return Math.max(0, now() - w0);
 };
 
-// Wieviel Prozent der Echtzeit die Simulation nicht mitgekommen ist. 0 heisst
-// durchgehend 60 UPS, 50 heisst: die Haelfte der Zeit lief die Welt nicht.
-const simDeficit = () => {
-  const rta = elapsed();
-  if (rta <= 0) return 0;
-  return Math.max(0, Math.min(100, (1 - elapsedSim() / rta) * 100));
+// DE: Verzoegerung in Prozent: wie weit T von R abweicht. Negativ heisst "die
+// DE: Welt ist hinterher" (der uebliche Fall), ein kleiner positiver Ausschlag
+// DE: heisst "die Simulation hat kurz aufgeholt" (moeglich, wenn sie
+// DE: zwischenzeitlich schneller als 60 UPS lief). Etwas Jitter um 0 ist normal;
+// DE: erst ein dauerhafter Ausschlag ins Negative bedeutet echten Rueckstand.
+// EN: Slowdown in percent: how far T deviates from R. Negative means "the
+// EN: world is behind" (the usual case), a small positive swing means "the
+// EN: simulation briefly caught up" (possible if it ran faster than 60 UPS
+// EN: for a while). A bit of jitter around 0 is normal; only a sustained
+// EN: swing into negative means a real slowdown.
+const slowdownPercent = () => {
+  const r = elapsed();
+  if (r < 1000 || !tickSourceReady()) return 0;
+  return (elapsedSim() / r - 1) * 100;
 };
 
-// Wie verlaesslich die Simulationsuhr dieses Laufs ist.
-const clockQuality = () => ({
-  exact: api.storage.get(NS, 'clockExact') !== false,
-  legacy: api.storage.get(NS, 'clockLegacy') === true,
-});
+// DE: Schritte, die eine ideale 60-UPS-Maschine in der bisherigen Echtzeit
+// DE: gelaufen waere.
+// EN: The number of steps a perfect 60-UPS machine would have run in the
+// EN: real time elapsed so far.
+const idealTicks = () => (elapsed() / 1000) * TICK_HZ;
 
-// Wurde im Spielstand jemals ein Cheat benutzt, ist der Lauf wertlos. Das Flag
-// setzt das Spiel selbst und nimmt es nie zurueck.
+// DE: Schritt-Rueckstand: positiv heisst "so viele Schritte fehlen noch zum
+// DE: Ideal", negativ heisst "die Simulation liegt vorn" (Aufholphase).
+// EN: Tick deficit: positive means "this many steps are still missing to
+// EN: reach the ideal", negative means "the simulation is ahead" (a catch-up phase).
+const tickDeficit = () => idealTicks() - liveU();
+const tickDeficitMs = () => tickDeficit() * TICK_MS;
+
+const avgUps = () => {
+  const rSec = elapsed() / 1000;
+  return rSec > 0 ? liveU() / rSec : 0;
+};
+
+// DE: Wie viele reale Sekunden jede simulierte Sekunde gekostet hat. 1.0 bei
+// DE: durchgehend 60 UPS, groesser bei Rueckstand.
+// EN: How many real seconds each simulated second has cost. 1.0 at a
+// EN: constant 60 UPS, higher when running behind.
+const thinkingMultiplier = () => {
+  const simT = elapsedSim();
+  return simT > 0 ? elapsed() / simT : 1;
+};
+
+// DE: Zeigt, wie stark der 50-ms-Deckel von api.time.getTimeMs() (siehe oben)
+// DE: verzerrt: je groesser der Unterschied zu R, desto mehr Zeit hat W verloren.
+// EN: Shows how much the 50 ms cap of api.time.getTimeMs() (see above)
+// EN: distorts things: the bigger the difference from R, the more time W has lost.
+const wMinusR = () => elapsedPlay() - elapsed();
+
+// DE: Wurde im Spielstand jemals ein Cheat benutzt, ist der Lauf wertlos. Das Flag
+// DE: setzt das Spiel selbst und nimmt es nie zurueck.
+// EN: If a cheat was ever used in the save file, the run is worthless. The
+// EN: game sets this flag itself and never clears it.
 const cheatsUsed = () => {
   try {
     return sandkit.state.store.integrity.cheatsUsed === true;
@@ -967,10 +1198,13 @@ const cheatsUsed = () => {
   }
 };
 
-// --- Namen fuer die Split-Tabelle -----------------------------------------
-// Forschungen tragen nicht alle einen eigenen Namensschluessel. Fehlt er,
-// benennt das Spiel sie ueber das, was sie freischaltet - z.B. heisst
-// "shaker" im Baum nach der Struktur "structures|shaker|name".
+// --- DE: Namen fuer die Split-Tabelle / EN: Names for the split table -------
+// DE: Forschungen tragen nicht alle einen eigenen Namensschluessel. Fehlt er,
+// DE: benennt das Spiel sie ueber das, was sie freischaltet - z.B. heisst
+// DE: "shaker" im Baum nach der Struktur "structures|shaker|name".
+// EN: Not every research has its own name key. When it's missing, the game
+// EN: names it after whatever it unlocks - e.g. "shaker" in the tree is named
+// EN: after the structure "structures|shaker|name".
 const prettifyId = id => String(id)
   .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
   .replace(/^./, c => c.toUpperCase());
@@ -979,7 +1213,7 @@ const translateIfPresent = key => {
   if (typeof key !== 'string' || key.length === 0) return null;
   try {
     if (api.i18n.hasTranslation && !api.i18n.hasTranslation(key)) return null;
-  } catch (e) { /* ohne Pruefung einfach versuchen */ }
+  } catch (e) { /* DE: ohne Pruefung einfach versuchen / EN: no check available, just try it */ }
   const value = t(key);
   if (typeof value !== 'string' || value.length === 0) return null;
   if (value === key || value.startsWith('[MISSING') || value.startsWith('[NO KEY]')) return null;
@@ -990,7 +1224,7 @@ const techName = techId => {
   if (!techId) return '?';
 
   let def = null;
-  try { def = api.tech.getDefinitionById(techId); } catch (e) { /* unbekannt */ }
+  try { def = api.tech.getDefinitionById(techId); } catch (e) { /* DE: unbekannt / EN: unknown */ }
 
   const direct = translateIfPresent(def && def.nameKey) || translateIfPresent(`tech|${techId}|name`);
   if (direct) return direct;
@@ -999,7 +1233,7 @@ const techName = techId => {
   if (Array.isArray(unlocks.structures)) {
     for (const type of unlocks.structures) {
       let sdef = null;
-      try { sdef = api.structures.getDefinitionByType(type); } catch (e) { /* unbekannt */ }
+      try { sdef = api.structures.getDefinitionByType(type); } catch (e) { /* DE: unbekannt / EN: unknown */ }
       const name = translateIfPresent(sdef && sdef.nameKey);
       if (name) return name;
     }
@@ -1017,9 +1251,11 @@ const techName = techId => {
 const upgradeName = (itemId, upgradeId) =>
   translateIfPresent(`upgrades|${itemId}|${upgradeId}|name`) || prettifyId(upgradeId);
 
-// --- Zwischenzeiten -------------------------------------------------------
-// Jeder eingeschaltete Ausloeser haengt hier einen Eintrag an: Beschriftung,
-// Zeit seit Laufbeginn und der Goldstand in dem Moment.
+// --- DE: Zwischenzeiten / EN: Splits -----------------------------------------
+// DE: Jeder eingeschaltete Ausloeser haengt hier einen Eintrag an: Beschriftung,
+// DE: Zeit seit Laufbeginn und der Goldstand in dem Moment.
+// EN: Every enabled trigger appends an entry here: label, time since the run
+// EN: started, and the gold total at that moment.
 const addSplit = (kind, label) => {
   const run = readRun();
   if (typeof run.startedAt !== 'number' || typeof run.finishedAt === 'number') return;
@@ -1028,25 +1264,34 @@ const addSplit = (kind, label) => {
   splits.push({
     t: elapsed(),
     sim: elapsedSim(),
+    w: elapsedPlay(),
     kind,
     label,
     gold: Math.floor(goldProgress()),
   });
   api.storage.set(NS, 'splits', splits);
-
 };
 
-// Die Gruppen-Einstellung aus den Mod-Optionen ist nur der Ausgangswert.
+// DE: Die Gruppen-Einstellung aus den Mod-Optionen ist nur der Ausgangswert.
+// EN: The group setting from the mod options is only the starting point.
 const splitOn = key => api.settings.get(key) === true;
 
-// --- Einzelne Ausloeser ---------------------------------------------------
-// Fuer jede Forschung, jeden Rang und jede Gold-Marke ein eigener Schalter.
-// Das passt nicht in die modinfo.json - die erlaubt hoechstens 64 Felder, und
-// allein die Forschungen sind rund 57. Deshalb ein eigenes Fenster im Spiel
-// und ein Objekt im localStorage, savegame-uebergreifend.
+// --- DE: Einzelne Ausloeser / EN: Individual triggers -----------------------
+// DE: Fuer jede Forschung, jeden Rang und jede Gold-Marke ein eigener Schalter.
+// DE: Das passt nicht in die modinfo.json - die erlaubt hoechstens 64 Felder, und
+// DE: allein die Forschungen sind rund 57. Deshalb ein eigenes Fenster im Spiel
+// DE: und ein Objekt im localStorage, savegame-uebergreifend.
 //
 //   {}                        -> alles folgt der Gruppen-Einstellung
 //   { "tech:shaker": false }  -> dieser eine Ausloeser ist abgewaehlt
+//
+// EN: A separate switch for every research, every rank and every gold mark.
+// EN: That doesn't fit in modinfo.json - it allows at most 64 fields, and the
+// EN: research alone is around 57. Hence a dedicated window in-game and an
+// EN: object in localStorage, shared across save files.
+//
+//   {}                        -> everything follows the group setting
+//   { "tech:shaker": false }  -> this one trigger is switched off
 const TRIGGER_KEY = 'goldSpeedrun.triggers';
 
 const readOverrides = () => {
@@ -1055,8 +1300,10 @@ const readOverrides = () => {
 };
 
 const writeOverrides = map => {
-  // Leere Eintraege gar nicht erst speichern, damit spaetere Aenderungen an den
-  // Gruppen-Einstellungen weiter durchschlagen.
+  // DE: Leere Eintraege gar nicht erst speichern, damit spaetere Aenderungen an den
+  // DE: Gruppen-Einstellungen weiter durchschlagen.
+  // EN: Don't store empty entries at all, so later changes to the group
+  // EN: settings keep taking effect.
   const clean = {};
   for (const [k, v] of Object.entries(map)) if (typeof v === 'boolean') clean[k] = v;
   api.storage.local.set(TRIGGER_KEY, clean);
@@ -1075,8 +1322,10 @@ const setTriggerEnabled = (kind, id, value) => {
   writeOverrides(map);
 };
 
-// Setzt eine ganze Gruppe; null loescht die Einzelschalter wieder, dann gilt
-// erneut die Gruppen-Einstellung.
+// DE: Setzt eine ganze Gruppe; null loescht die Einzelschalter wieder, dann gilt
+// DE: erneut die Gruppen-Einstellung.
+// EN: Sets a whole group; null clears the individual switches again, so the
+// EN: group setting applies once more.
 const setGroup = (kind, ids, value) => {
   const map = readOverrides();
   for (const id of ids) {
@@ -1087,9 +1336,12 @@ const setGroup = (kind, ids, value) => {
   writeOverrides(map);
 };
 
-// Alle Forschungs-IDs. Das Tech-Enum deckt nur einen Teil ab - von den
-// Definitionen des Spiels sind rund 22 als reine String-IDs hinterlegt und
-// tauchen im Enum nicht auf.
+// DE: Alle Forschungs-IDs. Das Tech-Enum deckt nur einen Teil ab - von den
+// DE: Definitionen des Spiels sind rund 22 als reine String-IDs hinterlegt und
+// DE: tauchen im Enum nicht auf.
+// EN: All research IDs. The Tech enum only covers part of them - about 22 of
+// EN: the game's definitions are stored as plain string IDs and don't show up
+// EN: in the enum.
 const EXTRA_TECH_IDS = [
   'kineticFieldEmitter', 'reconDrone', 'fluxEmanator', 'voidOrb', 'snowmaker',
   'thermalRelay', 'burnerBelt', 'heatCannon', 'copperMold', 'electricityConnector',
@@ -1109,7 +1361,7 @@ const allTechIds = () => {
   for (const id of EXTRA_TECH_IDS) ids.add(id);
   try {
     for (const id of Object.keys(sandkit.state.store.player.tech || {})) ids.add(id);
-  } catch (e) { /* noch kein Spielstand */ }
+  } catch (e) { /* DE: noch kein Spielstand / EN: no save loaded yet */ }
   techIdCache = [...ids];
   return techIdCache;
 };
@@ -1120,7 +1372,8 @@ const rankIds = () => {
   return out;
 };
 
-// Gold-Marken: entweder ein Anteil des Kategorieziels oder ein fester Schritt.
+// DE: Gold-Marken: entweder ein Anteil des Kategorieziels oder ein fester Schritt.
+// EN: Gold marks: either a share of the category goal or a fixed interval.
 const goldMarks = cat => {
   const mode = api.settings.get('splitGold');
   if (!mode || mode === 'off') return [];
@@ -1128,7 +1381,8 @@ const goldMarks = cat => {
   if (mode === '10k' || mode === '100k') {
     const step = mode === '10k' ? 10000 : 100000;
     const out = [];
-    // Die Marke auf dem Ziel selbst faellt weg - dort endet der Lauf ohnehin.
+    // DE: Die Marke auf dem Ziel selbst faellt weg - dort endet der Lauf ohnehin.
+    // EN: The mark right on the goal itself is dropped - the run ends there anyway.
     for (let v = step; v < cat.target; v += step) out.push({ value: v, label: shortGold(v) });
     return out;
   }
@@ -1143,7 +1397,8 @@ const goldMarks = cat => {
   }));
 };
 
-// Die Marken aendern sich nur, wenn Kategorie oder Einstellung wechseln.
+// DE: Die Marken aendern sich nur, wenn Kategorie oder Einstellung wechseln.
+// EN: The marks only change when the category or the setting changes.
 let markCache = { key: null, list: [] };
 
 const currentGoldMarks = cat => {
@@ -1152,39 +1407,59 @@ const currentGoldMarks = cat => {
   return markCache.list;
 };
 
-// --- Start durch die erste Aktion -----------------------------------------
-// Standard ist "jede Aktion": Bewegung, Graben, Bauen, Forschen, Aufsammeln.
-// Damit laesst sich kein Fortschritt an der Zeitnahme vorbei erarbeiten.
+// --- DE: Start durch die erste Aktion / EN: Start on the first action -------
+// DE: Standard ist "jede Aktion": Bewegung, Graben, Bauen, Forschen, Aufsammeln.
+// DE: Damit laesst sich kein Fortschritt an der Zeitnahme vorbei erarbeiten.
+// EN: The default is "any action": movement, digging, building, researching,
+// EN: collecting. That way no progress can be made without it counting against the clock.
 
-// Waehrend eigener Eingriffe - vor allem des Tutorial-Skips - ist der Start
-// gesperrt. Als Echtzeit-Frist, damit auch verzoegerte Folgeereignisse (Story,
-// Freischaltungen) nicht durchrutschen und ein haengender Schalter sich von
-// selbst loest.
+// DE: Waehrend eigener Eingriffe - vor allem des Tutorial-Skips - ist der Start
+// DE: gesperrt. Als Echtzeit-Frist, damit auch verzoegerte Folgeereignisse (Story,
+// DE: Freischaltungen) nicht durchrutschen und ein haengender Schalter sich von
+// DE: selbst loest.
+// EN: The start is locked while the mod is making its own interventions -
+// EN: above all the tutorial skip. Implemented as a real-time deadline so
+// EN: delayed follow-up events (story, unlocks) can't slip through either,
+// EN: and a stuck lock resolves itself.
 let suppressUntil = 0;
 
-// Sperren nur verlaengern, nie verkuerzen - sonst hebt ein spaeterer, kurzer
-// Eingriff die laengere Sperre eines frueheren wieder auf.
+// DE: Sperren nur verlaengern, nie verkuerzen - sonst hebt ein spaeterer, kurzer
+// DE: Eingriff die laengere Sperre eines frueheren wieder auf.
+// EN: Only ever extends the lock, never shortens it - otherwise a later,
+// EN: short intervention would cancel out the longer lock from an earlier one.
 const suppressFor = ms => {
   suppressUntil = Math.max(suppressUntil, Date.now() + ms);
 };
 
-// Kurze Schonfrist nach dem Laden. Sie gilt nur fuer die Ereignis-Ausloeser:
-// waehrend die Welt anlaeuft, kann die Simulation von sich aus Gelaende
-// aufloesen oder Material einsammeln. Direkte Eingaben - Taste, Klick, Bauen,
-// Forschen - starten auch in dieser Zeit sofort.
+// DE: Kurze Schonfrist nach dem Laden. Sie gilt nur fuer die Ereignis-Ausloeser:
+// DE: waehrend die Welt anlaeuft, kann die Simulation von sich aus Gelaende
+// DE: aufloesen oder Material einsammeln. Direkte Eingaben - Taste, Klick, Bauen,
+// DE: Forschen - starten auch in dieser Zeit sofort.
+// EN: A short grace period after loading. It only applies to the event
+// EN: triggers: while the world is spinning up, the simulation can dissolve
+// EN: terrain or collect material on its own. Direct input - key, click,
+// EN: building, researching - still starts the run immediately even during this time.
 let eventGraceUntil = 0;
 
 const graceFor = ms => {
   eventGraceUntil = Math.max(eventGraceUntil, Date.now() + ms);
 };
 
-// Drei Regelwerke:
+// DE: Drei Regelwerke:
 //   'mouse' - nur ein Druck der Maustaste startet: Graben, Greifen, Bauen,
 //             Forschen. Laufen ist frei, und was ohne Klick weiterlaeuft -
 //             etwa eine grabende Drohne - startet ebenfalls nichts.
 //   'click' - zusaetzlich alles, was Fortschritt bedeutet, auch ohne Klick.
 //   'any'   - zusaetzlich schon die erste Bewegung.
 //   'move'  - nur Bewegung, wie in Version 1.x.
+//
+// EN: Three rulesets:
+//   'mouse' - only a mouse press starts it: digging, grabbing, building,
+//             researching. Walking is free, and anything that keeps running
+//             without a click - say, a digging drone - doesn't start it either.
+//   'click' - additionally, anything that counts as progress, even without a click.
+//   'any'   - additionally, even the first movement.
+//   'move'  - movement only, as in version 1.x.
 const startMode = () => {
   if (officialMode()) return 'any';
   const v = api.settings.get('startMode');
@@ -1196,21 +1471,28 @@ const startsOnMovement = () => {
   return m === 'any' || m === 'move';
 };
 
-// Der Druck der Maustaste: Werkzeug- oder Waffenaktion im Spielfeld, Bauen,
-// Forschen. Gilt in jedem Regelwerk ausser "nur Bewegung".
+// DE: Der Druck der Maustaste: Werkzeug- oder Waffenaktion im Spielfeld, Bauen,
+// DE: Forschen. Gilt in jedem Regelwerk ausser "nur Bewegung".
+// EN: A mouse press: a tool or weapon action in the play field, building,
+// EN: researching. Applies under every ruleset except "movement only".
 const startsOnMouse = () => startMode() !== 'move';
 
-// Fortschritt ohne eigenen Klick - Drohnen, Foerderbaender, Aufsammeln.
+// DE: Fortschritt ohne eigenen Klick - Drohnen, Foerderbaender, Aufsammeln.
+// EN: Progress without a click of your own - drones, conveyor belts, picking things up.
 const startsOnEvent = () => {
   const m = startMode();
   return m === 'click' || m === 'any';
 };
 
-// --- Offizielles Regelwerk ------------------------------------------------
-// Die Vorgabe der offiziellen Speedrun-Kategorien: ausser diesem Mod ist
-// nichts aktiv, jede Aktion startet die Uhr, Gold zaehlt nach Kontostand, und
-// das Tutorial wird nicht automatisch uebersprungen. Nur wenn alles vier
-// stimmt, traegt der Lauf das Abzeichen.
+// --- DE: Offizielles Regelwerk / EN: Official ruleset -----------------------
+// DE: Die Vorgabe der offiziellen Speedrun-Kategorien: ausser diesem Mod ist
+// DE: nichts aktiv, jede Aktion startet die Uhr, Gold zaehlt nach Kontostand, und
+// DE: das Tutorial wird nicht automatisch uebersprungen. Nur wenn alles vier
+// DE: stimmt, traegt der Lauf das Abzeichen.
+// EN: What the official speedrun categories require: nothing but this mod is
+// EN: active, any action starts the clock, gold counts by balance, and the
+// EN: tutorial isn't auto-skipped. Only when all four hold does the run carry
+// EN: the badge.
 const OFFICIAL_RULES = [
   {
     id: 'startMode',
@@ -1227,7 +1509,8 @@ const OFFICIAL_RULES = [
   {
     id: 'skipTutorial',
     labelKey: 'mods|goldSpeedrun|cfg|skipTutorial',
-    // "Aus" - dieselbe Beschriftung wie bei den Gold-Marken.
+    // DE: "Aus" - dieselbe Beschriftung wie bei den Gold-Marken.
+    // EN: "Off" - the same label as used for the gold marks.
     valueKey: 'mods|goldSpeedrun|cfg|splitGold|off',
     ok: () => !skipTutorialEnabled(),
   },
@@ -1245,13 +1528,18 @@ const OFFICIAL_RULES = [
   },
 ];
 
-// Die Mod-Verwaltung selbst greift nicht ins Spiel ein - sie ist das Werkzeug,
-// mit dem die anderen Mods abgeschaltet werden, und zaehlt deshalb nicht mit.
+// DE: Die Mod-Verwaltung selbst greift nicht ins Spiel ein - sie ist das Werkzeug,
+// DE: mit dem die anderen Mods abgeschaltet werden, und zaehlt deshalb nicht mit.
+// EN: The mod manager itself doesn't intervene in the game - it's the tool
+// EN: used to turn the other mods off, so it doesn't count.
 const RULES_MOD_EXEMPT = [MOD_ID, 'mod-manager'];
 
-// Ladereihenfolge, die das Spiel beim Start ablegt. Sie ist die Wahrheit
-// darueber, was ueberhaupt geladen wurde - der Eintrag in der Mod-Verwaltung
-// bleibt auch stehen, wenn ein Mod-Ordner laengst wieder verschwunden ist.
+// DE: Ladereihenfolge, die das Spiel beim Start ablegt. Sie ist die Wahrheit
+// DE: darueber, was ueberhaupt geladen wurde - der Eintrag in der Mod-Verwaltung
+// DE: bleibt auch stehen, wenn ein Mod-Ordner laengst wieder verschwunden ist.
+// EN: The load order the game records at startup. It's the source of truth
+// EN: for what actually got loaded - the mod manager's entry keeps standing
+// EN: even after a mod folder has long since disappeared.
 const RUNTIME_MODS_KEY = '__sandkitExternalRuntimeV1';
 
 const loadedMods = () => {
@@ -1265,8 +1553,10 @@ const loadedMods = () => {
   }
 };
 
-// Fremde Mods, die geladen sind und in der Mod-Verwaltung nicht abgeschaltet
-// wurden. Mods ohne eigenen Schalter zaehlen als aktiv - sie laufen ja.
+// DE: Fremde Mods, die geladen sind und in der Mod-Verwaltung nicht abgeschaltet
+// DE: wurden. Mods ohne eigenen Schalter zaehlen als aktiv - sie laufen ja.
+// EN: Third-party mods that are loaded and not turned off in the mod manager.
+// EN: Mods without their own switch count as active - they're running, after all.
 const otherEnabledMods = () => loadedMods()
   .filter(m => RULES_MOD_EXEMPT.indexOf(m.id) < 0)
   .filter(m => {
@@ -1278,8 +1568,10 @@ const otherEnabledMods = () => loadedMods()
   })
   .map(m => m.name || m.id);
 
-// Das HUD zeichnet bei Millisekunden jeden Frame. Die Pruefung liest
-// Einstellungen und localStorage, deshalb haelt sie ihr Ergebnis kurz fest.
+// DE: Das HUD zeichnet bei Millisekunden jeden Frame. Die Pruefung liest
+// DE: Einstellungen und localStorage, deshalb haelt sie ihr Ergebnis kurz fest.
+// EN: The HUD redraws every frame at millisecond precision. The check reads
+// EN: settings and localStorage, so it caches its result briefly.
 let rulesCache = null;
 let rulesCacheAt = 0;
 
@@ -1309,10 +1601,14 @@ const rulesetStatus = () => {
   return rulesCache;
 };
 
-// Der Lauf haelt beim Start fest, ob er offiziell begonnen hat. Wird danach
-// etwas daran verstellt, faellt das Kennzeichen und kommt nicht zurueck -
-// sonst liesse sich ein Lauf unter offiziellen Regeln beginnen und mitten
-// drin auf die bequeme Einstellung wechseln.
+// DE: Der Lauf haelt beim Start fest, ob er offiziell begonnen hat. Wird danach
+// DE: etwas daran verstellt, faellt das Kennzeichen und kommt nicht zurueck -
+// DE: sonst liesse sich ein Lauf unter offiziellen Regeln beginnen und mitten
+// DE: drin auf die bequeme Einstellung wechseln.
+// EN: The run records at the start whether it began officially. If anything
+// EN: gets changed afterwards, the flag drops and never comes back -
+// EN: otherwise a run could start under the official rules and switch to a
+// EN: more convenient setting partway through.
 const runIsOfficial = () => {
   api.storage.ensure(NS);
   return api.storage.get(NS, 'official') === true;
@@ -1329,8 +1625,10 @@ const dropOfficial = () => {
   log('Regelwerk waehrend des Laufs verstellt - der Lauf gilt nicht mehr als offiziell');
 };
 
-// Was HUD und Ergebnisfenster anzeigen: vor dem Lauf die aktuellen
-// Einstellungen, waehrend und nach dem Lauf das, womit er begonnen hat.
+// DE: Was HUD und Ergebnisfenster anzeigen: vor dem Lauf die aktuellen
+// DE: Einstellungen, waehrend und nach dem Lauf das, womit er begonnen hat.
+// EN: What the HUD and result screen show: before the run, the current
+// EN: settings; during and after the run, what it actually started with.
 const rulesetView = () => {
   const live = rulesetStatus();
   const run = readRun();
@@ -1346,6 +1644,19 @@ const startRun = reason => {
   if (!modEnabled()) return false;
   if (Date.now() < suppressUntil) return false;
   if (uiBlocksStart()) return false;
+  // DE: Vor der eigentlichen Spielszene (Intro, Landeanflug) kann keine echte
+  // DE: Spielhandlung stattfinden - die Start-Ausloeser bleiben aber die ganze
+  // DE: Zeit ueber scharf geschaltet. Ohne diese Sperre kann ein Ereignis aus dem
+  // DE: Setup selbst (Weltgenerierung, Intro-/Tutorial-Skip) als "erste Aktion"
+  // DE: durchrutschen, sobald die feste 1,5s-Gnadenfrist von game:ready
+  // DE: verstrichen ist, obwohl noch gar kein Spieler etwas getan hat.
+  // EN: Before the actual game scene (intro, landing approach) no real
+  // EN: in-game action is possible - but the start triggers stay armed the
+  // EN: whole time regardless. Without this guard, an event from the setup
+  // EN: itself (world generation, intro/tutorial skip) can slip through as
+  // EN: the "first action" once the fixed 1.5 s grace period from game:ready
+  // EN: has elapsed, even though no player has done anything yet.
+  if (activeScene() !== enums.Scene.Game) return false;
   if (!isArmed()) return false;
 
   const startedAt = now();
@@ -1364,19 +1675,22 @@ const startRun = reason => {
   return true;
 };
 
-// Bewegung: Standard ist W/A/S/D. Hat der Spieler die Bewegung umgelegt,
-// gelten seine Tasten ebenfalls - daher werden die Belegungen zur Laufzeit
-// abgefragt.
+// DE: Bewegung: Standard ist W/A/S/D. Hat der Spieler die Bewegung umgelegt,
+// DE: gelten seine Tasten ebenfalls - daher werden die Belegungen zur Laufzeit
+// DE: abgefragt.
+// EN: Movement: the default is W/A/S/D. If the player has rebound movement,
+// EN: their keys apply too - so the bindings are looked up at runtime.
 const MOVEMENT_BINDINGS = [
-  enums.KeyBinding.Boost,    // hoch / Jetpack (W)
+  enums.KeyBinding.Boost,    // DE: hoch / Jetpack (W) / EN: up / jetpack (W)
   enums.KeyBinding.Left,     // (A)
-  enums.KeyBinding.Descend,  // runter (S)
+  enums.KeyBinding.Descend,  // DE: runter (S) / EN: down (S)
   enums.KeyBinding.Right,    // (D)
 ];
 
 const FALLBACK_CODES = ['KeyW', 'KeyA', 'KeyS', 'KeyD'];
 
-// "Control+KeyC" -> "KeyC"; nur die eigentliche Taste ist relevant.
+// DE: "Control+KeyC" -> "KeyC"; nur die eigentliche Taste ist relevant.
+// EN: "Control+KeyC" -> "KeyC"; only the actual key matters.
 const bareKey = k => (typeof k === 'string' ? k.split('+').pop() : '');
 
 const movementCodes = () => {
@@ -1394,7 +1708,8 @@ const movementCodes = () => {
   return codes;
 };
 
-// input:keydown ist ein Interceptor - hier wird nur mitgelesen, nie abgebrochen.
+// DE: input:keydown ist ein Interceptor - hier wird nur mitgelesen, nie abgebrochen.
+// EN: input:keydown is an interceptor - this only reads along, never cancels it.
 api.hooks.intercept('input:keydown', payload => {
   if (!startsOnMovement()) return;
   if (!isArmed()) return;
@@ -1406,12 +1721,14 @@ api.hooks.intercept('input:keydown', payload => {
   startRun('Bewegung');
 });
 
-// Jede Werkzeug-, Waffen- oder Bauaktion im Spielfeld. Feuert beim Klick,
-// bevor die Aktion ausgefuehrt wird - fruehestmoeglicher fairer Startpunkt.
+// DE: Jede Werkzeug-, Waffen- oder Bauaktion im Spielfeld. Feuert beim Klick,
+// DE: bevor die Aktion ausgefuehrt wird - fruehestmoeglicher fairer Startpunkt.
+// EN: Any tool, weapon or building action in the play field. Fires on click,
+// EN: before the action is executed - the earliest fair starting point.
 api.hooks.intercept('action:intercept', payload => {
   if (!startsOnMouse()) return;
   if (!isArmed()) return;
-  if (!payload || !payload.action) return;   // Klick ohne aktives Werkzeug
+  if (!payload || !payload.action) return;   // DE: Klick ohne aktives Werkzeug / EN: click without an active tool
   startRun('Aktion');
 });
 
@@ -1425,8 +1742,10 @@ api.hooks.intercept('progression:purchase', () => {
   if (isArmed()) startRun('Forschen');
 });
 
-// Alles, was Fortschritt bedeutet, aber ohne eigenen Klick auslaufen kann -
-// etwa eine Drohne, die weitergraebt, oder ein eingesammeltes Artefakt.
+// DE: Alles, was Fortschritt bedeutet, aber ohne eigenen Klick auslaufen kann -
+// DE: etwa eine Drohne, die weitergraebt, oder ein eingesammeltes Artefakt.
+// EN: Anything that counts as progress but can play out without a click of
+// EN: your own - say, a drone that keeps digging, or a collected artifact.
 const START_EVENTS = [
   'terrain:destroyed',
   'structures:placed',
@@ -1450,14 +1769,21 @@ const startFromEvent = name => {
   if (isArmed()) startRun(name);
 };
 
-// --- Ausloeser fuer Zwischenzeiten ----------------------------------------
-// Bewusst getrennt von den Start-Ausloesern: das Ereignis, das den Lauf erst
-// startet, soll keine Zwischenzeit bei 00:00 erzeugen. Deshalb werden die
-// Split-Ausloeser ZUERST registriert - sie sehen den Lauf dann noch als nicht
-// gestartet und halten sich raus, und erst danach startet ihn der Listener
-// weiter unten.
-// build() liefert den Eintrag oder null - die Entscheidung, ob dieser eine
-// Ausloeser eingeschaltet ist, faellt dort, weil sie von der ID abhaengt.
+// --- DE: Ausloeser fuer Zwischenzeiten / EN: Triggers for splits ------------
+// DE: Bewusst getrennt von den Start-Ausloesern: das Ereignis, das den Lauf erst
+// DE: startet, soll keine Zwischenzeit bei 00:00 erzeugen. Deshalb werden die
+// DE: Split-Ausloeser ZUERST registriert - sie sehen den Lauf dann noch als nicht
+// DE: gestartet und halten sich raus, und erst danach startet ihn der Listener
+// DE: weiter unten.
+// DE: build() liefert den Eintrag oder null - die Entscheidung, ob dieser eine
+// DE: Ausloeser eingeschaltet ist, faellt dort, weil sie von der ID abhaengt.
+// EN: Deliberately kept separate from the start triggers: the event that
+// EN: first starts the run shouldn't also create a split at 00:00. That's
+// EN: why the split triggers are registered FIRST - they still see the run
+// EN: as not started yet and stay out of the way, and only afterwards does
+// EN: the listener further below start it.
+// EN: build() returns the entry or null - the decision whether this
+// EN: particular trigger is enabled happens there, since it depends on the ID.
 const trigger = (eventName, build) => {
   try {
     api.events.on(eventName, payload => {
@@ -1467,8 +1793,10 @@ const trigger = (eventName, build) => {
       try {
         entry = build(payload);
       } catch (e) {
-        // Nicht stillschweigend schlucken: ein kaputter Ausloeser wuerde sonst
-        // einfach nie feuern, ohne dass es jemand merkt.
+        // DE: Nicht stillschweigend schlucken: ein kaputter Ausloeser wuerde sonst
+        // DE: einfach nie feuern, ohne dass es jemand merkt.
+        // EN: Don't swallow this silently: a broken trigger would otherwise
+        // EN: simply never fire, without anyone noticing.
         log(`Ausloeser "${eventName}" fehlgeschlagen:`, e);
         return;
       }
@@ -1492,8 +1820,10 @@ trigger('factory:levelUp', payload => {
   return { kind: 'rank', label: t('mods|goldSpeedrun|split|rank', { level }) };
 });
 
-// Artifact ist 1; der Enum-Zugriff bleibt trotzdem der Normalweg, damit eine
-// spaetere Umnummerierung im Spiel mitgenommen wird.
+// DE: Artifact ist 1; der Enum-Zugriff bleibt trotzdem der Normalweg, damit eine
+// DE: spaetere Umnummerierung im Spiel mitgenommen wird.
+// EN: Artifact is 1; the enum lookup remains the normal path anyway, so a
+// EN: future renumbering in the game gets picked up automatically.
 const ARTIFACT_TYPE = (enums.WorldItemType && enums.WorldItemType.Artifact) !== undefined
   ? enums.WorldItemType.Artifact
   : 1;
@@ -1517,7 +1847,8 @@ trigger('upgrade:purchased', payload => {
   };
 });
 
-// Erst jetzt die Start-Ausloeser: siehe Reihenfolge-Hinweis oben.
+// DE: Erst jetzt die Start-Ausloeser: siehe Reihenfolge-Hinweis oben.
+// EN: Only now the start triggers: see the ordering note above.
 for (const name of START_EVENTS) {
   try {
     api.events.on(name, () => startFromEvent(name));
@@ -1526,32 +1857,45 @@ for (const name of START_EVENTS) {
   }
 }
 
-// --- Zielpruefung ---------------------------------------------------------
+// --- DE: Zielpruefung / EN: Goal check ---------------------------------------
 let lastWrite = -1;
 
-// Wird gesetzt, sobald ein Lauf endet, und vom Ergebnisfenster gelesen.
+// DE: Wird gesetzt, sobald ein Lauf endet, und vom Ergebnisfenster gelesen.
+// EN: Set as soon as a run ends, and read by the result screen.
 let resultDismissed = false;
 
 const finishRun = cat => {
-  // Beide Uhren werden im selben Moment abgelesen, bevor der Lauf als beendet
-  // markiert wird - danach zaehlt advanceClocks() nicht mehr weiter.
+  // DE: Alle drei Uhren werden im selben Moment abgelesen, bevor der Lauf als
+  // DE: beendet markiert wird - danach zaehlt advanceClocks() nicht mehr weiter.
+  // EN: All three clocks are read at the same instant, before the run is
+  // EN: marked finished - after that, advanceClocks() no longer keeps counting.
   const time = elapsed();
   const simTime = elapsedSim();
-  const deficit = simDeficit();
-  const quality = clockQuality();
+  const playTime = elapsedPlay();
+  const slowdown = slowdownPercent();
+  const deficit = tickDeficit();
 
-  // Das Ziel selbst ist die letzte Zwischenzeit - so steht es auch in der Tabelle.
+  // DE: Das Ziel selbst ist die letzte Zwischenzeit - so steht es auch in der Tabelle.
+  // EN: The goal itself is the last split - that's how it appears in the table too.
   const splits = readSplits();
   splits.push({
     kind: 'goal',
     label: t('mods|goldSpeedrun|split|goal'),
     t: time,
     sim: simTime,
+    w: playTime,
     gold: Math.floor(goldProgress()),
   });
   api.storage.set(NS, 'splits', splits);
+  // DE: Vor finishedAt schreiben: liveU()/elapsedPlay() frieren sich selbst ein,
+  // DE: sobald finishedAt gesetzt ist, und lesen dann genau diese beiden Werte.
+  // EN: Write these before finishedAt: liveU()/elapsedPlay() freeze themselves
+  // EN: as soon as finishedAt is set, and then read exactly these two values.
+  api.storage.set(NS, 'upsUFinal', liveU());
+  api.storage.set(NS, 'upsWFinal', playTime);
+  api.storage.set(NS, 'upsTickReady', rawTickSourceReady());
   api.storage.set(NS, 'finishedAt', now());
-
+  flushHistoryToSave();
 
   const fmt = timeFormat();
   api.ui.toast({ key: 'mods|goldSpeedrun|done', params: { time: formatTime(time, fmt) } });
@@ -1560,9 +1904,12 @@ const finishRun = cat => {
     log('Lauf beendet in', formatTime(time, 'millis'),
       '- ACHTUNG: Cheats wurden in diesem Spielstand benutzt, keine Bestzeit gespeichert.');
   } else if (runRulesBroken()) {
-    // Wer mitten im Lauf am Regelwerk dreht, misst nicht mehr dasselbe wie
-    // alle anderen unter diesem Schluessel. Die Zeit bleibt sichtbar, sie
-    // wird nur nicht abgelegt.
+    // DE: Wer mitten im Lauf am Regelwerk dreht, misst nicht mehr dasselbe wie
+    // DE: alle anderen unter diesem Schluessel. Die Zeit bleibt sichtbar, sie
+    // DE: wird nur nicht abgelegt.
+    // EN: Anyone who changes the ruleset mid-run is no longer measuring the
+    // EN: same thing as everyone else under this key. The time stays
+    // EN: visible, it just doesn't get saved.
     log('Lauf beendet in', formatTime(time, 'millis'),
       '- ACHTUNG: Regelwerk waehrend des Laufs verstellt, keine Bestzeit gespeichert.');
   } else {
@@ -1571,27 +1918,19 @@ const finishRun = cat => {
       api.storage.local.set(bestKey(), time);
       api.ui.toast({ key: 'mods|goldSpeedrun|newBest', params: { time: formatTime(time, fmt) } });
     }
-
-    // Die Simulationszeit wird getrennt gefuehrt. Auf schwacher Hardware ist
-    // sie die einzige Zahl, mit der zwei Laeufe vergleichbar sind - eine
-    // geschaetzte oder aus einer alten Version uebernommene zaehlt aber nicht.
-    if (quality.exact && !quality.legacy) {
-      const bestSim = readBest('sim');
-      if (bestSim === null || simTime < bestSim) {
-        api.storage.local.set(bestKey('sim'), simTime);
-      }
-    }
   }
 
   resultDismissed = false;
 
-  // Fuer Nachweis und Stream-Overlay: Kategorie, Endzeit, Splits und die
-  // Mod-Liste des Spielstands in einem Block im Log.
+  // DE: Fuer Nachweis und Stream-Overlay: Kategorie, Endzeit, Splits und die
+  // DE: Mod-Liste des Spielstands in einem Block im Log.
+  // EN: For verification and stream overlays: category, final time, splits
+  // EN: and the save file's mod list, all in one log block.
   let mods = [];
   try {
     const entry = sandkit.state.store.mods['__sandkitExternalRuntimeV1'];
     if (entry && Array.isArray(entry.order)) mods = entry.order.map(m => `${m.id}@${m.version}`);
-  } catch (e) { /* keine Mod-Liste im Spielstand */ }
+  } catch (e) { /* DE: keine Mod-Liste im Spielstand / EN: no mod list in this save */ }
 
   log('Lauf beendet', {
     category: categoryLabel(),
@@ -1599,11 +1938,14 @@ const finishRun = cat => {
     timeMs: time,
     simTime: formatTime(simTime, 'millis'),
     simTimeMs: simTime,
-    // Wieviel Prozent der Echtzeit die Simulation nicht mitgekommen ist.
-    simDeficitPercent: Math.round(deficit * 10) / 10,
-    // exact: aus dem Schrittzaehler der Simulation. Sonst geschaetzt und
-    // damit nicht als Bestzeit verwertbar.
-    simClock: quality.legacy ? 'legacy' : quality.exact ? 'exact' : 'estimated',
+    playTimeMs: playTime,
+    // DE: (T/R - 1) * 100: negativ heisst "die Welt ist hinterher".
+    // EN: (T/R - 1) * 100: negative means "the world is behind".
+    slowdownPercent: Math.round(slowdown * 100) / 100,
+    // DE: Schritte, die einer idealen 60-UPS-Maschine gefehlt haben.
+    // EN: Steps a perfect 60-UPS machine would have been missing.
+    tickDeficit: Math.round(deficit),
+    tickSourceReady: tickSourceReady(),
     splits: splits.map(s =>
       `${formatTime(s.t, 'millis')}  (sim ${formatTime(Number.isFinite(s.sim) ? s.sim : s.t, 'millis')})  ${s.label}  ${s.gold} Gold`),
     cheatsUsed: cheatsUsed(),
@@ -1614,14 +1956,15 @@ const finishRun = cat => {
 const checkGoal = () => {
   const run = readRun();
   if (typeof run.startedAt !== 'number') return;
-  if (typeof run.finishedAt === 'number') return; // schon durch
+  if (typeof run.finishedAt === 'number') return; // DE: schon durch / EN: already finished
 
   const cat = category();
-  if (cat.target <= 0) return;                    // Ziel noch unbekannt
+  if (cat.target <= 0) return;                    // DE: Ziel noch unbekannt / EN: goal not known yet
 
   const current = progressOf(cat);
 
-  // Gold-Marken unterwegs.
+  // DE: Gold-Marken unterwegs.
+  // EN: Gold marks along the way.
   const marks = currentGoldMarks(cat);
   if (marks.length > 0) {
     let index = api.storage.get(NS, 'goldMarkIndex');
@@ -1629,7 +1972,8 @@ const checkGoal = () => {
     const gold = goldProgress();
     let moved = false;
     while (index < marks.length && gold >= marks[index].value) {
-      // Abgewaehlte Marken werden nur uebersprungen, nicht neu geprueft.
+      // DE: Abgewaehlte Marken werden nur uebersprungen, nicht neu geprueft.
+      // EN: Deselected marks are only skipped, not re-checked.
       if (triggerEnabled('gold', marks[index].value, true)) {
         addSplit('gold', marks[index].label);
       }
@@ -1643,45 +1987,65 @@ const checkGoal = () => {
 };
 
 api.events.on('frame:render', () => {
-  // Vor allem anderen und vor der Pruefung auf den Schalter der Mod-Verwaltung:
-  // advanceClocks() rechnet mit dem Abstand zum letzten Aufruf, ein
-  // uebersprungener Frame wuerde diesen Abstand aufblaehen.
+  // DE: Vor allem anderen und vor der Pruefung auf den Schalter der Mod-Verwaltung:
+  // DE: advanceClocks() rechnet mit dem Abstand zum letzten Aufruf, ein
+  // DE: uebersprungener Frame wuerde diesen Abstand aufblaehen.
+  // EN: Before anything else, and before checking the mod-manager switch:
+  // EN: advanceClocks() works off the gap since the last call, and a skipped
+  // EN: frame would inflate that gap.
   advanceClocks();
 
   if (!modEnabled()) return;
 
-  // Jeden Frame messen, damit kurz aufeinander folgendes Einnehmen und Ausgeben
-  // nicht durch das Raster faellt. Kostet nur einen Zahlenvergleich.
+  // DE: Jeden Frame messen, damit kurz aufeinander folgendes Einnehmen und Ausgeben
+  // DE: nicht durch das Raster faellt. Kostet nur einen Zahlenvergleich.
+  // EN: Sampled every frame so quick back-to-back earning and spending
+  // EN: doesn't fall through the cracks. Costs only a number comparison.
   if (goldMode() === 'earned') sampleEarned();
 
   const stamp = now();
 
-  // Jeden Frame pruefen: nur so stimmt die Endzeit auf die Millisekunde.
+  // DE: Jeden Frame pruefen: nur so stimmt die Endzeit auf die Millisekunde.
+  // EN: Checked every frame: only this way is the final time accurate to the millisecond.
   checkGoal();
 
-  // Solange der Lauf laeuft, darf sich am Regelwerk nichts mehr aendern.
-  // rulesetStatus() haelt sein Ergebnis kurz fest, das kostet also nichts.
+  // DE: Gedrosselt: der Verlauf braucht nicht jeden Frame ins Savegame.
+  // EN: Throttled: the history doesn't need to go into the save every frame.
+  maybeFlushHistory();
+
+  // DE: Solange der Lauf laeuft, darf sich am Regelwerk nichts mehr aendern.
+  // DE: rulesetStatus() haelt sein Ergebnis kurz fest, das kostet also nichts.
+  // EN: While the run is going, nothing about the ruleset may change anymore.
+  // EN: rulesetStatus() caches its result briefly, so this costs nothing.
   if (isRunning() && runIsOfficial() && !rulesetStatus().ok) dropOfficial();
 
-  // Laufsumme gedrosselt in den Spielstand schreiben.
+  // DE: Laufsumme gedrosselt in den Spielstand schreiben.
+  // EN: Write the running total to the save, throttled.
   if (stamp - lastWrite < 500) return;
   lastWrite = stamp;
 
-  // Doppelter Boden fuer den Fall, dass eine Aenderung ohne onChange kommt.
+  // DE: Doppelter Boden fuer den Fall, dass eine Aenderung ohne onChange kommt.
+  // EN: A safety net in case a change arrives without an onChange event.
   if (syncOfficialSettings()) refreshSettingsUi();
 
   if (earnedTotal !== null) api.storage.set(NS, 'earned', earnedTotal);
 });
 
-// Die Uhren haengen nicht am Bild. requestAnimationFrame steht still, sobald
-// das Fenster in den Hintergrund geht - eine Stoppuhr tut das nicht, und ein
-// Lauf soll sich nicht durch Alt+Tab anhalten lassen. Ein eigener Takt haelt
-// sie deshalb auch dann in Gang; angehalten wird nur, wenn das Spiel selbst
-// pausiert. Doppelt gerufen zu werden macht advanceClocks() nichts aus, es
-// rechnet immer mit dem Abstand zum letzten Aufruf.
+// DE: Die Uhren haengen nicht am Bild. requestAnimationFrame steht still, sobald
+// DE: das Fenster in den Hintergrund geht - eine Stoppuhr tut das nicht, und ein
+// DE: Lauf soll sich nicht durch Alt+Tab anhalten lassen. Ein eigener Takt haelt
+// DE: sie deshalb auch dann in Gang; angehalten wird nur, wenn das Spiel selbst
+// DE: pausiert. Doppelt gerufen zu werden macht advanceClocks() nichts aus, es
+// DE: rechnet immer mit dem Abstand zum letzten Aufruf.
+// EN: The clocks don't depend on the screen. requestAnimationFrame stops the
+// EN: moment the window goes to the background - a stopwatch doesn't, and a
+// EN: run shouldn't be pausable via Alt+Tab. A dedicated interval keeps them
+// EN: going even then; the only thing that pauses them is the game itself
+// EN: pausing. Being called twice doesn't bother advanceClocks(), it always
+// EN: works off the gap since the last call.
 setInterval(advanceClocks, 50);
 
-// --- Farben ---------------------------------------------------------------
+// --- DE: Farben / EN: Colors -------------------------------------------------
 const COLORS = {
   text: '#e6edf3',
   dim: '#93a1b1',
@@ -1703,9 +2067,11 @@ const KIND_COLOR = {
   goal: '#f0c040',
 };
 
-// --- HUD ------------------------------------------------------------------
-// Oben rechts sitzt die Missionsziel-/Fabrikrang-Leiste des Spiels, oben links
-// der Goldzaehler. Standard ist deshalb oben mittig - dort ist Platz.
+// --- DE: HUD / EN: HUD -------------------------------------------------------
+// DE: Oben rechts sitzt die Missionsziel-/Fabrikrang-Leiste des Spiels, oben links
+// DE: der Goldzaehler. Standard ist deshalb oben mittig - dort ist Platz.
+// EN: The game's mission-goal/factory-rank bar sits top right, the gold
+// EN: counter top left. So the default is top centre - there's room there.
 const CORNERS = {
   topCenter: { top: '14px', left: '50%', transform: 'translateX(-50%)' },
   topLeft: { top: '96px', left: '16px' },
@@ -1714,8 +2080,10 @@ const CORNERS = {
   bottomRight: { bottom: '96px', right: '16px' },
 };
 
-// Millisekunden brauchen jeden Frame, Sekunden nicht. Der Takt richtet sich
-// deshalb nach dem gewaehlten Format.
+// DE: Millisekunden brauchen jeden Frame, Sekunden nicht. Der Takt richtet sich
+// DE: deshalb nach dem gewaehlten Format.
+// EN: Milliseconds need every frame, seconds don't. The refresh rate is
+// EN: therefore based on the chosen format.
 const HUD_INTERVAL = { seconds: 250, centis: 50, millis: 16 };
 
 const HUD_SPLIT_ROWS = 6;
@@ -1728,8 +2096,10 @@ const useTick = fmt => {
   }, [fmt]);
 };
 
-// Eine Zeile der Split-Tabelle. Im HUD schmal, im Ergebnisfenster mit
-// Abschnittszeit und Goldzuwachs.
+// DE: Eine Zeile der Split-Tabelle. Im HUD schmal, im Ergebnisfenster mit
+// DE: Abschnittszeit und Goldzuwachs.
+// EN: One row of the split table. Narrow in the HUD, with segment time and
+// EN: gold gain in the result screen.
 function SplitRow({ split, previous, fmt, wide }) {
   const segment = split.t - (previous ? previous.t : 0);
   const goldGain = split.gold - (previous ? previous.gold : 0);
@@ -1755,9 +2125,12 @@ function SplitRow({ split, previous, fmt, wide }) {
           color: COLORS.dim, minWidth: '72px', textAlign: 'right',
         })
       : null,
-    // Absolute Zeit immer vollstaendig: Stunden, Minuten, Sekunden,
-    // Millisekunden. Nur die Abschnittsdauer daneben wird gekuerzt, dort ist
-    // ein fuehrendes "00:" nur Rauschen.
+    // DE: Absolute Zeit immer vollstaendig: Stunden, Minuten, Sekunden,
+    // DE: Millisekunden. Nur die Abschnittsdauer daneben wird gekuerzt, dort ist
+    // DE: ein fuehrendes "00:" nur Rauschen.
+    // EN: The absolute time is always shown in full: hours, minutes, seconds,
+    // EN: milliseconds. Only the segment duration next to it is shortened -
+    // EN: there, a leading "00:" is just noise.
     cell('time', formatTime(split.t, fmt), {
       minWidth: wide ? '104px' : '92px', textAlign: 'right',
     }),
@@ -1780,6 +2153,222 @@ function SplitTable({ splits, fmt, wide }) {
     })));
 }
 
+// --- DE: Verlauf: UPS ueber die Zeit / EN: History: UPS over time ----------
+// DE: Zwei getrennte Zwecke mit sehr unterschiedlichen Kosten:
+//   - die 60-Sekunden-Live-Grafik im HUD lebt nur im Speicher, ohne Save-Impact.
+//   - der Verlauf ueber den ganzen Lauf wandert (nur bei eingeschalteter
+//     Option) als Min/Max/Mittel-Eimer von 1 Sekunde ins Savegame.
+// DE: Beides wird ausschliesslich im Hauptthread aus dem ohnehin vorhandenen
+// DE: Schrittzaehler abgeleitet - kein zusaetzlicher Simulations-Aufwand, egal ob
+// DE: die Optionen an sind oder nicht.
+//
+// EN: Two separate purposes with very different costs:
+//   - the 60-second live graph in the HUD only lives in memory, no save impact.
+//   - the history over the whole run travels into the save file (only when
+//     the option is enabled) as 1-second min/max/average buckets.
+// EN: Both are derived purely on the main thread from the step counter that
+// EN: already exists anyway - no extra simulation cost, whether the options
+// EN: are on or off.
+const HISTORY_SAMPLE_MS = 100;     // DE: 10 Hz Abtastung im Hauptthread / EN: 10 Hz sampling on the main thread
+const HISTORY_BUCKET_MS = 1000;    // DE: 1 Hz gespeicherte Eimer / EN: 1 Hz stored buckets
+const HISTORY_MAX_BUCKETS = 5000;  // DE: ab hier je zwei Eimer zu einem verschmelzen / EN: beyond this, merge two buckets into one
+const SPARKLINE_WINDOW_MS = 60000; // DE: Live-Grafik: letzte 60 Sekunden / EN: live graph: last 60 seconds
+
+let sparklineRing = [];       // DE: { atMs, ups }[] - letzte 60 s, nur im Speicher / EN: { atMs, ups }[] - last 60 s, memory only
+let bucketAccum = null;       // DE: laufender 1-Hz-Eimer / EN: running 1 Hz bucket
+let historyBuf = [];          // DE: { min, max, avg }[] - kompletter Lauf / EN: { min, max, avg }[] - the whole run
+let lastHistorySample = null; // DE: { tick, atMs } fuer die Momentan-UPS / EN: { tick, atMs } for the instantaneous UPS
+
+const trackHistoryEnabled = () => api.settings.get('trackUpsHistory') === true;
+const liveSparklineEnabled = () => api.settings.get('showLiveSparkline') === true;
+
+const loadHistoryFromSave = () => {
+  const v = api.storage.get(NS, 'upsHistory');
+  historyBuf = Array.isArray(v) ? v.filter(b => b && Number.isFinite(b.avg)) : [];
+  bucketAccum = null;
+};
+
+const flushHistoryToSave = () => {
+  api.storage.set(NS, 'upsHistory', historyBuf);
+};
+
+const resetHistory = () => {
+  sparklineRing = [];
+  bucketAccum = null;
+  historyBuf = [];
+  lastHistorySample = null;
+  api.storage.set(NS, 'upsHistory', []);
+};
+
+// DE: Haelt sehr lange Laeufe im Rahmen: benachbarte Eimer paarweise
+// DE: zusammenfassen, die Aufloesung halbiert sich dabei.
+// EN: Keeps very long runs within bounds: merges adjacent buckets in pairs,
+// EN: which halves the resolution.
+const downsampleHistory = () => {
+  const merged = [];
+  for (let i = 0; i < historyBuf.length - 1; i += 2) {
+    const a = historyBuf[i];
+    const b = historyBuf[i + 1];
+    merged.push({
+      min: Math.min(a.min, b.min),
+      max: Math.max(a.max, b.max),
+      avg: Math.round(((a.avg + b.avg) / 2) * 10) / 10,
+    });
+  }
+  if (historyBuf.length % 2 === 1) merged.push(historyBuf[historyBuf.length - 1]);
+  historyBuf = merged;
+};
+
+const sampleHistoryTick = () => {
+  if (!isRunning() || gamePaused() || !tickSourceReady()) { lastHistorySample = null; return; }
+  const wantSparkline = liveSparklineEnabled();
+  const wantHistory = trackHistoryEnabled();
+  if (!wantSparkline && !wantHistory) { lastHistorySample = null; return; }
+
+  const atMs = performance.now();
+  const tick = rawTick();
+
+  if (lastHistorySample) {
+    const dtMs = atMs - lastHistorySample.atMs;
+    const dTick = tick - lastHistorySample.tick;
+    if (dtMs > 0 && dTick >= 0) {
+      const ups = Math.min(120, (dTick / dtMs) * 1000);
+
+      if (wantSparkline) {
+        sparklineRing.push({ atMs, ups });
+        const cutoff = atMs - SPARKLINE_WINDOW_MS;
+        while (sparklineRing.length > 0 && sparklineRing[0].atMs < cutoff) sparklineRing.shift();
+      }
+
+      if (wantHistory) {
+        if (!bucketAccum) {
+          bucketAccum = { startMs: atMs, min: ups, max: ups, sum: ups, n: 1 };
+        } else {
+          if (ups < bucketAccum.min) bucketAccum.min = ups;
+          if (ups > bucketAccum.max) bucketAccum.max = ups;
+          bucketAccum.sum += ups;
+          bucketAccum.n += 1;
+        }
+        if (atMs - bucketAccum.startMs >= HISTORY_BUCKET_MS) {
+          historyBuf.push({
+            min: Math.round(bucketAccum.min * 10) / 10,
+            max: Math.round(bucketAccum.max * 10) / 10,
+            avg: Math.round((bucketAccum.sum / bucketAccum.n) * 10) / 10,
+          });
+          bucketAccum = null;
+          if (historyBuf.length > HISTORY_MAX_BUCKETS) downsampleHistory();
+        }
+      }
+    }
+  }
+  lastHistorySample = { tick, atMs };
+};
+
+setInterval(sampleHistoryTick, HISTORY_SAMPLE_MS);
+
+let lastHistoryFlush = 0;
+const maybeFlushHistory = () => {
+  if (!trackHistoryEnabled()) return;
+  const stamp = Date.now();
+  if (stamp - lastHistoryFlush < 1000) return;
+  lastHistoryFlush = stamp;
+  flushHistoryToSave();
+};
+
+// DE: Reduziert eine Punktreihe auf eine feste Spaltenzahl fuer die Grafik - jede
+// DE: Spalte behaelt Minimum, Maximum und Mittel ihres Abschnitts, damit kurze
+// DE: Ausreisser (Ruckler) nicht in einem Durchschnitt verschwinden.
+// EN: Reduces a series of points to a fixed number of columns for the graph -
+// EN: each column keeps the minimum, maximum and average of its segment, so
+// EN: brief outliers (stutters) don't vanish inside an average.
+const downsampleToColumns = (items, cols, toStats) => {
+  if (!items || items.length === 0) return [];
+  const per = items.length / cols;
+  const out = [];
+  for (let c = 0; c < cols; c++) {
+    const start = Math.floor(c * per);
+    const end = Math.max(start + 1, Math.floor((c + 1) * per));
+    let min = Infinity, max = -Infinity, sum = 0, n = 0;
+    for (let i = start; i < end && i < items.length; i++) {
+      const v = toStats(items[i]);
+      if (v.min < min) min = v.min;
+      if (v.max > max) max = v.max;
+      sum += v.avg;
+      n++;
+    }
+    if (n === 0) continue;
+    out.push({ min, max, avg: sum / n });
+  }
+  return out;
+};
+
+const bucketStats = b => b;
+const ringStats = p => ({ min: p.ups, max: p.ups, avg: p.ups });
+
+// DE: Min/Max-Umschlag ueber UPS 0-60 mit gestrichelter 60er-Referenzlinie. Divs
+// DE: statt Canvas/SVG - genuegt fuer ein paar Dutzend bis anderthalbhundert
+// DE: Spalten und braucht keine zusaetzliche Zeichenflaeche.
+// EN: Min/max envelope over UPS 0-60 with a dashed reference line at 60.
+// EN: Divs instead of Canvas/SVG - good enough for a few dozen up to about a
+// EN: hundred and fifty columns, and needs no extra drawing surface.
+function UpsEnvelopeGraph({ columns, height }) {
+  const H = height || 90;
+  if (!columns || columns.length === 0) {
+    return h('div', {
+      style: {
+        height: `${H}px`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: COLORS.dim, fontSize: '11px', textAlign: 'center', padding: '0 12px',
+      },
+    }, t('mods|goldSpeedrun|graph|empty'));
+  }
+  const wPct = 100 / columns.length;
+  const bars = columns.map((c, i) => {
+    const minPct = Math.max(0, Math.min(100, (c.min / TICK_HZ) * 100));
+    const maxPct = Math.max(minPct + 0.6, Math.min(100, (c.max / TICK_HZ) * 100));
+    const color = c.avg >= TICK_HZ - 1 ? COLORS.green : c.avg >= TICK_HZ * 0.85 ? COLORS.gold : COLORS.red;
+    return h('div', {
+      key: i,
+      style: {
+        position: 'absolute', left: `${i * wPct}%`, width: `${Math.max(wPct, 0.6)}%`,
+        bottom: `${minPct}%`, height: `${maxPct - minPct}%`,
+        background: color, opacity: 0.85,
+      },
+    });
+  });
+  return h('div', {
+    style: {
+      position: 'relative', height: `${H}px`,
+      background: 'rgba(255,255,255,0.03)', borderRadius: '4px', overflow: 'hidden',
+    },
+  }, [
+    ...bars,
+    h('div', {
+      key: 'ref',
+      style: { position: 'absolute', left: 0, right: 0, top: 0, borderTop: `1px dashed ${COLORS.dim}`, opacity: 0.5 },
+    }),
+    h('div', {
+      key: 'refLabel',
+      style: { position: 'absolute', right: '3px', top: '1px', fontSize: '9px', color: COLORS.dim },
+    }, String(TICK_HZ)),
+  ]);
+}
+
+// DE: Kleine Metrik-Zeile fuer den erweiterten Block: Beschriftung links, Wert
+// DE: rechts, beides klein und gedaempft.
+// EN: Small metric row for the advanced block: label on the left, value on
+// EN: the right, both small and muted.
+function MetricLine({ label, value, color }) {
+  return h('div', {
+    style: {
+      display: 'flex', justifyContent: 'space-between', gap: '10px',
+      fontSize: '11px', color: COLORS.dim,
+    },
+  }, [
+    h('span', { key: 'l' }, label),
+    h('span', { key: 'v', style: { color: color || COLORS.text, fontVariantNumeric: 'tabular-nums' } }, value),
+  ]);
+}
+
 function SpeedrunHud() {
   const fmt = timeFormat();
   useTick(fmt);
@@ -1797,18 +2386,26 @@ function SpeedrunHud() {
   const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
   const corner = CORNERS[api.settings.get('corner')] || CORNERS.topCenter;
   const mode = clockMode();
-  const rtaTime = elapsed();
+  const rTime = elapsed();
   const simTime = elapsedSim();
-  const deficit = simDeficit();
-  // Die Bestzeit gehoert zu der Uhr, die gross im Bild steht.
-  const best = readBest(mode === 'sim' ? 'sim' : undefined);
+  const playTime = elapsedPlay();
+  const slowdown = slowdownPercent();
+  const deficit = tickDeficit();
+  const ready = tickSourceReady();
+  const advanced = api.settings.get('showAdvancedMetrics') === true;
+  const sparkline = liveSparklineEnabled();
+  // DE: Die Bestzeit ist immer die Echtzeit - unabhaengig von der gross gezeigten Uhr.
+  // EN: The best time is always real time - regardless of which clock is shown large.
+  const best = readBest();
   const tainted = cheatsUsed();
   const rules = showRuleset() ? rulesetView() : null;
 
   const allSplits = readSplits();
   const showSplits = api.settings.get('showSplits') !== false && allSplits.length > 0;
-  // Im laufenden Betrieb nur die letzten Zeilen - sonst waechst der Kasten
-  // ueber den halben Bildschirm. Die ganze Tabelle steht im Ergebnisfenster.
+  // DE: Im laufenden Betrieb nur die letzten Zeilen - sonst waechst der Kasten
+  // DE: ueber den halben Bildschirm. Die ganze Tabelle steht im Ergebnisfenster.
+  // EN: Only the last rows while running - otherwise the box would grow over
+  // EN: half the screen. The full table is in the result screen.
   const visible = allSplits.slice(-HUD_SPLIT_ROWS);
   const firstVisible = allSplits.length - visible.length;
 
@@ -1824,11 +2421,21 @@ function SpeedrunHud() {
     progressText = `${formatGold(current)} / ${formatGold(target)}`;
   }
 
+  const headlineMs = mode === 'sim' ? simTime : mode === 'play' ? playTime : rTime;
+  const headlineText = waiting ? dashTime(fmt) : formatTime(headlineMs, fmt);
+  const otherClock = kind => {
+    const ms = kind === 'sim' ? simTime : kind === 'play' ? playTime : rTime;
+    const shortKey = kind === 'sim' ? 'mods|goldSpeedrun|clock|simShort'
+      : kind === 'play' ? 'mods|goldSpeedrun|clock|playShort' : 'mods|goldSpeedrun|clock|realShort';
+    return `${t(shortKey)} ${waiting ? dashTime(fmt) : formatTime(ms, fmt)}`;
+  };
+  const otherClocks = ['real', 'sim', 'play'].filter(k => k !== mode);
+
   const box = {
     position: 'absolute',
     ...corner,
     minWidth: fmt === 'seconds' ? '210px' : '235px',
-    maxWidth: '300px',
+    maxWidth: '320px',
     padding: '8px 10px',
     borderRadius: '6px',
     border: `1px solid ${tainted ? COLORS.red : done ? COLORS.gold : waiting ? COLORS.border : '#5a6472'}`,
@@ -1837,8 +2444,10 @@ function SpeedrunHud() {
     color: COLORS.text,
     font: '500 13px/1.35 system-ui, sans-serif',
     pointerEvents: 'none',
-    // Ueber der Tutorial-Box (die liegt auf 10006) - sonst verdeckt sie den
-    // Timer genau dort, wo er standardmaessig sitzt.
+    // DE: Ueber der Tutorial-Box (die liegt auf 10006) - sonst verdeckt sie den
+    // DE: Timer genau dort, wo er standardmaessig sitzt.
+    // EN: Above the tutorial box (which sits at 10006) - otherwise it would
+    // EN: cover the timer exactly where it sits by default.
     zIndex: 10010,
   };
 
@@ -1850,22 +2459,74 @@ function SpeedrunHud() {
         color: done ? COLORS.gold : waiting ? COLORS.dim : COLORS.text,
         fontVariantNumeric: 'tabular-nums',
       },
-    }, formatTime(mode === 'sim' ? simTime : rtaTime, fmt)),
+    }, headlineText),
 
-    // Die zweite Uhr, klein darunter. Bei 60 UPS steht dieselbe Zahl da wie
-    // oben; faellt die Simulation zurueck, zeigt der Prozentsatz, wieviel der
-    // Echtzeit ohne Fortschritt in der Welt verstrichen ist.
-    mode === 'both' && !waiting
+    // DE: Die beiden anderen Uhren, klein darunter - immer beide, unabhaengig
+    // DE: davon, welche gross im Bild steht.
+    // EN: The other two clocks, small underneath - always both, regardless
+    // EN: of which one stands large on screen.
+    !waiting
       ? h('div', {
-          key: 'sim',
+          key: 'others',
           style: {
-            marginTop: '1px',
-            font: '600 12px/1.2 system-ui, sans-serif',
-            color: deficit >= 5 ? COLORS.gold : COLORS.dim,
+            marginTop: '1px', display: 'flex', gap: '10px',
+            font: '600 11px/1.2 system-ui, sans-serif', color: COLORS.dim,
             fontVariantNumeric: 'tabular-nums',
           },
-        }, `${t('mods|goldSpeedrun|clock|simShort')} ${formatTime(simTime, fmt)}`
-           + (deficit >= 1 ? `  -${deficit.toFixed(0)}%` : ''))
+        }, otherClocks.map(k => h('span', { key: k }, otherClock(k))))
+      : null,
+
+    // DE: Immer sichtbar: Verzoegerung und Schritt-Rueckstand. Kein Ausschalten -
+    // DE: das war explizit die Vorgabe, verlorene UPS sollen nie unter den Tisch
+    // DE: fallen koennen.
+    // EN: Always visible: slowdown and tick deficit. No way to turn them off -
+    // EN: that was explicitly the requirement, lost UPS should never be
+    // EN: allowed to disappear from view.
+    h('div', {
+      key: 'always',
+      style: {
+        marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '1px',
+        fontSize: '11px', fontVariantNumeric: 'tabular-nums',
+      },
+    }, [
+      h(MetricLine, {
+        key: 'slow',
+        label: t('mods|goldSpeedrun|metric|slowdown'),
+        value: waiting || !ready ? '—' : `${fmtSigned(slowdown, 2)}%`,
+        color: waiting || !ready ? COLORS.dim : slowdown <= -5 ? COLORS.red : slowdown <= -1 ? COLORS.gold : COLORS.green,
+      }),
+      h(MetricLine, {
+        key: 'deficit',
+        label: t('mods|goldSpeedrun|metric|deficit'),
+        value: waiting || !ready
+          ? '—'
+          : `${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s)`,
+        color: waiting || !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green,
+      }),
+    ]),
+
+    advanced && !waiting
+      ? h('div', {
+          key: 'advanced',
+          style: {
+            marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.08)',
+            display: 'flex', flexDirection: 'column', gap: '1px',
+          },
+        }, [
+          h(MetricLine, { key: 'u', label: t('mods|goldSpeedrun|metric|ticks'), value: ready ? api.i18n.formatNumber(liveU()) : '—' }),
+          h(MetricLine, { key: 'avg', label: t('mods|goldSpeedrun|metric|avgUps'), value: ready ? avgUps().toFixed(1) : '—' }),
+          h(MetricLine, { key: 'ideal', label: t('mods|goldSpeedrun|metric|idealTicks'), value: api.i18n.formatNumber(Math.round(idealTicks())) }),
+          h(MetricLine, { key: 'mult', label: t('mods|goldSpeedrun|metric|thinkMult'), value: ready ? `${thinkingMultiplier().toFixed(2)}×` : '—' }),
+          h(MetricLine, { key: 'wr', label: t('mods|goldSpeedrun|metric|wrProbe'), value: `${fmtSigned(wMinusR(), 0)} ms` }),
+        ])
+      : null,
+
+    sparkline && !waiting
+      ? h('div', { key: 'spark', style: { marginTop: '5px' } },
+          h(UpsEnvelopeGraph, {
+            columns: downsampleToColumns(sparklineRing, 40, ringStats),
+            height: 26,
+          }))
       : null,
 
     h('div', { key: 'goal', style: { marginTop: '4px', opacity: 0.85 } },
@@ -1911,8 +2572,9 @@ function SpeedrunHud() {
         ])
       : null,
 
-    // Fusszeile: welche Kategorie gilt (wichtig fuer Zuschauer), die Bestzeit
-    // und die Bestzeit.
+    // DE: Fusszeile: welche Kategorie gilt (wichtig fuer Zuschauer), die Bestzeit
+    // DE: und die Bestzeit.
+    // EN: Footer: which category applies (important for viewers), and the personal best.
     h('div', {
       key: 'foot',
       style: {
@@ -1924,9 +2586,12 @@ function SpeedrunHud() {
       best !== null ? h('span', { key: 'pb' }, `PB ${formatTime(best, fmt)}`) : null,
     ]),
 
-    // Regelwerk-Abzeichen: gruen, sobald alle vier Vorgaben der offiziellen
-    // Kategorien stimmen - sonst der dezente Hinweis, dass eigene Regeln
-    // gelten. Damit sieht auch ein Zuschauer sofort, woran er ist.
+    // DE: Regelwerk-Abzeichen: gruen, sobald alle vier Vorgaben der offiziellen
+    // DE: Kategorien stimmen - sonst der dezente Hinweis, dass eigene Regeln
+    // DE: gelten. Damit sieht auch ein Zuschauer sofort, woran er ist.
+    // EN: Ruleset badge: green as soon as all four official-category
+    // EN: requirements are met - otherwise a subtle note that custom rules
+    // EN: apply. That way even a viewer instantly knows where they stand.
     rules
       ? h('div', {
           key: 'rules',
@@ -1955,23 +2620,27 @@ function SpeedrunHud() {
 
 api.ui.inject('hud', SpeedrunHud);
 
-// --- Ergebnisfenster ------------------------------------------------------
-// Erscheint, sobald ein Lauf endet, und zeigt die vollstaendige Tabelle mit
-// Abschnittszeiten und Goldstand. F10 holt es zurueck.
+// --- DE: Ergebnisfenster / EN: Result screen ---------------------------------
+// DE: Erscheint, sobald ein Lauf endet, und zeigt die vollstaendige Tabelle mit
+// DE: Abschnittszeiten und Goldstand. F10 holt es zurueck.
+// EN: Appears as soon as a run ends, and shows the full table with segment
+// EN: times and gold total. F10 brings it back.
 const resultListeners = new Set();
 const notifyResult = () => resultListeners.forEach(fn => {
-  try { fn(); } catch (e) { /* ignorieren */ }
+  try { fn(); } catch (e) { /* DE: ignorieren / EN: ignore */ }
 });
 
 const setResultDismissed = v => { resultDismissed = !!v; notifyResult(); };
 
 function ResultScreen() {
   const [, bump] = react.useState(0);
+  const [expanded, setExpanded] = react.useState(false);
 
   react.useEffect(() => {
     const fn = () => bump(n => (n + 1) % 100000);
     resultListeners.add(fn);
-    // Der Lauf kann jederzeit enden, ohne dass jemand klickt - also nachsehen.
+    // DE: Der Lauf kann jederzeit enden, ohne dass jemand klickt - also nachsehen.
+    // EN: The run can end at any time without anyone clicking anything - so check periodically.
     const id = setInterval(fn, 300);
     return () => { resultListeners.delete(fn); clearInterval(id); };
   }, []);
@@ -1985,14 +2654,14 @@ function ResultScreen() {
   const fmt = timeFormat();
   const total = elapsed();
   const totalSim = elapsedSim();
-  const deficit = simDeficit();
-  const quality = clockQuality();
+  const totalPlay = elapsedPlay();
+  const slowdown = slowdownPercent();
+  const deficit = tickDeficit();
+  const ready = tickSourceReady();
   const splits = readSplits();
   const best = readBest();
-  const bestSim = readBest('sim');
   const tainted = cheatsUsed();
   const delta = best !== null ? total - best : null;
-  const deltaSim = bestSim !== null ? totalSim - bestSim : null;
   const rules = showRuleset() ? rulesetView() : null;
 
   const line = (label, value, color) => h('div', {
@@ -2012,7 +2681,7 @@ function ResultScreen() {
   return h('div', {
     style: {
       position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-      width: '460px', maxWidth: '92vw', maxHeight: '82vh',
+      width: expanded ? '560px' : '460px', maxWidth: '92vw', maxHeight: '86vh',
       display: 'flex', flexDirection: 'column',
       padding: '16px 18px',
       borderRadius: '8px',
@@ -2057,34 +2726,80 @@ function ResultScreen() {
           best === null ? COLORS.dim : delta <= 0 ? COLORS.green : COLORS.red,
         )),
 
-      // Die Simulationszeit steht immer mit im Ergebnis, auch wenn im Bild
-      // nur die Echtzeit lief - sie ist die Zahl, mit der sich der Lauf mit
-      // einem auf anderer Hardware vergleichen laesst.
-      h('div', { key: 'sim' },
-        line(
-          t('mods|goldSpeedrun|result|sim'),
-          `${formatTime(totalSim, fmt)}`
-            + (deficit >= 1 ? `  (-${deficit.toFixed(1)}%)` : '')
-            + (deltaSim !== null
-                ? `  ${deltaSim <= 0 ? '-' : '+'}${formatShort(Math.abs(deltaSim), fmt)}`
-                : ''),
-          COLORS.text,
-        )),
+      // DE: Verzoegerung und Schritt-Rueckstand stehen immer mit im Ergebnis,
+      // DE: klein und ohne Umschalter - dieselbe Vorgabe wie im HUD.
+      // EN: Slowdown and tick deficit always appear in the result, small and
+      // EN: with no way to turn them off - the same requirement as in the HUD.
+      h('div', {
+        key: 'metrics',
+        style: {
+          marginTop: '3px', display: 'flex', gap: '16px',
+          fontSize: '11px', color: COLORS.dim, fontVariantNumeric: 'tabular-nums',
+        },
+      }, [
+        h('span', { key: 'slow' },
+          `${t('mods|goldSpeedrun|metric|slowdown')}: ${ready ? `${fmtSigned(slowdown, 2)}%` : '—'}`),
+        h('span', { key: 'deficit' },
+          `${t('mods|goldSpeedrun|metric|deficit')}: ${ready ? `${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s)` : '—'}`),
+      ]),
 
-      // Wo die Simulationszeit nicht aus dem Schrittzaehler kommt, darf sie
-      // nicht wie eine gemessene Zahl gelesen werden.
-      quality.legacy || !quality.exact
+      h('button', {
+        key: 'expand',
+        onClick: () => setExpanded(v => !v),
+        style: {
+          marginTop: '6px', alignSelf: 'flex-start', cursor: 'pointer',
+          padding: '3px 9px', borderRadius: '4px',
+          border: `1px solid ${COLORS.border}`, background: 'transparent', color: COLORS.blue,
+          font: '600 11px/1 system-ui, sans-serif',
+        },
+      }, t(expanded ? 'mods|goldSpeedrun|result|collapse' : 'mods|goldSpeedrun|result|expand')),
+
+      expanded
         ? h('div', {
-            key: 'simNote',
-            style: { fontSize: '11px', color: COLORS.dim, marginTop: '2px' },
-          }, t(quality.legacy
-              ? 'mods|goldSpeedrun|result|simLegacy'
-              : 'mods|goldSpeedrun|result|simEstimated'))
+            key: 'full',
+            style: {
+              marginTop: '8px', paddingTop: '8px',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', flexDirection: 'column', gap: '4px',
+            },
+          }, [
+            h('div', { key: 'sim' },
+              line(t('mods|goldSpeedrun|result|sim'), ready ? formatTime(totalSim, fmt) : '—', COLORS.text)),
+            h('div', { key: 'play' },
+              line(t('mods|goldSpeedrun|result|play'), formatTime(totalPlay, fmt), COLORS.text)),
+
+            !ready
+              ? h('div', {
+                  key: 'noTick',
+                  style: { fontSize: '11px', color: COLORS.dim, marginTop: '2px' },
+                }, t('mods|goldSpeedrun|result|tickSourceMissing'))
+              : null,
+
+            h('div', {
+              key: 'advanced',
+              style: {
+                marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px',
+              },
+            }, [
+              h(MetricLine, { key: 'u', label: t('mods|goldSpeedrun|metric|ticks'), value: ready ? api.i18n.formatNumber(Math.round(totalSim / TICK_MS)) : '—' }),
+              h(MetricLine, { key: 'avg', label: t('mods|goldSpeedrun|metric|avgUps'), value: ready && total > 0 ? ((totalSim / TICK_MS) / (total / 1000)).toFixed(1) : '—' }),
+              h(MetricLine, { key: 'ideal', label: t('mods|goldSpeedrun|metric|idealTicks'), value: api.i18n.formatNumber(Math.round((total / 1000) * TICK_HZ)) }),
+              h(MetricLine, { key: 'mult', label: t('mods|goldSpeedrun|metric|thinkMult'), value: ready && totalSim > 0 ? `${(total / totalSim).toFixed(2)}×` : '—' }),
+              h(MetricLine, { key: 'wr', label: t('mods|goldSpeedrun|metric|wrProbe'), value: `${fmtSigned(totalPlay - total, 0)} ms` }),
+            ]),
+
+            h('div', { key: 'graphTitle', style: { marginTop: '6px', fontSize: '11px', color: COLORS.dim } },
+              t('mods|goldSpeedrun|graph|title')),
+            h('div', { key: 'graph', style: { marginTop: '2px' } },
+              h(UpsEnvelopeGraph, { columns: downsampleToColumns(historyBuf, 120, bucketStats), height: 90 })),
+          ])
         : null,
     ]),
 
-    // Regelwerk: bestaetigt den Lauf, oder benennt genau die Einstellungen,
-    // die von den offiziellen Kategorien abweichen.
+    // DE: Regelwerk: bestaetigt den Lauf, oder benennt genau die Einstellungen,
+    // DE: die von den offiziellen Kategorien abweichen.
+    // EN: Ruleset: confirms the run, or names exactly the settings that
+    // EN: deviate from the official categories.
     rules
       ? h('div', {
           key: 'rules',
@@ -2194,16 +2909,19 @@ function ResultScreen() {
 
 api.ui.inject('panel', ResultScreen);
 
-// --- Ausloeser-Fenster ----------------------------------------------------
-// Ein Schalter je Forschung, je Fabrikrang und je Gold-Marke. Damit stellt
-// sich jeder seinen Lauf selbst zusammen, ohne dass die Mod-Einstellungen mit
-// Dutzenden Feldern zugestellt werden.
+// --- DE: Ausloeser-Fenster / EN: Triggers window ----------------------------
+// DE: Ein Schalter je Forschung, je Fabrikrang und je Gold-Marke. Damit stellt
+// DE: sich jeder seinen Lauf selbst zusammen, ohne dass die Mod-Einstellungen mit
+// DE: Dutzenden Feldern zugestellt werden.
+// EN: A switch for every research, every factory rank and every gold mark.
+// EN: This lets everyone put their own run together, without cluttering the
+// EN: mod settings with dozens of fields.
 let triggerPanelOpen = false;
 let techFilter = '';
 
 const panelListeners = new Set();
 const notifyPanel = () => panelListeners.forEach(fn => {
-  try { fn(); } catch (e) { /* ignorieren */ }
+  try { fn(); } catch (e) { /* DE: ignorieren / EN: ignore */ }
 });
 
 const setTriggerPanelOpen = v => { triggerPanelOpen = !!v; notifyPanel(); };
@@ -2253,7 +2971,8 @@ function TriggerRow({ label, on, onToggle, overridden }) {
         fontSize: '12px',
       },
     }, label),
-    // Ein Punkt markiert, was vom Gruppen-Standard abweicht.
+    // DE: Ein Punkt markiert, was vom Gruppen-Standard abweicht.
+    // EN: A dot marks anything that deviates from the group default.
     h('span', {
       key: 'd',
       style: { width: '6px', color: COLORS.blue, fontSize: '10px' },
@@ -2306,7 +3025,8 @@ function TriggerPanel() {
   };
   const group = (kind, ids, value) => () => { setGroup(kind, ids, value); notifyPanel(); };
 
-  // Forschungen, nach angezeigtem Namen sortiert - die IDs sagen wenig.
+  // DE: Forschungen, nach angezeigtem Namen sortiert - die IDs sagen wenig.
+  // EN: Research, sorted by its displayed name - the IDs don't say much.
   const techs = allTechIds()
     .map(id => ({ id, name: techName(id) }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -2485,8 +3205,9 @@ function TriggerPanel() {
 
 api.ui.inject('panel', TriggerPanel);
 
-// --- Tastenkuerzel --------------------------------------------------------
-// F8 und F10 sind in den Standardbelegungen frei (belegt sind F2, F4, F5, F9).
+// --- DE: Tastenkuerzel / EN: Keyboard shortcuts ------------------------------
+// DE: F8 und F10 sind in den Standardbelegungen frei (belegt sind F2, F4, F5, F9).
+// EN: F8 and F10 are free in the default bindings (F2, F4, F5, F9 are taken).
 api.input.registerBinding('GoldSpeedrunReset', ['F8'], {
   displayNameKey: 'mods|goldSpeedrun|resetKey',
   category: 'mods|goldSpeedrun|name',
@@ -2499,6 +3220,7 @@ api.input.registerBinding('GoldSpeedrunReset', ['F8'], {
       api.storage.set(NS, 'official', false);
       api.storage.set(NS, 'officialBroken', false);
       startClocks();
+      resetHistory();
       resetEarned();
       setResultDismissed(true);
       api.ui.toast({ key: 'mods|goldSpeedrun|reset' });
@@ -2514,7 +3236,8 @@ api.input.registerBinding('GoldSpeedrunResult', ['F10'], {
   },
 });
 
-// F3 ist in den Standardbelegungen frei (belegt sind F2, F4, F5, F9).
+// DE: F3 ist in den Standardbelegungen frei (belegt sind F2, F4, F5, F9).
+// EN: F3 is free in the default bindings (F2, F4, F5, F9 are taken).
 api.input.registerBinding('GoldSpeedrunTriggers', ['F3'], {
   displayNameKey: 'mods|goldSpeedrun|trg|key',
   category: 'mods|goldSpeedrun|name',
@@ -2523,18 +3246,31 @@ api.input.registerBinding('GoldSpeedrunTriggers', ['F3'], {
   },
 });
 
-// --- Tutorial ueberspringen -----------------------------------------------
-// Beendet das Tutorial genau wie der Knopf im Spiel: die Simulations-Threads
-// werden informiert und die normalen Freischaltungen (Shaker) vergeben.
-// Waehrenddessen ist der Start gesperrt, sonst wuerde das dabei ausgeloeste
-// "tech:unlocked" den Timer starten.
-// Intro und Landeanflug ueberspringen. Genau das, was der Knopf
-// "Skip Intro" im Spiel tut: Intro-Bildschirm zu, Musik aus, und die interne
-// game.start(..., {skip:true}), die direkt in die Spielszene springt.
+// --- DE: Tutorial ueberspringen / EN: Skipping the tutorial ------------------
+// DE: Beendet das Tutorial genau wie der Knopf im Spiel: die Simulations-Threads
+// DE: werden informiert und die normalen Freischaltungen (Shaker) vergeben.
+// DE: Waehrenddessen ist der Start gesperrt, sonst wuerde das dabei ausgeloeste
+// DE: "tech:unlocked" den Timer starten.
+// DE: Intro und Landeanflug ueberspringen. Genau das, was der Knopf
+// DE: "Skip Intro" im Spiel tut: Intro-Bildschirm zu, Musik aus, und die interne
+// DE: game.start(..., {skip:true}), die direkt in die Spielszene springt.
 //
-// Wichtig fuer die Zeitnahme: der uebersprungene Landeanflug setzt die
-// Szenen-Trigger und laesst die Kapsel aufschlagen. Das kann Gelaende
-// zerstoeren - ohne Sperre wuerde das den Timer starten.
+// DE: Wichtig fuer die Zeitnahme: der uebersprungene Landeanflug setzt die
+// DE: Szenen-Trigger und laesst die Kapsel aufschlagen. Das kann Gelaende
+// DE: zerstoeren - ohne Sperre wuerde das den Timer starten.
+//
+// EN: Ends the tutorial exactly like the in-game button: the simulation
+// EN: threads get notified and the normal unlocks (Shaker) are granted. The
+// EN: start is locked while this happens, otherwise the "tech:unlocked" it
+// EN: triggers would start the timer.
+// EN: Skips the intro and landing approach. Exactly what the "Skip Intro"
+// EN: button in the game does: closes the intro screen, stops the music, and
+// EN: calls the internal game.start(..., {skip:true}), which jumps straight
+// EN: into the game scene.
+//
+// EN: Important for timing: the skipped landing approach sets the scene
+// EN: triggers and lets the capsule crash down. That can destroy terrain -
+// EN: without a lock, that would start the timer.
 const activeScene = () => {
   try { return sandkit.state.store.scene.active; } catch (e) { return null; }
 };
@@ -2543,14 +3279,22 @@ const introVisible = () => {
   try { return sandkit.state.session.ui.introScreen.visible === true; } catch (e) { return false; }
 };
 
-// --- Story-Textboxen ------------------------------------------------------
-// Das Spiel schiebt sie unter anderem beim Beenden des Tutorials nach - mit
-// Verzoegerung, deshalb tauchen sie erst nach dem Skip auf.
+// --- DE: Story-Textboxen / EN: Story text boxes ------------------------------
+// DE: Das Spiel schiebt sie unter anderem beim Beenden des Tutorials nach - mit
+// DE: Verzoegerung, deshalb tauchen sie erst nach dem Skip auf.
 //
-// Weggeklickt werden sie im Spiel so: aus session.notifications.story
-// entfernen und "story:notificationDismissed" feuern. Das zweite ist wichtig -
-// erst dadurch merkt sich die Story, dass der Schritt gezeigt wurde. Ein
-// blosses Leeren der Liste liesse sie spaeter wiederkommen.
+// DE: Weggeklickt werden sie im Spiel so: aus session.notifications.story
+// DE: entfernen und "story:notificationDismissed" feuern. Das zweite ist wichtig -
+// DE: erst dadurch merkt sich die Story, dass der Schritt gezeigt wurde. Ein
+// DE: blosses Leeren der Liste liesse sie spaeter wiederkommen.
+//
+// EN: The game queues these up, among other things, when the tutorial ends -
+// EN: with a delay, so they only show up after the skip.
+//
+// EN: The game dismisses them like this: remove from
+// EN: session.notifications.story and fire "story:notificationDismissed".
+// EN: The second part matters - only that makes the story remember the step
+// EN: was shown. Just clearing the list would let them come back later.
 const storyNotifications = () => {
   try {
     const list = sandkit.state.session.notifications.story;
@@ -2570,57 +3314,68 @@ const dismissStoryNotifications = () => {
   for (const notification of pending) {
     try {
       api.events.emit('story:notificationDismissed', { notification });
-    } catch (e) { /* Story-System nicht aktiv */ }
+    } catch (e) { /* DE: Story-System nicht aktiv / EN: story system not active */ }
   }
   for (const id of ['StoryNotifications', 'Notifications', 'Objectives']) {
-    try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* Komponente inaktiv */ }
+    try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* DE: Komponente inaktiv / EN: component not active */ }
   }
 
   log(`${pending.length} Story-Textbox(en) weggeblendet`);
   return pending.length;
 };
 
-// Wie bei skipTutorialEnabled: im offiziellen Regelwerk laeuft der Anfang ab,
-// egal was in den Schaltern steht.
+// DE: Wie bei skipTutorialEnabled: im offiziellen Regelwerk laeuft der Anfang ab,
+// DE: egal was in den Schaltern steht.
+// EN: Just like skipTutorialEnabled: under the official ruleset, the opening
+// EN: plays out normally, no matter what the switches say.
 const skipStoryEnabled = () => !officialMode() && api.settings.get('skipStory') !== false;
 
 const skipIntroEnabled = () => !officialMode() && api.settings.get('skipIntro') !== false;
 
-// Eigener Takt in Echtzeit: die Boxen kommen verzoegert und auch mitten im
-// Lauf, das Spiel-Update ist dafuer der falsche Aufhaenger.
+// DE: Eigener Takt in Echtzeit: die Boxen kommen verzoegert und auch mitten im
+// DE: Lauf, das Spiel-Update ist dafuer der falsche Aufhaenger.
+// EN: Its own real-time interval: the boxes arrive with a delay, and also
+// EN: mid-run, so the game update is the wrong thing to hook this to.
 setInterval(() => {
   if (!modEnabled()) return;
   if (!skipStoryEnabled()) return;
-  try { dismissStoryNotifications(); } catch (e) { /* naechster Takt */ }
+  try { dismissStoryNotifications(); } catch (e) { /* DE: naechster Takt / EN: try again next tick */ }
 }, 500);
 
-// Solange eine Textbox oder der Intro-Bildschirm im Weg steht, spielt niemand -
-// ein Klick oder Tastendruck dagegen darf den Timer nicht anwerfen. Bei
-// eingeschaltetem Wegblenden sind die Boxen binnen einer halben Sekunde weg,
-// es blockiert also nichts dauerhaft.
+// DE: Solange eine Textbox oder der Intro-Bildschirm im Weg steht, spielt niemand -
+// DE: ein Klick oder Tastendruck dagegen darf den Timer nicht anwerfen. Bei
+// DE: eingeschaltetem Wegblenden sind die Boxen binnen einer halben Sekunde weg,
+// DE: es blockiert also nichts dauerhaft.
+// EN: As long as a text box or the intro screen is in the way, nobody is
+// EN: playing - a click or key press against it must not start the timer.
+// EN: With auto-dismiss enabled, the boxes are gone within half a second, so
+// EN: nothing blocks permanently.
 const uiBlocksStart = () => {
   try {
     const session = sandkit.state.session;
     if (session.ui && session.ui.introScreen && session.ui.introScreen.visible) return true;
     if (Array.isArray(session.ui && session.ui.dialogs) && session.ui.dialogs.length > 0) return true;
-    // Auch ohne Wegblenden: solange eine Box im Bild steht, spielt niemand,
-    // und der Klick, der sie wegmacht, ist keine Spielhandlung.
+    // DE: Auch ohne Wegblenden: solange eine Box im Bild steht, spielt niemand,
+    // DE: und der Klick, der sie wegmacht, ist keine Spielhandlung.
+    // EN: Even without auto-dismiss: as long as a box is on screen, nobody is
+    // EN: playing, and the click that dismisses it isn't an in-game action.
     const list = storyNotifications();
     if (list && list.length > 0) return true;
-  } catch (e) { /* Sitzung noch nicht vollstaendig */ }
+  } catch (e) { /* DE: Sitzung noch nicht vollstaendig / EN: session not fully initialized yet */ }
   return false;
 };
 
 const closeIntroScreen = () => {
   try { sandkit.state.session.ui.introScreen.visible = false; } catch (e) { return; }
   for (const id of ['IntroScreen', 'Root']) {
-    try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* Komponente inaktiv */ }
+    try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* DE: Komponente inaktiv / EN: component not active */ }
   }
 };
 
 const skipIntro = () => {
-  // Gleicher Riegel wie beim Tutorial: die Einstellung entscheidet, nicht
-  // der Aufrufer.
+  // DE: Gleicher Riegel wie beim Tutorial: die Einstellung entscheidet, nicht
+  // DE: der Aufrufer.
+  // EN: Same guard as with the tutorial: the setting decides, not the caller.
   if (!skipIntroEnabled()) {
     log('Intro-Skip abgelehnt - die Einstellung steht auf aus'
       + (officialMode() ? ' (offizielles Regelwerk)' : ''));
@@ -2641,20 +3396,22 @@ const skipIntro = () => {
   graceFor(4000);
 
   closeIntroScreen();
-  try { state.session.music.engine.stop(); } catch (e) { /* keine Musik */ }
+  try { state.session.music.engine.stop(); } catch (e) { /* DE: keine Musik / EN: no music engine */ }
 
   start(state, { skip: true });
   log('Intro uebersprungen');
   return true;
 };
 
-// Nach einem Schreibvorgang muss das Menue neu zeichnen, sonst steht dort
-// weiter der Wert, den der Spieler gerade angeklickt hat.
+// DE: Nach einem Schreibvorgang muss das Menue neu zeichnen, sonst steht dort
+// DE: weiter der Wert, den der Spieler gerade angeklickt hat.
+// EN: After a write, the menu has to redraw, otherwise it would keep showing
+// EN: the value the player just clicked.
 const SETTINGS_UI = ['ModsScreen', 'Options', 'Menu', 'Root'];
 
 const refreshSettingsUi = () => {
   for (const id of SETTINGS_UI) {
-    try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* Komponente inaktiv */ }
+    try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* DE: Komponente inaktiv / EN: component not active */ }
   }
 };
 
@@ -2662,13 +3419,16 @@ const TUTORIAL_UI = ['Tutorial', 'Objectives', 'ShortcutHelper', 'Root'];
 
 const refreshTutorialUi = () => {
   for (const id of TUTORIAL_UI) {
-    try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* Komponente inaktiv */ }
+    try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* DE: Komponente inaktiv / EN: component not active */ }
   }
 };
 
-// Was der Knopf im Spiel ueber grantNormalUnlocks() mitgibt: die
-// Shaker-Forschung. Bricht der regulaere Weg vorher ab, fehlt sie - und der
-// Lauf startet mit weniger als bei jedem anderen.
+// DE: Was der Knopf im Spiel ueber grantNormalUnlocks() mitgibt: die
+// DE: Shaker-Forschung. Bricht der regulaere Weg vorher ab, fehlt sie - und der
+// DE: Lauf startet mit weniger als bei jedem anderen.
+// EN: What the in-game button grants via grantNormalUnlocks(): the Shaker
+// EN: research. If the normal path aborts before that, it's missing - and
+// EN: the run would start with less than everyone else's.
 const grantTutorialUnlocks = () => {
   try {
     const player = sandkit.state.store.player;
@@ -2679,9 +3439,9 @@ const grantTutorialUnlocks = () => {
     player.tech[shaker] = true;
     try {
       api.player.buildings.unlockByType(enums.StructureType.ShakerRight);
-    } catch (e) { /* Struktur unbekannt */ }
+    } catch (e) { /* DE: Struktur unbekannt / EN: structure unknown */ }
     for (const id of ['Hotbar', 'TechTree', 'Management', 'Resources']) {
-      try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* inaktiv */ }
+      try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* DE: inaktiv / EN: not active */ }
     }
     log('Shaker-Freischaltung nachgezogen - der Knopf im Spiel vergibt sie ebenfalls');
   } catch (e) {
@@ -2690,10 +3450,14 @@ const grantTutorialUnlocks = () => {
 };
 
 const skipTutorial = () => {
-  // Letzter Riegel vor der Tuer: egal, wer hier hereinkommt - steht der
-  // Schalter auf aus oder gilt das offizielle Regelwerk, wird nichts
-  // uebersprungen. Der Waechter prueft das schon, aber diese Funktion
-  // beendet das Tutorial unwiderruflich; ein zweiter Riegel kostet nichts.
+  // DE: Letzter Riegel vor der Tuer: egal, wer hier hereinkommt - steht der
+  // DE: Schalter auf aus oder gilt das offizielle Regelwerk, wird nichts
+  // DE: uebersprungen. Der Waechter prueft das schon, aber diese Funktion
+  // DE: beendet das Tutorial unwiderruflich; ein zweiter Riegel kostet nichts.
+  // EN: One last gate before the door: no matter who walks in here, if the
+  // EN: switch is off or the official ruleset applies, nothing gets skipped.
+  // EN: The guard already checks this, but this function ends the tutorial
+  // EN: irreversibly; a second gate costs nothing.
   if (!skipTutorialEnabled()) {
     log('Tutorial-Skip abgelehnt - die Einstellung steht auf aus'
       + (officialMode() ? ' (offizielles Regelwerk)' : ''));
@@ -2706,20 +3470,28 @@ const skipTutorial = () => {
 
   suppressFor(1000);
 
-  // Das Spiel setzt in progression.complete das Flag als ERSTES und frischt
-  // das Bild als LETZTES auf. Bricht etwas dazwischen ab - etwa der
-  // postAll an die Simulations-Threads -, gilt das Tutorial intern als
-  // beendet, die Box steht aber weiter im Bild, die Shaker-Forschung fehlt
-  // und "tutorial:completed" ist nie gefeuert worden.
+  // DE: Das Spiel setzt in progression.complete das Flag als ERSTES und frischt
+  // DE: das Bild als LETZTES auf. Bricht etwas dazwischen ab - etwa der
+  // DE: postAll an die Simulations-Threads -, gilt das Tutorial intern als
+  // DE: beendet, die Box steht aber weiter im Bild, die Shaker-Forschung fehlt
+  // DE: und "tutorial:completed" ist nie gefeuert worden.
+  // EN: In progression.complete, the game sets the flag FIRST and refreshes
+  // EN: the screen LAST. If something aborts in between - say, the postAll to
+  // EN: the simulation threads - the tutorial counts as finished internally,
+  // EN: but the box still shows on screen, the Shaker research is missing,
+  // EN: and "tutorial:completed" never fired.
   let clean = false;
   try {
-    // Identisch zum Knopf "Tutorial ueberspringen" im Spiel.
+    // DE: Identisch zum Knopf "Tutorial ueberspringen" im Spiel.
+    // EN: Identical to the "Skip Tutorial" button in the game.
     clean = api.progression.complete({ domain: 'tutorial', grantNormalUnlocks: true }) !== false;
   } catch (e) {
     log('Tutorial regulaer beenden abgebrochen:', e);
   }
 
-  // Ab hier immer nachziehen. Doppelt schadet nicht, fehlend schon.
+  // DE: Ab hier immer nachziehen. Doppelt schadet nicht, fehlend schon.
+  // EN: From here on, always follow through. Doing it twice doesn't hurt,
+  // EN: missing it does.
   store.tutorial.active = false;
   if (!store.tutorial.data) store.tutorial.data = {};
   refreshTutorialUi();
@@ -2729,22 +3501,32 @@ const skipTutorial = () => {
     grantTutorialUnlocks();
     try {
       api.events.emit('tutorial:completed', { skipped: true });
-    } catch (e) { /* Empfaenger nicht aktiv */ }
+    } catch (e) { /* DE: Empfaenger nicht aktiv / EN: no listener active */ }
   }
 
   api.ui.toast({ key: 'mods|goldSpeedrun|tutorialSkipped' });
   return true;
 };
 
-// --- Tutorial-Waechter ----------------------------------------------------
-// Bewusst ohne Szenen- und Ablaufbedingungen, und in Echtzeit statt im
-// Boot-Takt: der Skip hatte zu viele Voraussetzungen, von denen jede einzelne
-// ihn lautlos ausfallen liess. Hier zaehlt nur noch: Einstellung an, Tutorial
-// aktiv - dann weg damit.
+// --- DE: Tutorial-Waechter / EN: Tutorial guard ------------------------------
+// DE: Bewusst ohne Szenen- und Ablaufbedingungen, und in Echtzeit statt im
+// DE: Boot-Takt: der Skip hatte zu viele Voraussetzungen, von denen jede einzelne
+// DE: ihn lautlos ausfallen liess. Hier zaehlt nur noch: Einstellung an, Tutorial
+// DE: aktiv - dann weg damit.
 //
-// Der Vorbehalt "nicht mitten im Lauf" gilt weiter, aber nicht in den ersten
-// Sekunden nach dem Laden. Sonst genuegt ein Klick beim Startvorgang, um den
-// Skip dauerhaft zu verhindern - und genau dann bleibt die Box stehen.
+// DE: Der Vorbehalt "nicht mitten im Lauf" gilt weiter, aber nicht in den ersten
+// DE: Sekunden nach dem Laden. Sonst genuegt ein Klick beim Startvorgang, um den
+// DE: Skip dauerhaft zu verhindern - und genau dann bleibt die Box stehen.
+//
+// EN: Deliberately without scene or sequence conditions, and in real time
+// EN: instead of on the boot interval: the skip had too many prerequisites,
+// EN: any one of which could make it silently fail. All that matters here
+// EN: now: setting on, tutorial active - then get rid of it.
+//
+// EN: The "not mid-run" caveat still applies, but not in the first few
+// EN: seconds after loading. Otherwise a single click during startup would
+// EN: be enough to permanently prevent the skip - and that's exactly when
+// EN: the box would stay stuck on screen.
 let bootPhaseUntil = 0;
 
 const tutorialWatchTick = () => {
@@ -2760,15 +3542,21 @@ const tutorialWatchTick = () => {
   return false;
 };
 
-// Der Waechter ist das Sicherheitsnetz; angestossen wird er zusaetzlich direkt
-// bei game:ready und in jedem Boot-Takt, damit die Box nicht erst nach einer
-// halben Sekunde verschwindet.
+// DE: Der Waechter ist das Sicherheitsnetz; angestossen wird er zusaetzlich direkt
+// DE: bei game:ready und in jedem Boot-Takt, damit die Box nicht erst nach einer
+// DE: halben Sekunde verschwindet.
+// EN: The guard is the safety net; it's also triggered directly on
+// EN: game:ready and on every boot tick, so the box doesn't take up to half
+// EN: a second to disappear.
 setInterval(tutorialWatchTick, 500);
 
-// --- Einstellungen im Blick behalten --------------------------------------
-// Feuert, sobald jemand im Mod-Menue etwas umstellt. Das Zurueckschreiben
-// geht am Setter des Spiels vorbei und loest deshalb keinen zweiten Aufruf
-// aus - eine Schleife ist nicht moeglich.
+// --- DE: Einstellungen im Blick behalten / EN: Keeping an eye on settings ---
+// DE: Feuert, sobald jemand im Mod-Menue etwas umstellt. Das Zurueckschreiben
+// DE: geht am Setter des Spiels vorbei und loest deshalb keinen zweiten Aufruf
+// DE: aus - eine Schleife ist nicht moeglich.
+// EN: Fires as soon as anyone changes something in the mod menu. Writing the
+// EN: value back bypasses the game's own setter and therefore doesn't
+// EN: trigger a second call - a loop isn't possible.
 try {
   api.settings.onChange(() => {
     if (!modEnabled()) return;
@@ -2776,10 +3564,13 @@ try {
   });
 } catch (e) { log('Einstellungen nicht beobachtbar:', e); }
 
-// --- Start ----------------------------------------------------------------
-// Handle des Boot-Takts ausserhalb des Handlers: kommt game:ready ein zweites
-// Mal, wuerden sich sonst zwei Takte gegenseitig in die Quere kommen - der
-// eine macht den Intro-Bildschirm zu, den der andere noch sehen will.
+// --- DE: Start / EN: Startup -------------------------------------------------
+// DE: Handle des Boot-Takts ausserhalb des Handlers: kommt game:ready ein zweites
+// DE: Mal, wuerden sich sonst zwei Takte gegenseitig in die Quere kommen - der
+// DE: eine macht den Intro-Bildschirm zu, den der andere noch sehen will.
+// EN: The boot-interval handle lives outside the handler: if game:ready fires
+// EN: a second time, two intervals would otherwise get in each other's way -
+// EN: one closing the intro screen the other still wants to see.
 let bootTimer = null;
 
 api.events.on('game:ready', () => {
@@ -2789,24 +3580,28 @@ api.events.on('game:ready', () => {
     bootTimer = null;
   }
 
-  // Erst hier, nicht beim Laden des Mods: der Ausloeser geht an den
-  // Simulations-Thread, und den gibt es vor der Karte noch nicht. Beides ist
-  // gefahrlos wiederholbar - der gemeinsame Speicher wird beim zweiten Aufruf
-  // wiederverwendet, der Ausloeser unter derselben Kennung ersetzt.
-  setupSimClock();
-  simLastTick = null;   // neue Karte, der Schrittzaehler faengt von vorn an
-  lastPerf = null;
-  migrateClocks();
+  // DE: Die Basiswerte der drei Uhren aus dem (jetzt aktuellen) Spielstand neu
+  // DE: einlesen - das behebt den Fehler, der den Timer nach einem Ladevorgang
+  // DE: bei 0 haengen liess: die alten Basiswerte wurden nie wiederhergestellt.
+  // DE: Gefahrlos wiederholbar, auch wenn game:ready kein zweites Mal noetig war.
+  // EN: Re-reads the three clocks' baselines from the (now current) save file
+  // EN: - this fixes the bug that made the timer hang at 0 after a load: the
+  // EN: old baselines were never restored. Safe to repeat, even if game:ready
+  // EN: didn't strictly need to fire a second time.
+  resumeClocks();
+  loadHistoryFromSave();
 
   artifactTotalCache = null;
   markCache = { key: null, list: [] };
-  techIdCache = null;   // andere Karte, evtl. andere Mods, andere Forschungen
+  techIdCache = null;   // DE: andere Karte, evtl. andere Mods, andere Forschungen / EN: different map, maybe different mods, different research
   eventGraceUntil = 0;
   graceFor(1500);
   bootPhaseUntil = Date.now() + 20000;
 
-  // Eine Zeile mit dem tatsaechlichen Zustand. Wenn Intro oder Tutorial doch
-  // nicht verschwinden, steht hier, woran es lag - statt dass man raten muss.
+  // DE: Eine Zeile mit dem tatsaechlichen Zustand. Wenn Intro oder Tutorial doch
+  // DE: nicht verschwinden, steht hier, woran es lag - statt dass man raten muss.
+  // EN: One line with the actual state. If the intro or tutorial fail to
+  // EN: disappear after all, this shows why - instead of having to guess.
   try {
     log('Startzustand', {
       scene: sandkit.state.store.scene.active,
@@ -2819,30 +3614,49 @@ api.events.on('game:ready', () => {
     });
   } catch (e) { log('Startzustand nicht lesbar:', e); }
 
-  // Vor allem anderen: steht das offizielle Regelwerk, gelten seine Werte.
-  // Das muss vor dem Tutorial-Waechter passieren, der liest den Schalter.
+  // DE: Vor allem anderen: steht das offizielle Regelwerk, gelten seine Werte.
+  // DE: Das muss vor dem Tutorial-Waechter passieren, der liest den Schalter.
+  // EN: Before anything else: if the official ruleset is set, its values
+  // EN: apply. This has to happen before the tutorial guard, which reads that switch.
   syncOfficialSettings();
 
-  // Sofort versuchen, nicht erst beim naechsten Waechter-Takt.
+  // DE: Sofort versuchen, nicht erst beim naechsten Waechter-Takt.
+  // EN: Try immediately, rather than waiting for the next guard tick.
   tutorialWatchTick();
-  // Ein beim Laden bereits beendeter Lauf soll nicht sofort ins Gesicht
-  // springen - F10 holt das Ergebnis bei Bedarf zurueck.
+  // DE: Ein beim Laden bereits beendeter Lauf soll nicht sofort ins Gesicht
+  // DE: springen - F10 holt das Ergebnis bei Bedarf zurueck.
+  // EN: A run that was already finished at load time shouldn't pop up
+  // EN: immediately - F10 brings the result back if needed.
   resultDismissed = true;
   armRun();
 
-  // Intro und Tutorial laufen ueber einen eigenen Takt statt ueber
-  // schedule.nextTick. Grund: nextTick haengt am Spiel-Update, und beim
-  // Startvorgang ist noch nicht gesagt, dass das schon laeuft. Ein echter
-  // Timer ist davon unabhaengig.
+  // DE: Intro und Tutorial laufen ueber einen eigenen Takt statt ueber
+  // DE: schedule.nextTick. Grund: nextTick haengt am Spiel-Update, und beim
+  // DE: Startvorgang ist noch nicht gesagt, dass das schon laeuft. Ein echter
+  // DE: Timer ist davon unabhaengig.
   //
-  // Der Ablauf beim Start ist:
-  //   emit "game:ready"        <- Szene steht schon auf Intro
+  // DE: Der Ablauf beim Start ist:
+  //   emit "game:ready"        -> Szene steht schon auf Intro
   //   emit "game:started", await ...
-  //   introScreen.visible = true   <- erst hier stehen die Textboxen
+  //   introScreen.visible = true   -> erst hier stehen die Textboxen
   //
-  // Deshalb wird gewartet, bis der Intro-Bildschirm wirklich sichtbar ist,
-  // und erst dann gesprungen - sonst blendet der Startvorgang ihn nach dem
-  // Sprung noch einmal ein.
+  // DE: Deshalb wird gewartet, bis der Intro-Bildschirm wirklich sichtbar ist,
+  // DE: und erst dann gesprungen - sonst blendet der Startvorgang ihn nach dem
+  // DE: Sprung noch einmal ein.
+  //
+  // EN: The intro and tutorial run on their own interval instead of via
+  // EN: schedule.nextTick. Reason: nextTick depends on the game update, and
+  // EN: during startup it isn't guaranteed that's already running. A real
+  // EN: timer doesn't depend on that.
+  //
+  // EN: The sequence at startup is:
+  //   emit "game:ready"        -> scene is already set to Intro
+  //   emit "game:started", await ...
+  //   introScreen.visible = true   -> only now do the text boxes exist
+  //
+  // EN: That's why the code waits until the intro screen is actually
+  // EN: visible, and only jumps after that - otherwise the startup sequence
+  // EN: would show it again right after the jump.
   const wantIntro = skipIntroEnabled();
   const wantTutorial = skipTutorialEnabled();
 
@@ -2869,40 +3683,50 @@ api.events.on('game:ready', () => {
     const scene = activeScene();
 
     if (wantIntro) {
-      // Sicherheitsnetz: taucht der Bildschirm nach dem Sprung wieder auf,
-      // wird er zugemacht.
+      // DE: Sicherheitsnetz: taucht der Bildschirm nach dem Sprung wieder auf,
+      // DE: wird er zugemacht.
+      // EN: Safety net: if the screen reappears after the jump, it gets closed again.
       if (introDone && introVisible()) closeIntroScreen();
 
       if (!introDone) {
         if (scene === enums.Scene.Deploy) {
-          // Landeanflug laeuft schon - direkt durchspringen.
+          // DE: Landeanflug laeuft schon - direkt durchspringen.
+          // EN: The landing approach is already running - jump straight through.
           try { introDone = skipIntro(); } catch (e) { log('Intro-Skip fehlgeschlagen:', e); introDone = true; }
         } else if (scene === enums.Scene.Intro && introVisible()) {
-          // Genau der Zustand, in dem auch der Knopf im Spiel arbeitet.
+          // DE: Genau der Zustand, in dem auch der Knopf im Spiel arbeitet.
+          // EN: Exactly the state the in-game button also relies on.
           try { introDone = skipIntro(); } catch (e) { log('Intro-Skip fehlgeschlagen:', e); introDone = true; }
         } else if (scene !== enums.Scene.Intro && scene !== enums.Scene.Deploy) {
-          // Geladener Spielstand: es gibt gar kein Intro.
+          // DE: Geladener Spielstand: es gibt gar kein Intro.
+          // EN: A loaded save: there is no intro at all.
           introDone = true;
         }
       }
     }
 
-    // Das Tutorial macht der Waechter oben - hier wird nur noch abgewartet,
-    // bis er fertig ist. Frueher standen an dieser Stelle Bedingungen
-    // (Szene, isArmed), die den Skip lautlos ausfallen lassen konnten.
+    // DE: Das Tutorial macht der Waechter oben - hier wird nur noch abgewartet,
+    // DE: bis er fertig ist. Frueher standen an dieser Stelle Bedingungen
+    // DE: (Szene, isArmed), die den Skip lautlos ausfallen lassen konnten.
+    // EN: The guard above handles the tutorial - this just waits for it to
+    // EN: finish. Conditions used to sit here (scene, isArmed) that could
+    // EN: make the skip silently fail.
     if (!tutorialDone) {
       if (!wantTutorial) {
         tutorialDone = true;
       } else {
         tutorialWatchTick();
-        try { tutorialDone = sandkit.state.store.tutorial.active !== true; } catch (e) { /* noch nicht da */ }
+        try { tutorialDone = sandkit.state.store.tutorial.active !== true; } catch (e) { /* DE: noch nicht da / EN: not available yet */ }
         if (tutorialDone) refreshTicks = 5;
       }
     }
 
-    // Nach dem Skip noch ein paar Takte das Bild auffrischen: die
-    // Tutorial-Box wird beim Startvorgang mehrfach gezeichnet, und eine
-    // Auffrischung zum falschen Zeitpunkt verpufft.
+    // DE: Nach dem Skip noch ein paar Takte das Bild auffrischen: die
+    // DE: Tutorial-Box wird beim Startvorgang mehrfach gezeichnet, und eine
+    // DE: Auffrischung zum falschen Zeitpunkt verpufft.
+    // EN: A few more ticks of refreshing the screen after the skip: the
+    // EN: tutorial box gets redrawn several times during startup, and a
+    // EN: refresh at the wrong moment fizzles out.
     if (refreshTicks > 0) {
       refreshTicks--;
       refreshTutorialUi();
@@ -2910,9 +3734,12 @@ api.events.on('game:ready', () => {
 
     if (introDone && tutorialDone) announce();
 
-    // Auch wenn alles erledigt ist, laeuft der Takt noch rund drei Sekunden
-    // weiter: der Startvorgang kann den Intro-Bildschirm nach dem Sprung
-    // erneut einblenden, und dann muss ihn noch jemand zumachen.
+    // DE: Auch wenn alles erledigt ist, laeuft der Takt noch rund drei Sekunden
+    // DE: weiter: der Startvorgang kann den Intro-Bildschirm nach dem Sprung
+    // DE: erneut einblenden, und dann muss ihn noch jemand zumachen.
+    // EN: Even once everything is done, the interval keeps running for about
+    // EN: three more seconds: the startup sequence can show the intro screen
+    // EN: again after the jump, and someone still has to close it.
     if ((introDone && tutorialDone && ticks >= 30) || ticks >= 150) {
       clearInterval(bootTimer);
       bootTimer = null;
@@ -2927,7 +3754,8 @@ api.events.on('game:ready', () => {
   bootTimer = setInterval(bootTick, 100);
   bootTick();
 
-  // Falls der Takt haengen bleibt, soll die Kategorie trotzdem gemeldet werden.
+  // DE: Falls der Takt haengen bleibt, soll die Kategorie trotzdem gemeldet werden.
+  // EN: If the interval ever gets stuck, the category should still get announced.
   setTimeout(announce, 16000);
 });
 

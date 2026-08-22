@@ -1,5 +1,104 @@
 # Changelog
 
+## 2.8.0 — three clocks, tick-accurate
+
+The timing core from 2.7.0 was already right in principle - real time as the
+official clock, a hardware-independent second clock alongside it - but it
+leaned on an in-game trigger for the exact simulation clock and fell back to
+an estimate when that trigger did not fire. This version replaces the whole
+thing with a single source of truth: the executed tick counter, published
+straight out of the simulation thread.
+
+### The tick counter, not a trigger
+
+* Removed the `api.triggers.register` workaround and the `managerPerformance`
+  estimate it fell back to. In its place, a dedicated `worker.js` runs in the
+  simulation thread itself and copies `store.meta.tick` into a shared buffer
+  after every step - the mechanism the sandkit API is built for, no
+  string-built function bodies, no fallback path needed.
+* This raw tick count, `U`, is exact by construction: it cannot skip a step
+  or double-count one, because it is always the absolute counter, never a
+  delta.
+
+### Three clocks, not two
+
+* **Real time (R)** stays the official scoring, unchanged in meaning:
+  `performance.now()`, uncapped, paused only when the game pauses.
+* **Simulation time (T)** is now `U / 60` - derived directly from the exact
+  tick count instead of an in-game trigger's own accumulation. At a steady
+  60 UPS it equals real time; behind that, it is smaller.
+* **Play-clock (W)** joins as a third, separate number: the game's own
+  `store.meta.time`, the exact value written to the save file's playtime.
+  It is not a scoring metric - its 50 ms-per-frame cap (see 2.7.0's notes)
+  makes it drift below 20 FPS - but it lets a run be cross-checked against
+  its own save file and gives the community a shared reference point.
+* Any of the three can be the large headline clock (*Headline clock* option,
+  replacing *Which clock is shown*); the other two always sit underneath.
+
+### Always visible: how much the hardware cost this run
+
+* **Slowdown %** (`(T/R − 1) × 100`) and **Tick deficit** (`60·R − U`, shown
+  as both a tick count and the equivalent lost seconds) are now permanent,
+  not behind a percentage threshold like 2.7.0's deficit line. Both sit near
+  0 and jitter in either direction - the engine can briefly run *more* than
+  60 ticks a second to claw back a backlog, so a small positive reading is
+  normal; a sustained negative one is the signal to look at.
+* A new **advanced metrics** toggle (off by default) adds the raw tick
+  count, average UPS, the ticks an ideal 60-UPS machine would have reached
+  by now, the thinking multiplier (`R/T`, the reciprocal of Slowdown %), and
+  a `W − R` probe that shows exactly how far the play-clock's frame cap
+  pulled it from real time.
+
+### UPS over time
+
+* Two new graphs, both off by default and both sampled purely on the main
+  thread from the tick counter - no simulation cost either way.
+  * **UPS history**: a once-per-second min/max/average bucket of the whole
+    run, shown in the result screen as a min/max envelope against a 60 UPS
+    reference line. However long the run, every stutter stays visible - long
+    runs merge old buckets in pairs instead of losing resolution up front.
+  * **Live sparkline**: the same idea over a rolling 60 seconds, drawn under
+    the HUD timer.
+* The result screen keeps its automatic summary on finish and adds a
+  click-to-expand section with the full metric set and the full-run graph -
+  nothing pops up uninvited.
+
+### Added
+
+* **A "Mod enabled" switch in the mod's own settings.** Turns the whole mod
+  off - timer, overlay, splits, auto-skips, everything - without having to
+  uninstall it or dig through the separate mod manager screen. Same switch
+  the mod manager already had, just reachable directly. A run already in
+  progress keeps its official real-time clock running in the background
+  while this is off, exactly like disabling the mod through the manager
+  always has - so it cannot be used to pause a run mid-attempt.
+
+### Fixed
+
+* **The timer no longer hangs at 0 after loading a save.** The raw tick,
+  play-clock and real-time baselines now travel with the save and are
+  restored on load - a save/reload, including restarting an attempt from an
+  earlier save, resumes exactly instead of freezing. A defensive check also
+  re-syncs the baselines mid-run if a save loads without the usual signal.
+* **Removed the artificial ~400 ms start delay** carried over from the
+  proof-of-concept this was built from - the run and all its metrics now
+  begin on the exact frame of the first action, same as before.
+* **The timer could start on its own during a new game's loading sequence.**
+  The start triggers stay armed from the moment the mod loads, and the
+  intro/landing/tutorial-skip sequence on a new game can take several
+  seconds - long enough for a setup event (world generation, the automatic
+  intro or tutorial skip) to slip past the short post-load grace window and
+  get mistaken for the player's first action. The run can now only start
+  once the actual game scene is live, since no real action is possible
+  before that point anyway.
+
+### Changed
+
+* Splits are measured in real time (R), same as the personal best, and
+  additionally record simulation time and play-clock for later analysis.
+* Personal best is tracked on real time only; the separate simulation-time
+  best from 2.7.0 is gone along with the estimate path it protected against.
+
 ## 2.7.0 — two clocks
 
 The timer no longer takes the game's word for how much time has passed. It
