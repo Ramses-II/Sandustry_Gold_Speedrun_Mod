@@ -119,6 +119,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|result|noSplits': 'No triggers fired - enable some under Splits.',
   'mods|goldSpeedrun|result|close': 'Close',
   'mods|goldSpeedrun|result|hint': 'F10 shows this again',
+  'mods|goldSpeedrun|hud|openDashboard': 'Press F10 for Speedrun Dashboard',
   'mods|goldSpeedrun|result|expand': 'Show full statistics',
   'mods|goldSpeedrun|result|collapse': 'Hide full statistics',
 
@@ -300,6 +301,7 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|result|noSplits': 'Kein Auslöser gefeuert - unter Splits welche einschalten.',
   'mods|goldSpeedrun|result|close': 'Schließen',
   'mods|goldSpeedrun|result|hint': 'F10 zeigt das nochmal',
+  'mods|goldSpeedrun|hud|openDashboard': 'F10 öffnet das Speedrun-Dashboard',
   'mods|goldSpeedrun|result|expand': 'Alle Werte zeigen',
   'mods|goldSpeedrun|result|collapse': 'Alle Werte ausblenden',
 
@@ -2861,7 +2863,9 @@ function SpeedrunHud() {
   const current = progressOf(cat);
   const target = cat.target;
   const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
-  const corner = CORNERS[api.settings.get('corner')] || CORNERS.topCenter;
+  const cornerKey = api.settings.get('corner') || 'topCenter';
+  const corner = CORNERS[cornerKey] || CORNERS.topCenter;
+  const isBottomRight = cornerKey === 'bottomRight';
   const mode = clockMode();
   const rTime = elapsed();
   const simTime = elapsedSim();
@@ -3065,7 +3069,15 @@ function SpeedrunHud() {
       h('span', { key: 'mode' }, categoryLabel()),
       best !== null && best > 0 ? h('span', { key: 'pb' }, `PB ${formatTime(best, fmt)}`) : null,
     ]),
-    h('button', { key: 'f10btn', onClick: () => setResultDismissed(false), style: btnStyle }, 'Dashboard (F10)'),
+    isBottomRight
+      ? h('div', {
+          key: 'f10hint',
+          style: {
+            marginTop: '6px', fontSize: '11px', opacity: 0.6, textAlign: 'center',
+            pointerEvents: 'none',
+          },
+        }, t('mods|goldSpeedrun|hud|openDashboard'))
+      : h('button', { key: 'f10btn', onClick: () => setResultDismissed(false), style: btnStyle }, 'Dashboard (F10)'),
     tainted
       ? h('div', {
           key: 'tainted',
@@ -3087,7 +3099,7 @@ function SpeedrunHud() {
     background: COLORS.box,
     color: COLORS.text,
     font: '500 13px/1.35 system-ui, sans-serif',
-    pointerEvents: 'auto',
+    pointerEvents: 'none',
     display: 'flex',
     flexDirection: horizontal ? 'row' : 'column',
     alignItems: horizontal ? 'flex-start' : 'stretch',
@@ -3301,17 +3313,30 @@ function ResultScreen() {
     const isDone = typeof run.finishedAt === 'number';
     const stStr = isBroken ? 'RULES BROKEN' : (isWait ? 'Waiting' : (isDone ? 'Finished' : 'Running'));
 
-    const chip = (key, text, isLive) => h('span', {
-      key,
-      style: {
-        padding: '5px 9px',
-        borderRadius: '6px',
-        background: isLive ? 'rgba(240, 192, 64, 0.12)' : 'rgba(255, 255, 255, 0.045)',
-        font: `${isLive ? '800' : '600'} 12px/1 system-ui, sans-serif`,
-        color: isLive ? (isBroken ? COLORS.red : isDone ? COLORS.gold : COLORS.green) : COLORS.dim,
-        border: isLive ? `1px solid ${isBroken ? 'rgba(224, 82, 82, 0.4)' : isDone ? 'rgba(240, 192, 64, 0.4)' : 'rgba(74, 222, 128, 0.4)'}` : '1px solid rgba(255, 255, 255, 0.04)',
-      }
-    }, text);
+    const chip = (key, text, isLive, tone) => {
+      const palette = tone === 'green'
+        ? { bg: 'rgba(74, 222, 128, 0.12)', fg: COLORS.green, bd: 'rgba(74, 222, 128, 0.4)' }
+        : tone === 'red'
+          ? { bg: 'rgba(224, 82, 82, 0.12)', fg: COLORS.red, bd: 'rgba(224, 82, 82, 0.4)' }
+          : isLive
+            ? {
+              bg: 'rgba(240, 192, 64, 0.12)',
+              fg: isBroken ? COLORS.red : isDone ? COLORS.gold : COLORS.green,
+              bd: isBroken ? 'rgba(224, 82, 82, 0.4)' : isDone ? 'rgba(240, 192, 64, 0.4)' : 'rgba(74, 222, 128, 0.4)',
+            }
+            : { bg: 'rgba(255, 255, 255, 0.045)', fg: COLORS.dim, bd: 'rgba(255, 255, 255, 0.04)' };
+      return h('span', {
+        key,
+        style: {
+          padding: '5px 9px',
+          borderRadius: '6px',
+          background: palette.bg,
+          font: `${isLive || tone ? '800' : '600'} 12px/1 system-ui, sans-serif`,
+          color: palette.fg,
+          border: `1px solid ${palette.bd}`,
+        }
+      }, text);
+    };
 
     const heroCard = (key, lbl, val, valColor, sub, subColor) => h('div', {
       key,
@@ -3429,57 +3454,6 @@ function ResultScreen() {
         !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green
       ),
     ]);
-
-    const rulesBlock = rules ? h('div', {
-      key: 'rules',
-      style: {
-        margin: '0 24px 10px', padding: '10px 14px', borderRadius: '8px',
-        border: `1px solid ${rules.ok
-          ? 'rgba(74, 222, 128, 0.45)'
-          : rules.broken ? 'rgba(224, 82, 82, 0.55)' : COLORS.border}`,
-        background: rules.ok
-          ? 'rgba(74, 222, 128, 0.08)'
-          : rules.broken ? 'rgba(224, 82, 82, 0.10)' : 'rgba(255,255,255,0.03)',
-      },
-    }, [
-      h('div', {
-        key: 'title',
-        style: {
-          font: '700 11px/1.3 system-ui, sans-serif', letterSpacing: '0.07em',
-          color: rules.ok ? COLORS.green : rules.broken ? COLORS.red : COLORS.dim,
-        },
-      }, rules.ok
-        ? `✓ ${t('mods|goldSpeedrun|rules|badge')}`
-        : rules.broken
-          ? t('mods|goldSpeedrun|rules|broken')
-          : t('mods|goldSpeedrun|rules|title')),
-      h('div', {
-        key: 'desc',
-        style: { marginTop: '3px', fontSize: '11px', color: COLORS.dim },
-      }, rules.broken
-        ? t('mods|goldSpeedrun|rules|brokenDesc')
-        : t(rules.ok ? 'mods|goldSpeedrun|rules|ok' : 'mods|goldSpeedrun|rules|bad')
-          + (rules.ok && rules.locked ? ` (${t('mods|goldSpeedrun|rules|locked')})` : '')
-          + (!rules.locked && officialMode() ? ` (${t('mods|goldSpeedrun|rules|forced')})` : '')),
-      rules.ok || rules.broken ? null : h('div', {
-        key: 'list',
-        style: {
-          marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '2px',
-          fontSize: '11px',
-        },
-      }, rules.items.filter(i => !i.ok).map(i => h('div', {
-        key: i.id,
-        style: { display: 'flex', justifyContent: 'space-between', gap: '12px' },
-      }, [
-        h('span', { key: 'l' }, i.label),
-        h('span', {
-          key: 'v',
-          style: { color: COLORS.red, textAlign: 'right' },
-        }, i.extra.length > 0
-          ? i.extra.join(', ')
-          : t('mods|goldSpeedrun|rules|need', { value: i.value })),
-      ]))),
-    ]) : null;
 
     const leftStatsCard = h('div', {
       key: 'stats-col',
@@ -3751,12 +3725,21 @@ function ResultScreen() {
           }, [
             chip('st', stStr, true),
             chip('sd', `Seed: ${getMapSeed()}`, false),
+            rules ? chip(
+              'rules',
+              rules.ok
+                ? t('mods|goldSpeedrun|rules|badge')
+                : rules.broken
+                  ? t('mods|goldSpeedrun|rules|broken')
+                  : t('mods|goldSpeedrun|rules|custom'),
+              rules.ok || rules.broken,
+              rules.ok ? 'green' : rules.broken ? 'red' : null
+            ) : null,
             chip('ps', `Pauses: ${readClock('pauseCount')}`, false),
             chip('rl', `Reloads: ${readClock('reloadCount')}`, false),
           ])
         ]),
         heroBlock,
-        rulesBlock,
         bodyGrid,
         footer,
       ])
