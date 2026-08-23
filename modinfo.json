@@ -3,7 +3,7 @@
   "apiVersion": 1,
   "id": "gold-speedrun",
   "name": "Gold Speedrun Challenge",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "author": "1986oliver & Ramses_II",
   "description": "Speedrun timer with millisecond precision (HH:MM:SS.mmm), measured in in-game time - it pauses when the game does.\n\nThe clock starts on your first mouse action: digging, grabbing, building or researching. Walking around is free, but nothing progresses off the timer. It stops the moment the category goal is reached.\n\nCATEGORIES: 100k / 500k / 1M gold, all artifacts (counted from the loaded map), factory rank 6 or 7, or your own gold target. Gold comes in two rulesets - Normal counts everything you earn, Hard Mode goes by your balance.\n\nTHREE CLOCKS: real time (R) is the official scoring - measured by the mod itself with performance.now(), the number a stopwatch next to the screen shows. Simulation time (T) counts the simulation steps the world actually ran, divided by 60 - a run on a machine that cannot hold 60 UPS stays comparable with one that can. Play-clock (W) is the game's own save-file clock. Slowdown % and tick deficit are always shown under the timer, so lost UPS never hide. All three, plus optional advanced metrics and a UPS history graph, are always measured and end up in the result screen.\n\nSPLITS: every research, every factory rank, every artifact, every upgrade, and gold marks. Each trigger is switchable on its own (F3), so you build the run you want. Every split records time and gold. A result screen with the full table appears at the end (F10).\n\nOptional: skip the intro, dismiss story pop-ups, end the tutorial automatically. Runs on a save where cheats were used are flagged and never stored as a best time.\n\nAll in-game text is available in English and German.\n\nOFFICIAL RULESET: the timer marks whether your settings match the official speedrun rules - started by any action including movement, gold ruleset Hard Mode, automatic tutorial skip off, and no other mod enabled. All four match: a green OFFICIAL RULESET badge on the timer and on the result screen. Anything off: the result screen names the setting. Set Gold ruleset to Official ruleset and the mod applies all of it for you - Hard Mode, timer on any action, and the tutorial, intro and story skips all off, locked so they cannot be moved.\n\n---\n\nSpeedrun-Timer mit Millisekunden (HH:MM:SS.mmm), gemessen in der In-Game-Zeit - sie haelt an, wenn das Spiel pausiert.\n\nDie Uhr startet mit dem ersten Mausdruck: Graben, Greifen, Bauen oder Forschen. Herumlaufen ist frei, aber es entsteht kein Fortschritt an der Zeitnahme vorbei. Sie stoppt in dem Moment, in dem das Ziel der Kategorie erreicht ist.\n\nKATEGORIEN: 100k / 500k / 1M Gold, alle Artefakte (aus der geladenen Karte gezaehlt), Fabrikrang 6 oder 7, oder ein eigenes Gold-Ziel. Bei Gold gibt es zwei Regelwerke - Normal zaehlt alles Eingenommene, Hard Mode geht nach dem Kontostand.\n\nDREI UHREN: die Echtzeit (R) ist die offizielle Wertung - vom Mod selbst mit performance.now() gemessen, die Zahl, die auch eine Stoppuhr neben dem Bildschirm zeigt. Die Simulationszeit (T) zaehlt die Schritte, die die Welt tatsaechlich gelaufen ist, geteilt durch 60 - damit bleibt ein Lauf auf schwacher Hardware mit einem auf starker vergleichbar. Die Spielzeit-Uhr (W) ist die eigene Uhr des Spielstands. Verzoegerung in Prozent und Schritt-Rueckstand stehen immer unter dem Timer, verlorene UPS bleiben also nie verborgen. Alle drei, dazu optionale erweiterte Messwerte und ein UPS-Verlaufsdiagramm, werden immer gemessen und stehen im Ergebnisfenster.\n\nSPLITS: jede Forschung, jeder Fabrikrang, jedes Artefakt, jede Aufwertung und Gold-Marken. Jeder Ausloeser ist einzeln schaltbar (F3), damit du dir deinen Lauf selbst zusammenstellst. Jeder Split haelt Zeit und Goldstand fest. Am Ende erscheint ein Ergebnisfenster mit der vollstaendigen Tabelle (F10).\n\nOptional: Intro ueberspringen, Story-Textboxen wegblenden, Tutorial automatisch beenden. Laeufe auf einem Spielstand, in dem Cheats benutzt wurden, werden markiert und nie als Bestzeit gespeichert.\n\nAlle Texte im Spiel gibt es auf Deutsch und Englisch.\n\nOFFIZIELLES REGELWERK: der Timer zeigt an, ob deine Einstellungen den offiziellen Speedrun-Regeln entsprechen - Start durch jede Aktion inklusive Bewegung, Gold-Regelwerk Hard Mode, automatischer Tutorial-Skip aus, und kein anderer Mod aktiv. Stimmt alles vier, steht ein gruenes OFFIZIELLES REGELWERK am Timer und im Ergebnisfenster. Weicht etwas ab, benennt das Ergebnisfenster die Einstellung. Stell das Gold-Regelwerk auf Offizielles Regelwerk, dann setzt der Mod alles selbst - Hard Mode, Start bei jeder Aktion, und Tutorial-, Intro- und Story-Skip aus, festgestellt gegen Verstellen.",
   "entry": "main.js",
@@ -224,6 +224,31 @@
       "default": true,
       "labelKey": "mods|goldSpeedrun|cfg|showSplits",
       "descriptionKey": "mods|goldSpeedrun|cfg|showSplits|desc"
+    },
+    "hudSplitRows": {
+      "type": "number",
+      "default": 6,
+      "min": 2,
+      "max": 24,
+      "step": 1,
+      "labelKey": "mods|goldSpeedrun|cfg|hudSplitRows",
+      "descriptionKey": "mods|goldSpeedrun|cfg|hudSplitRows|desc"
+    },
+    "hudLayout": {
+      "type": "choice",
+      "default": "horizontal",
+      "options": [
+        {
+          "value": "horizontal",
+          "labelKey": "mods|goldSpeedrun|cfg|hudLayout|horizontal"
+        },
+        {
+          "value": "vertical",
+          "labelKey": "mods|goldSpeedrun|cfg|hudLayout|vertical"
+        }
+      ],
+      "labelKey": "mods|goldSpeedrun|cfg|hudLayout",
+      "descriptionKey": "mods|goldSpeedrun|cfg|hudLayout|desc"
     },
     "showOverlay": {
       "type": "boolean",

@@ -246,6 +246,9 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|rules|locked': 'locked in when the run started',
   'mods|goldSpeedrun|rules|mods': 'Other mods enabled',
   'mods|goldSpeedrun|rules|modsNone': 'none',
+  'mods|goldSpeedrun|rules|badge': 'OFFICIAL',
+  'mods|goldSpeedrun|rules|broken': 'RULES BROKEN',
+  'mods|goldSpeedrun|rules|custom': 'CUSTOM',
   'mods|goldSpeedrun|cfg|showRuleset': 'Show ruleset badge',
   'mods|goldSpeedrun|cfg|showRuleset|desc': 'Marks on the timer and on the result screen whether the settings match the official ruleset: timer started by any action including movement, gold ruleset Hard Mode, tutorial skip off, and no other mod enabled.',
   'mods|goldSpeedrun|cfg|showAdvancedMetrics': 'Show advanced metrics',
@@ -421,6 +424,9 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|rules|locked': 'festgehalten beim Start des Laufs',
   'mods|goldSpeedrun|rules|mods': 'Andere Mods aktiv',
   'mods|goldSpeedrun|rules|modsNone': 'keine',
+  'mods|goldSpeedrun|rules|badge': 'OFFIZIELL',
+  'mods|goldSpeedrun|rules|broken': 'REGELBRUCH',
+  'mods|goldSpeedrun|rules|custom': 'EIGENES REGELWERK',
   'mods|goldSpeedrun|cfg|showRuleset': 'Regelwerk-Abzeichen zeigen',
   'mods|goldSpeedrun|cfg|showRuleset|desc': 'Zeigt am Timer und im Ergebnisfenster, ob die Einstellungen dem offiziellen Regelwerk entsprechen: Start durch jede Aktion inklusive Bewegung, Gold-Regelwerk Hard Mode, Tutorial-Skip aus, und kein anderer Mod aktiv.',
   'mods|goldSpeedrun|cfg|showAdvancedMetrics': 'Erweiterte Messwerte zeigen',
@@ -806,6 +812,21 @@ const readBest = () => {
   return null;
 };
 
+const globalBestsKey = () => bestKey() + '.global';
+
+const readGlobalBests = () => {
+  let v = api.storage.local.get(globalBestsKey());
+  if (typeof v === 'string' && v.startsWith('{')) {
+    try { v = JSON.parse(v); } catch (e) { v = null; }
+  }
+  return v && typeof v === 'object' && !Array.isArray(v) ? v : { seq: {}, abs: {} };
+};
+
+const writeGlobalBests = (bests) => {
+  if (!bests || typeof bests !== 'object') return;
+  try { api.storage.local.set(globalBestsKey(), JSON.stringify(bests)); } catch (e) { /* ignore */ }
+};
+
 const bestSplitsKey = () => bestKey() + '.splits';
 
 const parseSplitList = v => {
@@ -902,6 +923,14 @@ const findPbSplit = (split, pbSplits) => {
 // EN: the save. This is the same number that shows up as playTime in the save
 // EN: file even without this mod - api.time.getTimeMs() reads store.meta.time directly.
 const now = () => api.time.getTimeMs() || 0;
+
+const getMapSeed = () => {
+  try {
+    const seed = sandkit.state.store.meta.seed;
+    if (typeof seed === 'number' || typeof seed === 'string') return seed;
+  } catch (e) { /* ignore */ }
+  return 0;
+};
 
 // DE: Welche der drei Uhren gross im Bild steht. Auf die Wertung hat das keinen
 // DE: Einfluss - alle drei werden immer gemessen und immer festgehalten.
@@ -1134,6 +1163,7 @@ let lastPerf = null;   // DE: performance.now() beim letzten advanceClocks() / E
 let lastPlay = null;   // DE: now() beim letzten advanceClocks() / EN: now() at the last advanceClocks()
 let lastTick = null;   // DE: rawTick() beim letzten advanceClocks() / EN: rawTick() at the last advanceClocks()
 let justStarted = false; // DE: Verhindert Hot-Reload Erkennung im Start-Frame / EN: Prevents hot-reload detection on start frame
+let wasPaused = false;
 
 const readClock = key => {
   const v = api.storage.get(NS, key);
@@ -1148,6 +1178,9 @@ const startClocks = () => {
   lastPlay = now();
   lastTick = rawTick();
   justStarted = true;
+  wasPaused = false;
+  api.storage.set(NS, 'pauseCount', 0);
+  api.storage.set(NS, 'reloadCount', 0);
   api.storage.set(NS, 'upsRms', 0);
   api.storage.set(NS, 'upsWElapsed', 0);
   api.storage.set(NS, 'upsUElapsed', 0);
@@ -1164,6 +1197,8 @@ const resumeClocks = () => {
     lastPerf = null; lastPlay = null; lastTick = null;
     return;
   }
+  api.storage.set(NS, 'reloadCount', readClock('reloadCount') + 1);
+  wasPaused = gamePaused();
   rMs = readClock('upsRms');
   wMs = readClock('upsWElapsed');
   uTicks = readClock('upsUElapsed');
@@ -1210,7 +1245,15 @@ const advanceClocks = () => {
 
   if (prevPerf === null) return;
   if (!isRunning()) return;
-  if (gamePaused()) return;
+
+  const paused = gamePaused();
+  if (paused !== wasPaused) {
+    if (paused) {
+      api.storage.set(NS, 'pauseCount', readClock('pauseCount') + 1);
+    }
+    wasPaused = paused;
+  }
+  if (paused) return;
 
   let changed = false;
 
@@ -1363,32 +1406,87 @@ const translateIfPresent = key => {
   return value;
 };
 
-const techName = techId => {
-  if (!techId) return '?';
+const enumName = (en, id) => {
+  try {
+    const mapped = en && en[id];
+    if (typeof mapped === 'string' && mapped.length > 0 && mapped !== String(id)) return mapped;
+  } catch (e) { /* DE: Enum fehlt / EN: enum missing */ }
+  return null;
+};
 
+const i18nId = name => String(name).replace(/^./, c => c.toLowerCase());
+
+const itemName = itemId => {
+  const direct = translateIfPresent(`items|${itemId}|name`);
+  if (direct) return direct;
+  const named = enumName(enums.ItemId, itemId);
+  if (named) {
+    const fromEnum = translateIfPresent(`items|${i18nId(named)}|name`)
+      || translateIfPresent(`items|${named}|name`);
+    if (fromEnum) return fromEnum;
+  }
+  try {
+    const idef = api.items.getDefinitionById(itemId);
+    const fromDef = translateIfPresent(idef && idef.nameKey) || (idef && typeof idef.name === 'string' ? idef.name : null);
+    if (fromDef) return fromDef;
+  } catch (e) { /* DE: nur Mod-Items / EN: mod items only */ }
+  try {
+    const created = api.items.createFromId && api.items.createFromId(itemId);
+    const fromCreate = translateIfPresent(created && created.nameKey)
+      || (created && typeof created.name === 'string' ? created.name : null);
+    if (fromCreate) return fromCreate;
+  } catch (e) { /* DE: Vanilla-Item ohne API / EN: vanilla item has no API */ }
+  return named ? prettifyId(named) : null;
+};
+
+const structureName = type => {
+  try {
+    const sdef = api.structures.getDefinitionByType(type);
+    const name = translateIfPresent(sdef && sdef.nameKey)
+      || (sdef && typeof sdef.name === 'string' ? sdef.name : null);
+    if (name) return name;
+  } catch (e) { /* DE: unbekannt / EN: unknown */ }
+  const named = enumName(enums.StructureType, type);
+  return translateIfPresent(`structures|${type}|name`)
+    || (named ? translateIfPresent(`structures|${i18nId(named)}|name`) : null);
+};
+
+const techName = techId => {
+  if (techId == null || techId === '') return '?';
+
+  const resolved = enumName(enums.Tech, techId);
   let def = null;
   try { def = api.tech.getDefinitionById(techId); } catch (e) { /* DE: unbekannt / EN: unknown */ }
+  if (!def && resolved) {
+    try { def = api.tech.getDefinitionById(resolved); } catch (e) { /* ignore */ }
+  }
 
-  const direct = translateIfPresent(def && def.nameKey) || translateIfPresent(`tech|${techId}|name`);
+  if (def) {
+    const fromDef = translateIfPresent(def.nameKey)
+      || (typeof def.name === 'string' && def.name ? def.name : null);
+    if (fromDef) return fromDef;
+  }
+
+  const direct = translateIfPresent(`tech|${techId}|name`)
+    || (resolved ? translateIfPresent(`tech|${i18nId(resolved)}|name`) : null)
+    || (resolved ? translateIfPresent(`tech|${resolved}|name`) : null);
   if (direct) return direct;
 
   const unlocks = (def || {}).unlocks || {};
-  if (Array.isArray(unlocks.structures)) {
-    for (const type of unlocks.structures) {
-      let sdef = null;
-      try { sdef = api.structures.getDefinitionByType(type); } catch (e) { /* DE: unbekannt / EN: unknown */ }
-      const name = translateIfPresent(sdef && sdef.nameKey);
+  if (Array.isArray(unlocks.items)) {
+    for (const itemId of unlocks.items) {
+      const name = itemName(itemId);
       if (name) return name;
     }
   }
-  if (Array.isArray(unlocks.items)) {
-    for (const itemId of unlocks.items) {
-      const name = translateIfPresent(`items|${itemId}|name`);
+  if (Array.isArray(unlocks.structures)) {
+    for (const type of unlocks.structures) {
+      const name = structureName(type);
       if (name) return name;
     }
   }
 
-  return prettifyId(techId);
+  return prettifyId(resolved || techId);
 };
 
 const upgradeName = (itemId, upgradeId) =>
@@ -1404,13 +1502,40 @@ const addSplit = (kind, label, id) => {
   if (typeof run.startedAt !== 'number' || typeof run.finishedAt === 'number') return;
 
   const splits = readSplits();
+  const t = elapsed();
+  const sid = splitIdOf(kind, id) || `${kind}:${label}`;
+
+  const bests = readGlobalBests();
+  if (!bests.seq) bests.seq = {};
+  if (!bests.abs) bests.abs = {};
+
+  const isSeq = kind === 'rank' || kind === 'goal' || kind === 'gold';
+  if (isSeq) {
+    let prevSeqT = 0;
+    for (let i = splits.length - 1; i >= 0; i--) {
+      if (splits[i].kind === 'rank' || splits[i].kind === 'goal' || splits[i].kind === 'gold') {
+        prevSeqT = splits[i].t;
+        break;
+      }
+    }
+    const segment = t - prevSeqT;
+    if (bests.seq[sid] === undefined || segment < bests.seq[sid]) {
+      bests.seq[sid] = segment;
+    }
+  } else {
+    if (bests.abs[sid] === undefined || t < bests.abs[sid]) {
+      bests.abs[sid] = t;
+    }
+  }
+  writeGlobalBests(bests);
+
   splits.push({
-    t: elapsed(),
+    t,
     sim: elapsedSim(),
     w: elapsedPlay(),
     kind,
     label,
-    id: splitIdOf(kind, id) || `${kind}:${label}`,
+    id: sid,
     gold: Math.floor(goldProgress()),
   });
   api.storage.set(NS, 'splits', splits);
@@ -1456,8 +1581,20 @@ const writeOverrides = map => {
 const triggerKey = (kind, id) => `${kind}:${id}`;
 
 const triggerEnabled = (kind, id, groupDefault) => {
-  const v = readOverrides()[triggerKey(kind, id)];
-  return typeof v === 'boolean' ? v : groupDefault;
+  const map = readOverrides();
+  const keys = [triggerKey(kind, id)];
+  if (kind === 'tech') {
+    const named = enumName(enums.Tech, id);
+    if (named) keys.push(triggerKey(kind, named));
+    try {
+      const num = enums.Tech && enums.Tech[id];
+      if (typeof num === 'number') keys.push(triggerKey(kind, num));
+    } catch (e) { /* ignore */ }
+  }
+  for (const k of keys) {
+    if (typeof map[k] === 'boolean') return map[k];
+  }
+  return groupDefault;
 };
 
 const setTriggerEnabled = (kind, id, value) => {
@@ -1504,7 +1641,11 @@ const allTechIds = () => {
   }
   for (const id of EXTRA_TECH_IDS) ids.add(id);
   try {
-    for (const id of Object.keys(sandkit.state.store.player.tech || {})) ids.add(id);
+    for (const id of Object.keys(sandkit.state.store.player.tech || {})) {
+      const named = enumName(enums.Tech, id);
+      if (named) ids.add(named);
+      else ids.add(id);
+    }
   } catch (e) { /* DE: noch kein Spielstand / EN: no save loaded yet */ }
   techIdCache = [...ids];
   return techIdCache;
@@ -1807,15 +1948,16 @@ const rulesetStatus = () => {
   }));
 
   const extra = otherEnabledMods();
+  const extraCount = extra.length;
   items.push({
     id: 'mods',
     label: t('mods|goldSpeedrun|rules|mods'),
-    value: t('mods|goldSpeedrun|rules|modsNone'),
-    ok: extra.length === 0,
+    value: extraCount > 0 ? `${extraCount} Mods` : t('mods|goldSpeedrun|rules|modsNone'),
+    ok: extraCount === 0,
     extra,
   });
 
-  rulesCache = { ok: items.every(i => i.ok), items };
+  rulesCache = { ok: items.every(i => i.ok), items, extraCount };
   rulesCacheAt = stamp;
   return rulesCache;
 };
@@ -1887,7 +2029,7 @@ const startRun = reason => {
   api.storage.set(NS, 'official', rulesetStatus().ok);
   api.storage.set(NS, 'officialBroken', false);
   resetEarned();
-  resultDismissed = false;
+  setResultDismissed(true);
 
 
   log(`Timer gestartet (${reason}), Kategorie: ${categoryLabel()}`);
@@ -2050,10 +2192,11 @@ const ARTIFACT_TYPE = (enums.WorldItemType && enums.WorldItemType.Artifact) !== 
 trigger('worldItem:pickedUp', payload => {
   if (!payload || payload.type !== ARTIFACT_TYPE) return null;
   if (!triggerEnabled('artifact', 'any', splitOn('splitArtifact'))) return null;
+  const index = getArtifactsFound() + 1;
   return {
     kind: 'artifact',
-    label: t('mods|goldSpeedrun|split|artifact', { index: getArtifactsFound() }),
-    id: `artifact:${getArtifactsFound()}`,
+    label: t('mods|goldSpeedrun|split|artifact', { index }),
+    id: `artifact:${index}`,
   };
 });
 
@@ -2081,9 +2224,9 @@ for (const name of START_EVENTS) {
 // --- DE: Zielpruefung / EN: Goal check ---------------------------------------
 let lastWrite = -1;
 
-// DE: Wird gesetzt, sobald ein Lauf endet, und vom Ergebnisfenster gelesen.
-// EN: Set as soon as a run ends, and read by the result screen.
-let resultDismissed = false;
+// DE: Wird beim Start auf true gesetzt, beim Beenden auf false.
+// EN: Set to true at start, false at finish.
+let resultDismissed = true;
 
 const scoredRealTime = () => {
   const live = elapsed();
@@ -2185,7 +2328,7 @@ const finishRun = cat => {
     tickDeficit: Math.round(deficit),
     tickSourceReady: tickSourceReady(),
     splits: splits.map(s =>
-      `${formatTime(s.t, 'millis')}  (sim ${formatTime(Number.isFinite(s.sim) ? s.sim : s.t, 'millis')})  ${s.label}  ${s.gold} Gold`),
+      `${formatTime(s.t, 'millis')}  (sim ${formatTime(Number.isFinite(s.sim) ? s.sim : s.t, 'millis')})  ${displaySplitLabel(s, splits)}  ${s.gold} Gold`),
     cheatsUsed: cheatsUsed(),
     mods,
   });
@@ -2327,8 +2470,13 @@ const HUD_INTERVAL = { seconds: 250, centis: 50, millis: 16 };
 const useTick = fmt => {
   const [, bump] = react.useState(0);
   react.useEffect(() => {
-    const id = setInterval(() => bump(n => (n + 1) % 1000), HUD_INTERVAL[fmt] || 50);
-    return () => clearInterval(id);
+    const fn = () => bump(n => (n + 1) % 1000);
+    const id = setInterval(fn, HUD_INTERVAL[fmt] || 50);
+    resultListeners.add(fn);
+    return () => {
+      clearInterval(id);
+      resultListeners.delete(fn);
+    };
   }, [fmt]);
 };
 
@@ -2336,34 +2484,54 @@ const useTick = fmt => {
 // DE: Ergebnisfenster mit Abschnittszeit und Goldstand.
 // EN: One row of the split table. Narrow in the HUD with the PB delta, and
 // EN: with segment time and gold total in the result screen.
-function SplitRow({ split, previous, fmt, wide, pb }) {
+function SplitRow({ split, previous, fmt, wide, pb, bests, prevSeqT }) {
   const upcoming = split.upcoming === true;
   const live = Number.isFinite(split.t);
   const prevT = previous && Number.isFinite(previous.t) ? previous.t : 0;
   const segment = live ? split.t - prevT : 0;
   const pbTime = pb && Number.isFinite(pb.t) ? pb.t : null;
-  const delta = live && pbTime !== null ? split.t - pbTime : null;
+  
+  const isSeq = split.kind === 'rank' || split.kind === 'goal' || split.kind === 'gold';
+  let delta = null;
+  if (live && bests) {
+    if (isSeq) {
+      if (bests.seq && bests.seq[split.id] !== undefined) {
+        delta = (split.t - prevSeqT) - bests.seq[split.id];
+      }
+    } else {
+      if (bests.abs && bests.abs[split.id] !== undefined) {
+        delta = split.t - bests.abs[split.id];
+      }
+    }
+  } else if (live && pbTime !== null) {
+    delta = split.t - pbTime;
+  }
 
   const cell = (key, value, style) => h('span', { key, style }, value);
 
   return h('div', {
     style: {
-      display: 'flex', gap: '8px', alignItems: 'baseline',
-      padding: wide ? '3px 0' : '1px 0',
-      borderBottom: wide ? '1px solid rgba(255,255,255,0.05)' : 'none',
+      display: wide ? 'grid' : 'flex',
+      gridTemplateColumns: wide ? '1fr 92px 140px 92px' : undefined,
+      gap: wide ? '12px' : '8px',
+      alignItems: 'baseline',
+      padding: wide ? '8px 6px' : '1px 0',
+      borderBottom: wide ? '1px solid rgba(255,255,255,0.04)' : 'none',
       fontVariantNumeric: 'tabular-nums',
+      fontSize: wide ? '15px' : undefined,
       opacity: upcoming ? 0.55 : 1,
     },
   }, [
     cell('label', split.label, {
-      flex: 1, minWidth: 0,
+      flex: wide ? undefined : 1,
+      minWidth: 0,
       color: upcoming ? COLORS.dim : (KIND_COLOR[split.kind] || COLORS.text),
-      fontWeight: split.kind === 'goal' && !upcoming ? 700 : 500,
+      fontWeight: split.kind === 'goal' && !upcoming ? 800 : (wide ? 600 : 500),
       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
     }),
     wide
-      ? cell('seg', live && segment > 0 ? '+' + formatShort(segment, fmt) : '-', {
-          color: COLORS.dim, minWidth: '72px', textAlign: 'right',
+      ? cell('seg', live && segment > 0 && isSeq ? '+' + formatShort(segment, fmt) : (isSeq ? '-' : ''), {
+          color: COLORS.dim, minWidth: '72px', textAlign: 'right', fontSize: '14px',
         })
       : null,
     // DE: Absolute Zeit immer vollstaendig: Stunden, Minuten, Sekunden,
@@ -2377,16 +2545,18 @@ function SplitRow({ split, previous, fmt, wide, pb }) {
     cell('time', live
       ? formatTime(split.t, fmt)
       : (pbTime !== null ? formatTime(pbTime, fmt) : '—'), {
-      minWidth: wide ? '104px' : '92px', textAlign: 'right',
-      color: upcoming ? COLORS.dim : undefined,
+      minWidth: wide ? undefined : '92px', textAlign: 'right',
+      color: upcoming ? COLORS.dim : '#ffffff',
+      fontWeight: wide ? 600 : undefined,
     }),
     wide
       ? cell('gold', live ? formatGold(split.gold) : '', {
           color: COLORS.gold, minWidth: '76px', textAlign: 'right',
+          fontWeight: 600,
         })
       : cell('delta', delta !== null
           ? (delta >= 0 ? '+' : '-') + formatShort(Math.abs(delta), fmt)
-          : (!upcoming && live && segment > 0 ? '+' + formatShort(segment, fmt) : ''), {
+          : (!upcoming && live && segment > 0 && isSeq ? '+' + formatShort(segment, fmt) : ''), {
           color: delta === null ? COLORS.dim : delta <= 0 ? COLORS.green : COLORS.red,
           minWidth: '64px', textAlign: 'right',
         }),
@@ -2395,15 +2565,24 @@ function SplitRow({ split, previous, fmt, wide, pb }) {
 
 function SplitTable({ splits, fmt, wide, pbSplits }) {
   const pbs = Array.isArray(pbSplits) ? pbSplits : [];
+  const bests = readGlobalBests();
+  let prevSeqT = 0;
   return h('div', { style: { display: 'flex', flexDirection: 'column' } },
-    splits.map((s, i) => h(SplitRow, {
-      key: i,
-      split: s,
-      previous: i > 0 ? splits[i - 1] : null,
-      fmt,
-      wide,
-      pb: findPbSplit(s, pbs),
-    })));
+    splits.map((s, i) => {
+      const isSeq = s.kind === 'rank' || s.kind === 'goal' || s.kind === 'gold';
+      const myPrevSeqT = prevSeqT;
+      if (isSeq && Number.isFinite(s.t)) prevSeqT = s.t;
+      return h(SplitRow, {
+        key: i,
+        split: { ...s, label: displaySplitLabel(s, splits) },
+        previous: i > 0 ? splits[i - 1] : null,
+        fmt,
+        wide,
+        pb: findPbSplit(s, pbs),
+        bests,
+        prevSeqT: myPrevSeqT,
+      });
+    }));
 }
 
 // --- DE: Verlauf: UPS ueber die Zeit / EN: History: UPS over time ----------
@@ -2650,12 +2829,28 @@ function MetricLine({ label, value, color }) {
   ]);
 }
 
+const RulesBadge = ({ rules }) => {
+  if (!rules) return null;
+  return h('span', {
+    style: {
+      marginLeft: '8px',
+      padding: '2px 6px',
+      borderRadius: '4px',
+      fontSize: '10px',
+      background: rules.ok ? 'rgba(74, 222, 128, 0.2)' : rules.broken ? 'rgba(248, 113, 113, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+      color: rules.ok ? '#4ade80' : rules.broken ? '#f87171' : COLORS.dim,
+    },
+    title: rules.ok ? t('mods|goldSpeedrun|rules|ok') : rules.broken ? t('mods|goldSpeedrun|rules|brokenDesc') : t('mods|goldSpeedrun|rules|bad')
+  }, rules.ok ? `✓ ${t('mods|goldSpeedrun|rules|badge')}` : rules.broken ? t('mods|goldSpeedrun|rules|broken') : (rules.extraCount > 0 ? `❌ ${rules.extraCount} Mods` : t('mods|goldSpeedrun|rules|custom')));
+};
+
 function SpeedrunHud() {
   const fmt = timeFormat();
   useTick(fmt);
 
   if (!modEnabled()) return null;
   if (api.settings.get('showOverlay') === false) return null;
+  if (!resultDismissed) return null;
 
   const run = readRun();
   const waiting = typeof run.startedAt !== 'number';
@@ -2725,7 +2920,24 @@ function SpeedrunHud() {
     },
   }, children);
 
+  const stateStr = rules && rules.broken ? '[RULES BROKEN]' : done ? '[Finished]' : waiting ? '[Waiting]' : '[Running]';
+  const seedStr = getMapSeed();
+  const pauseCount = readClock('pauseCount');
+  const reloadCount = readClock('reloadCount');
+
   const clockBlock = [
+    h('div', {
+      key: 'header',
+      style: {
+        fontSize: '11px', color: COLORS.dim, fontVariantNumeric: 'tabular-nums',
+        marginBottom: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap'
+      }
+    }, [
+      h('span', { key: 'state', style: { color: rules && rules.broken ? COLORS.red : done ? COLORS.gold : COLORS.text, fontWeight: 'bold' } }, stateStr),
+      h('span', { key: 'seed' }, `Seed: ${seedStr}`),
+      h('span', { key: 'pauses' }, `Pauses: ${pauseCount}`),
+      h('span', { key: 'reloads' }, `Reloads: ${reloadCount}`),
+    ]),
     h('div', {
       key: 'time',
       style: {
@@ -2784,8 +2996,8 @@ function SpeedrunHud() {
   ];
 
   const progressBlock = [
-    h('div', { key: 'goal', style: { marginTop: horizontal ? 0 : '4px', opacity: 0.85 } },
-      waiting
+    h('div', { key: 'goal', style: { marginTop: horizontal ? 0 : '4px', opacity: 0.85, display: 'flex', justifyContent: 'space-between' } }, [
+      h('span', {}, waiting
         ? t(startMode() === 'move'
             ? 'mods|goldSpeedrun|waitingMove'
             : startMode() === 'any'
@@ -2794,6 +3006,8 @@ function SpeedrunHud() {
                 ? 'mods|goldSpeedrun|waitingClick'
                 : 'mods|goldSpeedrun|waitingMouse')
         : progressText),
+      rules ? h(RulesBadge, { rules }) : null
+    ]),
     h('div', {
       key: 'bar',
       style: {
@@ -2834,6 +3048,12 @@ function SpeedrunHud() {
         }))
     : null;
 
+  const btnStyle = {
+    background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.dim}`, color: COLORS.text,
+    padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', pointerEvents: 'auto',
+    fontSize: '11px', marginTop: '6px', width: '100%',
+  };
+
   const infoBlock = [
     h('div', {
       key: 'foot',
@@ -2845,22 +3065,7 @@ function SpeedrunHud() {
       h('span', { key: 'mode' }, categoryLabel()),
       best !== null && best > 0 ? h('span', { key: 'pb' }, `PB ${formatTime(best, fmt)}`) : null,
     ]),
-    rules
-      ? h('div', {
-          key: 'rules',
-          style: {
-            marginTop: '3px',
-            font: '700 10px/1.3 system-ui, sans-serif',
-            letterSpacing: '0.07em',
-            color: rules.ok ? COLORS.green : rules.broken ? COLORS.red : COLORS.dim,
-            opacity: rules.ok || rules.broken ? 0.95 : 0.5,
-          },
-        }, rules.ok
-          ? `✓ ${t('mods|goldSpeedrun|rules|badge')}`
-          : rules.broken
-            ? t('mods|goldSpeedrun|rules|broken')
-            : t('mods|goldSpeedrun|rules|custom'))
-      : null,
+    h('button', { key: 'f10btn', onClick: () => setResultDismissed(false), style: btnStyle }, 'Dashboard (F10)'),
     tainted
       ? h('div', {
           key: 'tainted',
@@ -2882,15 +3087,11 @@ function SpeedrunHud() {
     background: COLORS.box,
     color: COLORS.text,
     font: '500 13px/1.35 system-ui, sans-serif',
-    pointerEvents: 'none',
+    pointerEvents: 'auto',
     display: 'flex',
     flexDirection: horizontal ? 'row' : 'column',
     alignItems: horizontal ? 'flex-start' : 'stretch',
     gap: horizontal ? '12px' : 0,
-    // DE: Ueber der Tutorial-Box (die liegt auf 10006) - sonst verdeckt sie den
-    // DE: Timer genau dort, wo er standardmaessig sitzt.
-    // EN: Above the tutorial box (which sits at 10006) - otherwise it would
-    // EN: cover the timer exactly where it sits by default.
     zIndex: 10010,
   };
 
@@ -2910,7 +3111,16 @@ function SpeedrunHud() {
   ]);
 }
 
-api.ui.inject('hud', SpeedrunHud);
+function SpeedrunHudSafe() {
+  try {
+    return SpeedrunHud();
+  } catch (e) {
+    return h('div', { style: { position: 'absolute', top: 0, left: 0, background: 'red', color: 'white', padding: '10px', zIndex: 99999 } }, 
+      'SpeedrunHud Crashed: ' + String(e));
+  }
+}
+
+api.ui.inject('hud', SpeedrunHudSafe);
 
 // --- DE: Ergebnisfenster / EN: Result screen ---------------------------------
 // DE: Erscheint, sobald ein Lauf endet, und zeigt die vollstaendige Tabelle mit
@@ -2922,284 +3132,650 @@ const notifyResult = () => resultListeners.forEach(fn => {
   try { fn(); } catch (e) { /* DE: ignorieren / EN: ignore */ }
 });
 
-const setResultDismissed = v => { resultDismissed = !!v; notifyResult(); };
+const setResultDismissed = v => { resultDismissed = !!v; notifyResult(); notifyPanel(); };
+
+const csvEscape = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+
+const csvInt = v => Number.isFinite(Number(v)) ? Math.round(Number(v)) : '';
+
+const artifactIndexOf = split => {
+  const fromId = String(split && split.id || '').match(/^artifact:(\d+)$/);
+  if (fromId) return Number(fromId[1]);
+  const fromLabel = String(split && split.label || '').match(/(\d+)\s*$/);
+  if (fromLabel) return Number(fromLabel[1]);
+  return null;
+};
+
+const artifactRecordedBase = list => {
+  let min = Infinity;
+  for (const s of list || []) {
+    if (!s || s.kind !== 'artifact' || s.upcoming) continue;
+    const n = artifactIndexOf(s);
+    if (n !== null && n < min) min = n;
+  }
+  return Number.isFinite(min) ? min : 1;
+};
+
+const displaySplitLabel = (split, list) => {
+  if (!split) return '';
+  if (split.kind === 'tech') {
+    const raw = String(split.label || '');
+    if (/^\d+$/.test(raw)) {
+      const id = (split.id && String(split.id).replace(/^tech:/, '')) || raw;
+      return techName(id);
+    }
+    return split.label;
+  }
+  if (split.kind === 'artifact' && !split.upcoming) {
+    const n = artifactIndexOf(split);
+    if (n !== null && artifactRecordedBase(list) === 0) {
+      return t('mods|goldSpeedrun|split|artifact', { index: n + 1 });
+    }
+  }
+  return split.label;
+};
+
+const splitsToCsv = list => {
+  const rows = ['kind,label,time_ms,sim_ms,play_ms,gold'];
+  for (const s of list) {
+    rows.push([
+      s.kind,
+      csvEscape(displaySplitLabel(s, list)),
+      csvInt(s.t),
+      csvInt(s.sim),
+      csvInt(s.w),
+      csvInt(s.gold),
+    ].join(','));
+  }
+  return rows.join('\n');
+};
+
+const parseCsvLine = line => {
+  const out = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = false;
+      } else {
+        cur += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ',') {
+      out.push(cur);
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  out.push(cur);
+  return out;
+};
+
+const csvToSplits = text => {
+  const out = [];
+  let hasId = false;
+  let seenHeader = false;
+  for (const raw of String(text || '').split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const cols = parseCsvLine(line);
+    if (!seenHeader && cols[0] === 'kind') {
+      seenHeader = true;
+      hasId = cols[1] === 'id';
+      continue;
+    }
+    const kind = cols[0];
+    const id = hasId ? cols[1] : '';
+    const label = hasId ? cols[2] : cols[1];
+    const t = parseFloat(hasId ? cols[3] : cols[2]);
+    if (!kind || !label || !Number.isFinite(t)) continue;
+    const sim = parseFloat(hasId ? cols[4] : cols[3]);
+    const w = parseFloat(hasId ? cols[5] : cols[4]);
+    const gold = parseFloat(hasId ? cols[6] : cols[5]);
+    out.push({
+      kind,
+      id: id || `${kind}:${label}`,
+      label,
+      t,
+      sim: Number.isFinite(sim) ? sim : undefined,
+      w: Number.isFinite(w) ? w : undefined,
+      gold: Number.isFinite(gold) ? gold : undefined,
+    });
+  }
+  return out;
+};
+
+const downloadTextFile = (content, filename) => {
+  if (typeof document === 'undefined' || typeof URL === 'undefined' || typeof Blob === 'undefined') return;
+  const blob = new Blob([content], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  if (document.body) {
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } else {
+    a.click();
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 
 function ResultScreen() {
-  const [, bump] = react.useState(0);
-  const [expanded, setExpanded] = react.useState(false);
+  try {
+    const [, bump] = react.useState(0);
 
-  react.useEffect(() => {
-    const fn = () => bump(n => (n + 1) % 100000);
-    resultListeners.add(fn);
-    // DE: Der Lauf kann jederzeit enden, ohne dass jemand klickt - also nachsehen.
-    // EN: The run can end at any time without anyone clicking anything - so check periodically.
-    const id = setInterval(fn, 300);
-    return () => { resultListeners.delete(fn); clearInterval(id); };
-  }, []);
+    react.useEffect(() => {
+      const fn = () => bump(n => (n + 1) % 100000);
+      resultListeners.add(fn);
+      const id = setInterval(fn, 300);
+      return () => { resultListeners.delete(fn); clearInterval(id); };
+    }, []);
 
-  if (!modEnabled()) return null;
-  if (resultDismissed) return null;
+    if (!modEnabled()) return null;
+    if (resultDismissed) return null;
 
-  const run = readRun();
-  if (typeof run.finishedAt !== 'number' || typeof run.startedAt !== 'number') return null;
+    const run = readRun();
+    const fmt = timeFormat();
+    const total = elapsed();
+    const totalSim = elapsedSim();
+    const totalPlay = elapsedPlay();
+    const slowdown = slowdownPercent();
+    const deficit = tickDeficit();
+    const ready = tickSourceReady();
+    const splits = readSplits();
+    const best = readBest();
+    const tainted = cheatsUsed();
+    const delta = best !== null ? total - best : null;
+    const rules = showRuleset() ? rulesetView() : null;
 
-  const fmt = timeFormat();
-  const total = elapsed();
-  const totalSim = elapsedSim();
-  const totalPlay = elapsedPlay();
-  const slowdown = slowdownPercent();
-  const deficit = tickDeficit();
-  const ready = tickSourceReady();
-  const splits = readSplits();
-  const best = readBest();
-  const tainted = cheatsUsed();
-  const delta = best !== null ? total - best : null;
-  const rules = showRuleset() ? rulesetView() : null;
+    const isBroken = rules && rules.broken;
+    const isWait = typeof run.startedAt !== 'number';
+    const isDone = typeof run.finishedAt === 'number';
+    const stStr = isBroken ? 'RULES BROKEN' : (isWait ? 'Waiting' : (isDone ? 'Finished' : 'Running'));
 
-  const line = (label, value, color) => h('div', {
-    style: { display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'baseline' },
-  }, [
-    h('span', { key: 'l', style: { color: COLORS.dim, fontSize: '12px' } }, label),
-    h('span', {
-      key: 'v',
+    const chip = (key, text, isLive) => h('span', {
+      key,
       style: {
-        color: color || COLORS.text,
-        fontVariantNumeric: 'tabular-nums',
-        font: '700 15px/1.2 system-ui, sans-serif',
-      },
-    }, value),
-  ]);
+        padding: '5px 9px',
+        borderRadius: '6px',
+        background: isLive ? 'rgba(240, 192, 64, 0.12)' : 'rgba(255, 255, 255, 0.045)',
+        font: `${isLive ? '800' : '600'} 12px/1 system-ui, sans-serif`,
+        color: isLive ? (isBroken ? COLORS.red : isDone ? COLORS.gold : COLORS.green) : COLORS.dim,
+        border: isLive ? `1px solid ${isBroken ? 'rgba(224, 82, 82, 0.4)' : isDone ? 'rgba(240, 192, 64, 0.4)' : 'rgba(74, 222, 128, 0.4)'}` : '1px solid rgba(255, 255, 255, 0.04)',
+      }
+    }, text);
 
-  return h('div', {
-    style: {
-      position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-      width: expanded ? '560px' : '460px', maxWidth: '92vw', maxHeight: '86vh',
-      display: 'flex', flexDirection: 'column',
-      padding: '16px 18px',
-      borderRadius: '8px',
-      border: `1px solid ${tainted ? COLORS.red : COLORS.gold}`,
-      background: COLORS.panel,
-      boxShadow: '0 18px 50px rgba(0,0,0,0.55)',
-      color: COLORS.text,
-      font: '500 13px/1.4 system-ui, sans-serif',
-      zIndex: 60,
-    },
-  }, [
-    h('div', {
-      key: 'head',
-      style: { display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '10px' },
+    const heroCard = (key, lbl, val, valColor, sub, subColor) => h('div', {
+      key,
+      style: {
+        background: 'rgba(0, 0, 0, 0.25)',
+        border: '1px solid rgba(255, 255, 255, 0.04)',
+        borderRadius: '10px',
+        padding: '16px 20px 18px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+      }
+    }, [
+      h('div', {
+        key: 'lbl',
+        style: {
+          font: '800 13px/1 system-ui, sans-serif',
+          color: COLORS.gold,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+        }
+      }, lbl),
+      h('div', {
+        key: 'val',
+        style: {
+          marginTop: '10px',
+          font: '800 42px/1 system-ui, sans-serif',
+          fontVariantNumeric: 'tabular-nums',
+          letterSpacing: '-0.02em',
+          color: valColor || '#ffffff',
+          textShadow: '0 2px 10px rgba(0,0,0,0.65)',
+        }
+      }, val),
+      h('div', {
+        key: 'sub',
+        style: {
+          marginTop: '8px',
+          font: '700 13px/1.2 system-ui, sans-serif',
+          fontVariantNumeric: 'tabular-nums',
+          color: subColor || COLORS.dim,
+        }
+      }, sub),
+    ]);
+
+    const statRow = (label, value) => h('div', {
+      key: label,
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        gap: '12px',
+        padding: '8px 0',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+      }
+    }, [
+      h('span', { key: 'k', style: { color: COLORS.dim, font: '600 14px/1.2 system-ui, sans-serif' } }, label),
+      h('span', { key: 'v', style: { font: '700 16px/1.2 system-ui, sans-serif', fontVariantNumeric: 'tabular-nums', color: COLORS.text } }, value),
+    ]);
+
+    const actionBtn = (key, hotkey, label, onClick) => h('button', {
+      key,
+      onClick,
+      style: {
+        font: '700 13px/1.2 system-ui, sans-serif',
+        padding: '10px 14px',
+        borderRadius: '8px',
+        border: `1px solid ${COLORS.border}`,
+        background: 'rgba(0, 0, 0, 0.2)',
+        color: '#d7dee6',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+      }
+    }, [
+      hotkey ? h('span', { key: 'k', style: { color: COLORS.gold, fontSize: '11px', fontWeight: 800 } }, hotkey) : null,
+      h('span', { key: 'l' }, label),
+    ]);
+
+    const deltaText = best !== null ? (delta <= 0 ? '-' : '+') + formatShort(Math.abs(delta), fmt) : '—';
+    const deltaColor = best === null ? COLORS.dim : delta <= 0 ? COLORS.green : COLORS.red;
+
+    const heroBlock = h('div', {
+      key: 'hero',
+      style: {
+        display: 'grid',
+        gridTemplateColumns: '1.15fr 1fr 0.9fr',
+        gap: '14px',
+        padding: '16px 24px 8px',
+        flexShrink: 0,
+      }
+    }, [
+      heroCard(
+        'total',
+        t('mods|goldSpeedrun|result|total'),
+        isWait ? dashTime(fmt) : formatTime(total, fmt),
+        isDone ? '#ffd56a' : '#ffffff',
+        isDone ? 'real time · official' : 'real time',
+        COLORS.dim
+      ),
+      heroCard(
+        'best',
+        t('mods|goldSpeedrun|result|best'),
+        best === null ? t('mods|goldSpeedrun|result|noBest') : formatTime(best, fmt),
+        '#ffffff',
+        best !== null ? `${deltaText} vs PB` : '—',
+        deltaColor
+      ),
+      heroCard(
+        'slow',
+        t('mods|goldSpeedrun|metric|slowdown'),
+        ready ? `${fmtSigned(slowdown, 2)}%` : '—',
+        !ready ? COLORS.dim : slowdown <= -5 ? '#ff8b8b' : slowdown <= -1 ? COLORS.gold : COLORS.green,
+        ready ? `${t('mods|goldSpeedrun|metric|deficit')}: ${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s)` : '—',
+        !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green
+      ),
+    ]);
+
+    const rulesBlock = rules ? h('div', {
+      key: 'rules',
+      style: {
+        margin: '0 24px 10px', padding: '10px 14px', borderRadius: '8px',
+        border: `1px solid ${rules.ok
+          ? 'rgba(74, 222, 128, 0.45)'
+          : rules.broken ? 'rgba(224, 82, 82, 0.55)' : COLORS.border}`,
+        background: rules.ok
+          ? 'rgba(74, 222, 128, 0.08)'
+          : rules.broken ? 'rgba(224, 82, 82, 0.10)' : 'rgba(255,255,255,0.03)',
+      },
     }, [
       h('div', {
         key: 'title',
-        style: { flex: 1, font: '700 17px/1 system-ui, sans-serif', letterSpacing: '0.04em' },
-      }, t('mods|goldSpeedrun|result|title')),
-      h('div', {
-        key: 'cat',
-        style: { font: '400 12px/1 system-ui, sans-serif', color: COLORS.dim },
-      }, categoryLabel()),
-    ]),
-
-    h('div', {
-      key: 'summary',
-      style: {
-        display: 'flex', flexDirection: 'column', gap: '4px',
-        padding: '8px 10px', marginBottom: '10px',
-        borderRadius: '5px', background: 'rgba(255,255,255,0.04)',
-      },
-    }, [
-      h('div', { key: 'total' },
-        line(t('mods|goldSpeedrun|result|total'), formatTime(total, fmt), COLORS.gold)),
-      h('div', { key: 'best' },
-        line(
-          t('mods|goldSpeedrun|result|best'),
-          best === null
-            ? t('mods|goldSpeedrun|result|noBest')
-            : `${formatTime(best, fmt)}  (${delta <= 0 ? '-' : '+'}${formatShort(Math.abs(delta), fmt)})`,
-          best === null ? COLORS.dim : delta <= 0 ? COLORS.green : COLORS.red,
-        )),
-
-      // DE: Verzoegerung und Schritt-Rueckstand stehen immer mit im Ergebnis,
-      // DE: klein und ohne Umschalter - dieselbe Vorgabe wie im HUD.
-      // EN: Slowdown and tick deficit always appear in the result, small and
-      // EN: with no way to turn them off - the same requirement as in the HUD.
-      h('div', {
-        key: 'metrics',
         style: {
-          marginTop: '3px', display: 'flex', gap: '16px',
-          fontSize: '11px', color: COLORS.dim, fontVariantNumeric: 'tabular-nums',
+          font: '700 11px/1.3 system-ui, sans-serif', letterSpacing: '0.07em',
+          color: rules.ok ? COLORS.green : rules.broken ? COLORS.red : COLORS.dim,
         },
+      }, rules.ok
+        ? `✓ ${t('mods|goldSpeedrun|rules|badge')}`
+        : rules.broken
+          ? t('mods|goldSpeedrun|rules|broken')
+          : t('mods|goldSpeedrun|rules|title')),
+      h('div', {
+        key: 'desc',
+        style: { marginTop: '3px', fontSize: '11px', color: COLORS.dim },
+      }, rules.broken
+        ? t('mods|goldSpeedrun|rules|brokenDesc')
+        : t(rules.ok ? 'mods|goldSpeedrun|rules|ok' : 'mods|goldSpeedrun|rules|bad')
+          + (rules.ok && rules.locked ? ` (${t('mods|goldSpeedrun|rules|locked')})` : '')
+          + (!rules.locked && officialMode() ? ` (${t('mods|goldSpeedrun|rules|forced')})` : '')),
+      rules.ok || rules.broken ? null : h('div', {
+        key: 'list',
+        style: {
+          marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '2px',
+          fontSize: '11px',
+        },
+      }, rules.items.filter(i => !i.ok).map(i => h('div', {
+        key: i.id,
+        style: { display: 'flex', justifyContent: 'space-between', gap: '12px' },
       }, [
-        h('span', { key: 'slow' },
-          `${t('mods|goldSpeedrun|metric|slowdown')}: ${ready ? `${fmtSigned(slowdown, 2)}%` : '—'}`),
-        h('span', { key: 'deficit' },
-          `${t('mods|goldSpeedrun|metric|deficit')}: ${ready ? `${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s)` : '—'}`),
-      ]),
+        h('span', { key: 'l' }, i.label),
+        h('span', {
+          key: 'v',
+          style: { color: COLORS.red, textAlign: 'right' },
+        }, i.extra.length > 0
+          ? i.extra.join(', ')
+          : t('mods|goldSpeedrun|rules|need', { value: i.value })),
+      ]))),
+    ]) : null;
 
-      h('button', {
-        key: 'expand',
-        onClick: () => setExpanded(v => !v),
-        style: {
-          marginTop: '6px', alignSelf: 'flex-start', cursor: 'pointer',
-          padding: '3px 9px', borderRadius: '4px',
-          border: `1px solid ${COLORS.border}`, background: 'transparent', color: COLORS.blue,
-          font: '600 11px/1 system-ui, sans-serif',
-        },
-      }, t(expanded ? 'mods|goldSpeedrun|result|collapse' : 'mods|goldSpeedrun|result|expand')),
-
-      expanded
-        ? h('div', {
-            key: 'full',
-            style: {
-              marginTop: '8px', paddingTop: '8px',
-              borderTop: '1px solid rgba(255,255,255,0.08)',
-              display: 'flex', flexDirection: 'column', gap: '4px',
-            },
-          }, [
-            h('div', { key: 'sim' },
-              line(t('mods|goldSpeedrun|result|sim'), ready ? formatTime(totalSim, fmt) : '—', COLORS.text)),
-            h('div', { key: 'play' },
-              line(t('mods|goldSpeedrun|result|play'), formatTime(totalPlay, fmt), COLORS.text)),
-
-            !ready
-              ? h('div', {
-                  key: 'noTick',
-                  style: { fontSize: '11px', color: COLORS.dim, marginTop: '2px' },
-                }, t('mods|goldSpeedrun|result|tickSourceMissing'))
-              : null,
-
-            h('div', {
-              key: 'advanced',
-              style: {
-                marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px',
-              },
-            }, [
-              h(MetricLine, { key: 'u', label: t('mods|goldSpeedrun|metric|ticks'), value: ready ? api.i18n.formatNumber(Math.round(totalSim / TICK_MS)) : '—' }),
-              h(MetricLine, { key: 'avg', label: t('mods|goldSpeedrun|metric|avgUps'), value: ready && total > 0 ? ((totalSim / TICK_MS) / (total / 1000)).toFixed(1) : '—' }),
-              h(MetricLine, { key: 'ideal', label: t('mods|goldSpeedrun|metric|idealTicks'), value: api.i18n.formatNumber(Math.round((total / 1000) * TICK_HZ)) }),
-              h(MetricLine, { key: 'mult', label: t('mods|goldSpeedrun|metric|thinkMult'), value: ready && totalSim > 0 ? `${(total / totalSim).toFixed(2)}×` : '—' }),
-              h(MetricLine, { key: 'wr', label: t('mods|goldSpeedrun|metric|wrProbe'), value: `${fmtSigned(totalPlay - total, 0)} ms` }),
-            ]),
-
-            h('div', { key: 'graphTitle', style: { marginTop: '6px', fontSize: '11px', color: COLORS.dim } },
-              t('mods|goldSpeedrun|graph|title')),
-            h('div', { key: 'graph', style: { marginTop: '2px' } },
-              h(UpsEnvelopeGraph, { columns: downsampleToColumns(historyBuf, 120, bucketStats), height: 90 })),
-          ])
-        : null,
-    ]),
-
-    // DE: Regelwerk: bestaetigt den Lauf, oder benennt genau die Einstellungen,
-    // DE: die von den offiziellen Kategorien abweichen.
-    // EN: Ruleset: confirms the run, or names exactly the settings that
-    // EN: deviate from the official categories.
-    rules
-      ? h('div', {
-          key: 'rules',
-          style: {
-            marginBottom: '10px', padding: '7px 10px', borderRadius: '5px',
-            border: `1px solid ${rules.ok
-              ? 'rgba(74, 222, 128, 0.45)'
-              : rules.broken ? 'rgba(224, 82, 82, 0.55)' : COLORS.border}`,
-            background: rules.ok
-              ? 'rgba(74, 222, 128, 0.08)'
-              : rules.broken ? 'rgba(224, 82, 82, 0.10)' : 'rgba(255,255,255,0.03)',
-          },
-        }, [
-          h('div', {
-            key: 'title',
-            style: {
-              font: '700 11px/1.3 system-ui, sans-serif', letterSpacing: '0.07em',
-              color: rules.ok ? COLORS.green : rules.broken ? COLORS.red : COLORS.dim,
-            },
-          }, rules.ok
-            ? `✓ ${t('mods|goldSpeedrun|rules|badge')}`
-            : rules.broken
-              ? t('mods|goldSpeedrun|rules|broken')
-              : t('mods|goldSpeedrun|rules|title')),
-
-          h('div', {
-            key: 'desc',
-            style: { marginTop: '3px', fontSize: '11px', color: COLORS.dim },
-          }, rules.broken
-            ? t('mods|goldSpeedrun|rules|brokenDesc')
-            : t(rules.ok ? 'mods|goldSpeedrun|rules|ok' : 'mods|goldSpeedrun|rules|bad')
-              + (rules.ok && rules.locked ? ` (${t('mods|goldSpeedrun|rules|locked')})` : '')
-              + (!rules.locked && officialMode() ? ` (${t('mods|goldSpeedrun|rules|forced')})` : '')),
-
-          rules.ok || rules.broken ? null : h('div', {
-            key: 'list',
-            style: {
-              marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '2px',
-              fontSize: '11px',
-            },
-          }, rules.items.filter(i => !i.ok).map(i => h('div', {
-            key: i.id,
-            style: { display: 'flex', justifyContent: 'space-between', gap: '12px' },
-          }, [
-            h('span', { key: 'l' }, i.label),
-            h('span', {
-              key: 'v',
-              style: { color: COLORS.red, textAlign: 'right' },
-            }, i.extra.length > 0
-              ? i.extra.join(', ')
-              : t('mods|goldSpeedrun|rules|need', { value: i.value })),
-          ]))),
-        ])
-      : null,
-
-    tainted
-      ? h('div', {
-          key: 'tainted',
-          style: { marginBottom: '10px', color: COLORS.red, fontWeight: 700, fontSize: '12px' },
-        }, t('mods|goldSpeedrun|tainted'))
-      : null,
-
-    h('div', {
-      key: 'cols',
+    const leftStatsCard = h('div', {
+      key: 'stats-col',
       style: {
-        display: 'flex', gap: '8px', fontSize: '11px', color: COLORS.dim,
-        paddingBottom: '4px', borderBottom: `1px solid ${COLORS.border}`,
-      },
+        background: 'rgba(0, 0, 0, 0.25)',
+        border: '1px solid rgba(255, 255, 255, 0.04)',
+        borderRadius: '10px',
+        padding: '16px 18px 14px',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+      }
     }, [
-      h('span', { key: 'a', style: { flex: 1 } }, t('mods|goldSpeedrun|result|colSplit')),
-      h('span', { key: 'b', style: { minWidth: '72px', textAlign: 'right' } }, t('mods|goldSpeedrun|result|colSegment')),
-      h('span', { key: 'c', style: { minWidth: '104px', textAlign: 'right' } }, t('mods|goldSpeedrun|result|colTime')),
-      h('span', { key: 'd', style: { minWidth: '76px', textAlign: 'right' } }, t('mods|goldSpeedrun|result|colGold')),
-    ]),
+      h('h2', {
+        key: 'title',
+        style: {
+          margin: '0 0 14px',
+          font: '800 14px/1 system-ui, sans-serif',
+          color: COLORS.gold,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+        }
+      }, t('mods|goldSpeedrun|result|expand')),
+      h('div', { key: 'metrics-list', style: { display: 'flex', flexDirection: 'column' } }, [
+        statRow(t('mods|goldSpeedrun|result|sim'), ready ? formatTime(totalSim, fmt) : '—'),
+        statRow(t('mods|goldSpeedrun|result|play'), formatTime(totalPlay, fmt)),
+        statRow(t('mods|goldSpeedrun|metric|ticks'), ready ? api.i18n.formatNumber(Math.round(totalSim / TICK_MS)) : '—'),
+        statRow(t('mods|goldSpeedrun|metric|avgUps'), ready && total > 0 ? ((totalSim / TICK_MS) / (total / 1000)).toFixed(1) : '—'),
+        statRow(t('mods|goldSpeedrun|metric|idealTicks'), api.i18n.formatNumber(Math.round((total / 1000) * TICK_HZ))),
+        statRow(t('mods|goldSpeedrun|metric|thinkMult'), ready && totalSim > 0 ? `${(total / totalSim).toFixed(2)}×` : '—'),
+        statRow(t('mods|goldSpeedrun|metric|wrProbe'), `${fmtSigned(totalPlay - total, 0)} ms`),
+      ]),
+      h('div', {
+        key: 'graph-wrap',
+        style: { marginTop: 'auto', paddingTop: '12px' }
+      }, [
+        h('div', {
+          key: 'gcap',
+          style: {
+            font: '700 12px/1 system-ui, sans-serif',
+            color: COLORS.dim,
+            marginBottom: '8px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+          }
+        }, t('mods|goldSpeedrun|graph|title')),
+        h('div', {
+          key: 'graph-box',
+          style: {
+            position: 'relative',
+            padding: '6px 4px 0',
+            background: 'rgba(0, 0, 0, 0.32)',
+            borderRadius: '6px',
+            overflow: 'hidden',
+          }
+        }, h(UpsEnvelopeGraph, { columns: downsampleToColumns(historyBuf, 120, bucketStats), height: 88 }))
+      ])
+    ]);
 
-    h('div', {
-      key: 'list',
-      style: { overflowY: 'auto', flex: 1, fontSize: '12px', paddingTop: '2px' },
-    }, splits.length > 0
-      ? h(SplitTable, { splits, fmt, wide: true })
-      : h('div', { style: { color: COLORS.dim, padding: '10px 0' } },
-          t('mods|goldSpeedrun|result|noSplits'))),
+    const rightSplitsCard = h('div', {
+      key: 'splits-col',
+      style: {
+        background: 'rgba(0, 0, 0, 0.25)',
+        border: '1px solid rgba(255, 255, 255, 0.04)',
+        borderRadius: '10px',
+        padding: '16px 18px 14px',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+      }
+    }, [
+      h('h2', {
+        key: 'title',
+        style: {
+          margin: '0 0 14px',
+          font: '800 14px/1 system-ui, sans-serif',
+          color: COLORS.gold,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+        }
+      }, `SPLITS (${splits.length})`),
+      h('div', {
+        key: 'split-head',
+        style: {
+          display: 'grid',
+          gridTemplateColumns: '1fr 92px 140px 92px',
+          gap: '12px',
+          alignItems: 'baseline',
+          padding: '0 8px 10px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.10)',
+          font: '800 12px/1 system-ui, sans-serif',
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          color: COLORS.dim,
+        }
+      }, [
+        h('span', { key: 'a' }, t('mods|goldSpeedrun|result|colSplit')),
+        h('span', { key: 'b', style: { textAlign: 'right' } }, t('mods|goldSpeedrun|result|colSegment')),
+        h('span', { key: 'c', style: { textAlign: 'right' } }, t('mods|goldSpeedrun|result|colTime')),
+        h('span', { key: 'd', style: { textAlign: 'right' } }, t('mods|goldSpeedrun|result|colGold')),
+      ]),
+      h('div', {
+        key: 'split-list',
+        style: {
+          overflowY: 'auto',
+          flex: 1,
+          minHeight: 0,
+          paddingRight: '6px',
+          marginTop: '4px',
+        }
+      }, splits.length > 0
+        ? h(SplitTable, { splits, fmt, wide: true })
+        : h('div', { style: { color: COLORS.dim, padding: '20px 0', textAlign: 'center' } },
+            t('mods|goldSpeedrun|result|noSplits')))
+    ]);
 
-    h('div', {
+    const bodyGrid = h('div', {
+      key: 'body',
+      style: {
+        display: 'grid',
+        gridTemplateColumns: '380px 1fr',
+        gap: '16px',
+        padding: '10px 24px 0',
+        minHeight: 0,
+        flex: 1,
+      }
+    }, [leftStatsCard, rightSplitsCard]);
+
+    const footer = h('footer', {
       key: 'foot',
       style: {
-        marginTop: '12px', display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', gap: '12px',
-      },
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
+        padding: '16px 24px 20px',
+        flexShrink: 0,
+      }
     }, [
-      h('span', {
-        key: 'hint',
-        style: { fontSize: '11px', color: COLORS.dim },
-      }, t('mods|goldSpeedrun|result|hint')),
+      h('div', { key: 'actions', style: { display: 'flex', gap: '10px' } }, [
+        actionBtn('btn-export', 'CSV', 'Export targets', () => {
+          downloadTextFile(splitsToCsv(splits), 'sandustry-speedrun-splits.csv');
+        }),
+        actionBtn('btn-import', 'CSV', 'Import targets', () => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.csv';
+          input.onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+              const imported = csvToSplits(ev.target.result);
+              if (imported.length === 0) return;
+              api.storage.ensure(NS);
+              api.storage.set(NS, 'splits', imported);
+              notifyResult();
+            };
+            reader.readAsText(file);
+          };
+          input.click();
+        }),
+        actionBtn('btn-summary', null, 'Copy summary', () => {
+          const cat = categoryLabel();
+          const time = formatTime(total, 'millis');
+          const seed = getMapSeed();
+          const pauses = readClock('pauseCount');
+          const reloads = readClock('reloadCount');
+          const lines = [
+            `Run Summary: ${cat}`,
+            `Final Time: ${time}`,
+            `Seed: ${seed}`,
+            `Pauses: ${pauses}  |  Reloads: ${reloads}`,
+            '',
+            `Splits:`
+          ];
+          const padLabel = str => (str + '               ').slice(0, 15);
+          splits.forEach(s => {
+            let lbl = displaySplitLabel(s, splits);
+            if (s.kind === 'goal') lbl = 'GOAL';
+            lines.push(`  ${padLabel(lbl)}${formatTime(s.t, 'millis')}`);
+          });
+          navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
+        }),
+      ]),
+      h('span', { key: 'hint', style: { color: COLORS.dim, font: '600 13px/1 system-ui, sans-serif' } }, t('mods|goldSpeedrun|result|hint')),
       h('button', {
         key: 'close',
         onClick: () => setResultDismissed(true),
         style: {
-          cursor: 'pointer', padding: '5px 14px', borderRadius: '4px',
-          border: `1px solid ${COLORS.border}`, background: '#000', color: COLORS.text,
-          font: '600 12px/1 system-ui, sans-serif',
-        },
+          font: '800 14px/1 system-ui, sans-serif',
+          padding: '12px 20px',
+          borderRadius: '8px',
+          border: `1px solid ${COLORS.gold}`,
+          background: 'rgba(240, 192, 64, 0.14)',
+          color: '#ffd56a',
+          cursor: 'pointer',
+        }
       }, t('mods|goldSpeedrun|result|close')),
-    ]),
-  ]);
+    ]);
+
+    return h('div', {
+      key: 'scrim-and-dash',
+      style: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(0, 0, 0, 0.45)',
+        pointerEvents: 'auto',
+        zIndex: 10020,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      onClick: e => {
+        if (e.target === e.currentTarget) setResultDismissed(true);
+      }
+    }, [
+      h('div', {
+        key: 'dash-window',
+        style: {
+          position: 'relative',
+          width: 'min(1120px, 94vw)',
+          height: 'min(720px, 90vh)',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '12px',
+          border: `1px solid ${tainted ? COLORS.red : '#4a5564'}`,
+          background: COLORS.box,
+          boxShadow: '0 24px 70px rgba(0,0,0,0.65)',
+          color: COLORS.text,
+          font: '500 14px/1.4 system-ui, sans-serif',
+          overflow: 'hidden',
+          pointerEvents: 'auto',
+        },
+        onClick: e => e.stopPropagation(),
+      }, [
+        h('header', {
+          key: 'head',
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            padding: '18px 24px 16px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'rgba(0, 0, 0, 0.25)',
+            flexShrink: 0,
+          }
+        }, [
+          h('h1', {
+            key: 'title',
+            style: {
+              margin: 0,
+              flex: 1,
+              font: '800 22px/1 system-ui, sans-serif',
+              color: COLORS.gold,
+              letterSpacing: '0.02em',
+            }
+          }, 'Speedrun Dashboard'),
+          h('span', {
+            key: 'cat',
+            style: { font: '700 14px/1 system-ui, sans-serif', color: COLORS.blue }
+          }, categoryLabel()),
+          h('div', {
+            key: 'chips',
+            style: { display: 'flex', gap: '8px' }
+          }, [
+            chip('st', stStr, true),
+            chip('sd', `Seed: ${getMapSeed()}`, false),
+            chip('ps', `Pauses: ${readClock('pauseCount')}`, false),
+            chip('rl', `Reloads: ${readClock('reloadCount')}`, false),
+          ])
+        ]),
+        heroBlock,
+        rulesBlock,
+        bodyGrid,
+        footer,
+      ])
+    ]);
+  } catch (e) {
+    log('[DEBUG] ResultScreen crashed during render: ' + e);
+    return null;
+  }
 }
 
-api.ui.inject('panel', ResultScreen);
+function ResultScreenSafe() {
+  try {
+    return h(ResultScreen, null);
+  } catch (e) {
+    log('[DEBUG] ResultScreen crashed: ' + e);
+    return h('div', { style: { position: 'absolute', top: 0, left: 0, background: 'red', color: 'white', padding: '10px', zIndex: 99999 } }, 'ResultScreen Crashed: ' + String(e));
+  }
+}
+
 
 // --- DE: Ausloeser-Fenster / EN: Triggers window ----------------------------
 // DE: Ein Schalter je Forschung, je Fabrikrang und je Gold-Marke. Damit stellt
@@ -3495,7 +4071,38 @@ function TriggerPanel() {
   ]);
 }
 
-api.ui.inject('panel', TriggerPanel);
+function PanelOverlay() {
+  const [, bump] = react.useState(0);
+
+  react.useEffect(() => {
+    const fn = () => bump(n => (n + 1) % 100000);
+    panelListeners.add(fn);
+    resultListeners.add(fn);
+    return () => {
+      panelListeners.delete(fn);
+      resultListeners.delete(fn);
+    };
+  }, []);
+
+  if (!modEnabled()) return null;
+
+  const hasModal = !resultDismissed || triggerPanelOpen;
+  return h('div', {
+    style: {
+      position: 'fixed',
+      pointerEvents: hasModal ? 'auto' : 'none',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      zIndex: 10020,
+    }
+  }, [
+    h(ResultScreenSafe, { key: 'result' }),
+    h(TriggerPanel, { key: 'trigger' })
+  ]);
+}
+api.ui.inject('panel', PanelOverlay);
 
 // --- DE: Tastenkuerzel / EN: Keyboard shortcuts ------------------------------
 // DE: F8 und F10 sind in den Standardbelegungen frei (belegt sind F2, F4, F5, F9).
@@ -3523,11 +4130,20 @@ api.input.registerBinding('GoldSpeedrunReset', ['F8'], {
   },
 });
 
+let lastResultToggle = 0;
 api.input.registerBinding('GoldSpeedrunResult', ['F10'], {
   displayNameKey: 'mods|goldSpeedrun|resultKey',
   category: 'mods|goldSpeedrun|name',
   handlers: {
-    pressed: () => setResultDismissed(!resultDismissed),
+    pressed: () => {
+      log(`[DEBUG] F10 Key Pressed! resultDismissed was: ${resultDismissed}`);
+      if (Date.now() - lastResultToggle < 400) {
+        log(`[DEBUG] F10 Key debounce blocked.`);
+        return;
+      }
+      lastResultToggle = Date.now();
+      setResultDismissed(!resultDismissed);
+    },
   },
 });
 

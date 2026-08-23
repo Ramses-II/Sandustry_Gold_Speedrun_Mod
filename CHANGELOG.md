@@ -2,8 +2,29 @@
 
 ## 2.8.1 — resume, compact HUD, stable graph
 
+### Added
+
+* **CSV export/import on the result screen.** Export writes the splits you
+  see in the table (`kind`, label, real/sim/play time in whole milliseconds,
+  gold). Import reads the same format back into the current run. The old
+  export pulled an empty per-category "targets" store, so the file was
+  header-only even after a finished run with a full split list.
+* **Copy summary** on the result screen, plus seed, pause count and reload
+  count on the timer and in the dashboard.
+
 ### Fixed
 
+* **CSV times are whole milliseconds.** Float leftovers from
+  `performance.now()` and `U * (1000/60)` are rounded on export.
+* **Unnamed research in F3 and in splits (5, 6, 22, 59, …).** Those IDs are
+  numeric Tech-enum values (Flamethrower, Gun, Rocket, Cryoblaster, …). The
+  game titles them from the unlocked item; the mod now does the same via
+  `enums.Tech` / `enums.ItemId` and the i18n keys, instead of showing the
+  raw number. F3 no longer lists a second row for the numeric save key.
+* **Artifacts counted from 0.** The pickup split fired before the store
+  incremented, so the first artifact was "Artifact 0". New splits start at
+  1; an already-finished run remaps 0-based labels on the result table and
+  on export.
 * **Simulation time (+63%) and jump on reload:** The internal architecture for U (simulation ticks) and W (play-time) has been completely rewritten. They are now pure additive counters exactly like R (real-time). This permanently fixes a bug where reloading a save would calculate a massive negative baseline from a cold buffer and inflate the simulation time by adding the saved elapsed time on top of the world tick.
 * **Hot-reload stability:** Loading a save mid-game (without quitting to the main menu) now correctly detects the jump in time, resets the polling cursors, and perfectly resumes the elapsed run without adding backward jumps to the simulation clock.
 * **Split triggers menu (F3) flicker:** Pressing and holding F3 no longer causes the menu to rapidly toggle open and closed due to key repetition.
