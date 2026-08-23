@@ -1,5 +1,53 @@
 # Changelog
 
+## 2.8.1 — resume, compact HUD, stable graph
+
+### Fixed
+
+* **Simulation time (+63%) and jump on reload:** The internal architecture for U (simulation ticks) and W (play-time) has been completely rewritten. They are now pure additive counters exactly like R (real-time). This permanently fixes a bug where reloading a save would calculate a massive negative baseline from a cold buffer and inflate the simulation time by adding the saved elapsed time on top of the world tick.
+* **Hot-reload stability:** Loading a save mid-game (without quitting to the main menu) now correctly detects the jump in time, resets the polling cursors, and perfectly resumes the elapsed run without adding backward jumps to the simulation clock.
+* **Split triggers menu (F3) flicker:** Pressing and holding F3 no longer causes the menu to rapidly toggle open and closed due to key repetition.
+* **Translation error on buttons:** The ON/OFF switches in the split menu now properly show "ON" and "OFF" on the English client, instead of being hardcoded to the German "AN" and "AUS".
+* **Save/reload continues all three clocks.** Real time and simulation time
+  were restarting at 0 after a load while the play-clock kept the old value.
+  Elapsed R, T and W now travel with the save; after load they are restored
+  and re-anchored against the live world. The HUD no longer waits for
+  `game:ready` alone - if a run is in progress and memory still shows 0, the
+  clocks heal themselves on the next tick.
+* **Live UPS bars no longer flicker** when the 60-second window slides. Each
+  finished second is a locked bucket; only the current incomplete second
+  updates. A bar that has gone green, yellow or red stays that colour until
+  it drops off the left.
+
+### Changed
+
+* **Horizontal timer layout is now the default.** Splits and progress sit on
+  the left, clocks plus slowdown and tick deficit in the middle, the UPS
+  graph (at double height) and the footer on the right. The old vertical
+  stack remains as *Timer layout → Vertical*.
+* **HUD split column shows the LiveSplit delta** versus the personal best
+  (green ahead, red behind) instead of gold gained. Existing PBs have no
+  stored splits, so the column stays empty until the next best is set. The
+  result screen still lists gold.
+* **The split list now shows upcoming milestones**, not only ones that have
+  already fired: remaining gold marks, factory ranks, artifacts, the goal,
+  and leftover PB research/upgrades. Completed rows stay visible at the
+  top; the rest look ahead. How many rows fit is set under *Splits visible
+  on the timer* (default 6). Upcoming rows are dimmed and show the PB time
+  when one exists.
+* The overlay uses `pointer-events: none` on every HUD wrapper and sizes
+  itself to its content, so it should not intercept clicks.
+* **PB split times are stored as JSON** (localStorage plus the save file).
+  The previous array write often never came back, so the delta column stayed
+  empty even after a best. Existing PBs are backfilled from a finished save
+  that matches the stored time. Until a PB exists, the column shows segment
+  time so the list is not dead.
+* **Slowdown, tick deficit and the live UPS graph survive a reload.** The
+  last computed slowdown/deficit plus the sparkline buckets travel with the save.
+* **A stored PB of 00:00:00 no longer blocks every real best.** That zero
+  came from a bad write; it is ignored, and a finished run on the save is
+  adopted as the PB if none exists.
+
 ## 2.8.0 — three clocks, tick-accurate
 
 The timing core from 2.7.0 was already right in principle - real time as the

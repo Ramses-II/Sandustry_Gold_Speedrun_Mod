@@ -26,7 +26,7 @@ const NS = 'goldSpeedrun';          // DE: Namespace im Savegame / EN: namespace
 const BEST_PREFIX = 'goldSpeedrun.best'; // DE: localStorage, savegame-uebergreifend / EN: localStorage, shared across save files
 const LEGACY_BEST_KEY = 'goldSpeedrun.best'; // DE: Bestzeit aus Version <= 1.4 / EN: best time from version <= 1.4
 
-const MOD_VERSION = '2.8.0';
+const MOD_VERSION = '2.8.1';
 const log = (...a) => console.log(`[${MOD_ID} v${MOD_VERSION}]`, ...a);
 
 // --- DE: Schalter der Mod-Verwaltung / EN: Mod-manager switch ---------------
@@ -155,6 +155,8 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|trg|hint': 'Every switch counts on its own. The group settings in the mod options are only the starting point - what you pick here wins.',
   'mods|goldSpeedrun|trg|locked': 'A run is in progress - changes apply to the next run.',
   'mods|goldSpeedrun|trg|noGoldMarks': 'No gold marks - pick an interval under Gold marks in the mod options.',
+  'mods|goldSpeedrun|btn|on': 'ON',
+  'mods|goldSpeedrun|btn|off': 'OFF',
 
   // DE: Einstellungen / EN: Settings
   'mods|goldSpeedrun|cfg|goalGold': 'Custom gold target',
@@ -203,7 +205,13 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|cfg|skipTutorial|desc': 'Ends the tutorial as soon as a save is loaded, exactly like the in-game skip button. Only happens while the timer is still waiting, never during a run.',
   'mods|goldSpeedrun|cfg|showOverlay': 'Show timer on screen',
   'mods|goldSpeedrun|cfg|showSplits': 'Show split table',
-  'mods|goldSpeedrun|cfg|showSplits|desc': 'Lists the last triggers under the timer with time and gold. The full table appears on the result screen when the run ends.',
+  'mods|goldSpeedrun|cfg|showSplits|desc': 'Lists the last triggers under the timer with time and the LiveSplit-style delta versus the personal best. The full table appears on the result screen when the run ends.',
+  'mods|goldSpeedrun|cfg|hudSplitRows': 'Splits visible on the timer',
+  'mods|goldSpeedrun|cfg|hudSplitRows|desc': 'How many split rows the timer shows at once. The last completed ones stay visible; the rest look ahead to upcoming marks. 6 is the default.',
+  'mods|goldSpeedrun|cfg|hudLayout': 'Timer layout',
+  'mods|goldSpeedrun|cfg|hudLayout|desc': 'Horizontal puts splits, clocks and the UPS graph side by side to save height. Vertical is the old single-column stack.',
+  'mods|goldSpeedrun|cfg|hudLayout|horizontal': 'Horizontal (compact)',
+  'mods|goldSpeedrun|cfg|hudLayout|vertical': 'Vertical',
   'mods|goldSpeedrun|cfg|corner': 'Timer position',
   'mods|goldSpeedrun|cfg|corner|topCenter': 'Top centre',
   'mods|goldSpeedrun|cfg|corner|topLeft': 'Top left',
@@ -324,6 +332,8 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|trg|hint': 'Jeder Schalter zählt für sich. Die Gruppen in den Mod-Einstellungen sind nur der Ausgangspunkt - was du hier wählst, gilt.',
   'mods|goldSpeedrun|trg|locked': 'Ein Lauf läuft gerade - Änderungen greifen beim nächsten Lauf.',
   'mods|goldSpeedrun|trg|noGoldMarks': 'Keine Gold-Marken - in den Mod-Einstellungen unter Gold-Marken einen Abstand wählen.',
+  'mods|goldSpeedrun|btn|on': 'AN',
+  'mods|goldSpeedrun|btn|off': 'AUS',
 
   'mods|goldSpeedrun|cfg|goalGold': 'Eigenes Gold-Ziel',
   'mods|goldSpeedrun|cfg|goalGold|desc': 'Wird nur benutzt, wenn die Kategorie auf Eigenes Gold steht. Jede ganze Zahl ab 1 - praktisch für schnelle Tests.',
@@ -371,7 +381,13 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|cfg|skipTutorial|desc': 'Beendet das Tutorial beim Laden eines Spielstands, genau wie der Knopf im Spiel. Passiert nur, solange der Timer noch wartet - nie mitten im Lauf.',
   'mods|goldSpeedrun|cfg|showOverlay': 'Timer einblenden',
   'mods|goldSpeedrun|cfg|showSplits': 'Split-Tabelle zeigen',
-  'mods|goldSpeedrun|cfg|showSplits|desc': 'Listet die letzten Auslöser unter der Uhr mit Zeit und Gold. Die vollständige Tabelle erscheint am Ende im Ergebnisfenster.',
+  'mods|goldSpeedrun|cfg|showSplits|desc': 'Listet die letzten Auslöser unter der Uhr mit Zeit und dem LiveSplit-Delta zur Bestzeit. Die vollständige Tabelle erscheint am Ende im Ergebnisfenster.',
+  'mods|goldSpeedrun|cfg|hudSplitRows': 'Splits am Timer',
+  'mods|goldSpeedrun|cfg|hudSplitRows|desc': 'Wie viele Split-Zeilen der Timer gleichzeitig zeigt. Die letzten erledigten bleiben stehen, der Rest blickt auf die kommenden Marken. Standard ist 6.',
+  'mods|goldSpeedrun|cfg|hudLayout': 'Anordnung des Timers',
+  'mods|goldSpeedrun|cfg|hudLayout|desc': 'Waagerecht stellt Splits, Uhren und die UPS-Grafik nebeneinander, damit der Kasten weniger hoch wird. Senkrecht ist der alte Stapel.',
+  'mods|goldSpeedrun|cfg|hudLayout|horizontal': 'Waagerecht (kompakt)',
+  'mods|goldSpeedrun|cfg|hudLayout|vertical': 'Senkrecht',
   'mods|goldSpeedrun|cfg|corner': 'Position des Timers',
   'mods|goldSpeedrun|cfg|corner|topCenter': 'Oben mittig',
   'mods|goldSpeedrun|cfg|corner|topLeft': 'Oben links',
@@ -775,15 +791,107 @@ const bestKey = () => {
 
 const readBest = () => {
   const v = api.storage.local.get(bestKey());
-  if (Number.isFinite(v)) return v;
-  // DE: Bestzeit aus Version <= 1.4: galt immer fuer 100k im Normal-Regelwerk.
-  // EN: Best time from version <= 1.4: it always applied to 100k under the Normal ruleset.
+  // DE: 0 ist keine Bestzeit - das war ein Schreibfehler, der jeden echten Lauf
+  // DE: als "langsamer als 00:00" verworfen hat.
+  // EN: 0 is not a best time - that was a write error that made every real
+  // EN: run look slower than 00:00 and so never get stored.
+  if (Number.isFinite(v) && v > 0) return v;
+  const fromSave = api.storage.get(NS, 'pbTime');
+  if (Number.isFinite(fromSave) && fromSave > 0) return fromSave;
   const cat = category();
   if (cat.id === '100000' && goldMode() === 'earned' && !skipTutorialEnabled()) {
     const legacy = api.storage.local.get(LEGACY_BEST_KEY);
-    if (Number.isFinite(legacy)) return legacy;
+    if (Number.isFinite(legacy) && legacy > 0) return legacy;
   }
   return null;
+};
+
+const bestSplitsKey = () => bestKey() + '.splits';
+
+const parseSplitList = v => {
+  if (Array.isArray(v)) return v.filter(e => e && typeof e === 'object');
+  if (typeof v === 'string' && v.charAt(0) === '[') {
+    try {
+      const parsed = JSON.parse(v);
+      return Array.isArray(parsed) ? parsed.filter(e => e && typeof e === 'object') : [];
+    } catch (e) { /* DE: kein JSON / EN: not JSON */ }
+  }
+  return [];
+};
+
+const writeBestTime = time => {
+  if (!(time > 0)) return false;
+  try { api.storage.local.set(bestKey(), time); } catch (e) { /* DE: kein localStorage / EN: no localStorage */ }
+  api.storage.set(NS, 'pbTime', time);
+  return true;
+};
+
+const writeBestSplits = splits => {
+  if (!Array.isArray(splits) || splits.length === 0) return;
+  const json = JSON.stringify(splits);
+  try { api.storage.local.set(bestSplitsKey(), json); } catch (e) { /* DE: localStorage voll / EN: localStorage full */ }
+  api.storage.set(NS, 'pbSplits', splits);
+};
+
+const readBestSplits = () => {
+  const fromLocal = parseSplitList(api.storage.local.get(bestSplitsKey()));
+  if (fromLocal.length > 0) return fromLocal;
+  const fromSave = parseSplitList(api.storage.get(NS, 'pbSplits'));
+  if (fromSave.length > 0) {
+    try { api.storage.local.set(bestSplitsKey(), JSON.stringify(fromSave)); } catch (e) { /* ignore */ }
+    return fromSave;
+  }
+  return [];
+};
+
+const maybeBackfillBestSplits = () => {
+  if (readBestSplits().length > 0) return;
+  const best = readBest();
+  if (best === null) return;
+  const run = readRun();
+  if (typeof run.finishedAt !== 'number') return;
+  const splits = readSplits();
+  if (splits.length === 0) return;
+  const time = elapsed();
+  if (!Number.isFinite(time) || Math.abs(time - best) > 50) return;
+  writeBestSplits(splits);
+};
+
+const maybeAdoptFinishedAsBest = () => {
+  try {
+    const bogus = api.storage.local.get(bestKey());
+    if (bogus === 0) api.storage.local.set(bestKey(), null);
+  } catch (e) { /* ignore */ }
+  const run = readRun();
+  if (typeof run.finishedAt !== 'number') return;
+  try {
+    if (cheatsUsed() || runRulesBroken()) return;
+  } catch (e) { return; }
+  const time = Math.max(elapsed(), readClock('upsRms'));
+  if (!(time > 0)) return;
+  const best = readBest();
+  if (best === null || time < best) {
+    writeBestTime(time);
+    writeBestSplits(readSplits());
+    return;
+  }
+  maybeBackfillBestSplits();
+};
+
+const splitIdOf = (kind, id) => (id ? String(id) : '');
+
+const normLabel = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+const findPbSplit = (split, pbSplits) => {
+  if (!split || !Array.isArray(pbSplits)) return null;
+  if (split.id) {
+    const byId = pbSplits.find(p => p && p.id === split.id);
+    if (byId) return byId;
+  }
+  const exact = pbSplits.find(p => p && p.kind === split.kind && p.label === split.label);
+  if (exact) return exact;
+  const want = normLabel(split.label);
+  return pbSplits.find(p => p && p.kind === split.kind && normLabel(p.label) === want) || null;
 };
 
 // --- DE: Zeitformat / EN: Time format ---------------------------------------
@@ -803,6 +911,8 @@ const clockMode = () => {
   const v = api.settings.get('clockMode');
   return v === 'sim' || v === 'play' ? v : 'real';
 };
+
+const hudLayout = () => api.settings.get('hudLayout') === 'vertical' ? 'vertical' : 'horizontal';
 
 const timeFormat = () => {
   const v = api.settings.get('timeFormat');
@@ -1017,101 +1127,130 @@ const gamePaused = () => {
   }
 };
 
-let u0 = 0;           // DE: Schrittzaehler-Basis bei Laufstart / EN: step-counter baseline at run start
-let w0 = 0;            // DE: W-Basis (ms) bei Laufstart / EN: W baseline (ms) at run start
 let rMs = 0;           // DE: aufsummierte Echtzeit seit Laufstart (persistiert) / EN: accumulated real time since run start (persisted)
+let wMs = 0;           // DE: aufsummierte Spielzeit / EN: accumulated play time
+let uTicks = 0;        // DE: aufsummierte Weltschritte / EN: accumulated world ticks
 let lastPerf = null;   // DE: performance.now() beim letzten advanceClocks() / EN: performance.now() at the last advanceClocks()
+let lastPlay = null;   // DE: now() beim letzten advanceClocks() / EN: now() at the last advanceClocks()
+let lastTick = null;   // DE: rawTick() beim letzten advanceClocks() / EN: rawTick() at the last advanceClocks()
+let justStarted = false; // DE: Verhindert Hot-Reload Erkennung im Start-Frame / EN: Prevents hot-reload detection on start frame
 
 const readClock = key => {
   const v = api.storage.get(NS, key);
   return Number.isFinite(v) ? v : 0;
 };
 
-// DE: Basiswerte synchron beim Laufstart setzen - keine kuenstliche Verzoegerung.
-// DE: Der Lauf beginnt exakt bei der ersten Aktion, wie der Startmodus es schon
-// DE: immer versprochen hat.
-// EN: Sets the baselines synchronously at run start - no artificial delay.
-// EN: The run begins exactly on the first action, just as the start mode has
-// EN: always promised.
 const startClocks = () => {
-  u0 = rawTick();
-  w0 = now();
   rMs = 0;
+  wMs = 0;
+  uTicks = 0;
   lastPerf = performance.now();
-  api.storage.set(NS, 'upsU0', u0);
-  api.storage.set(NS, 'upsW0', w0);
+  lastPlay = now();
+  lastTick = rawTick();
+  justStarted = true;
   api.storage.set(NS, 'upsRms', 0);
+  api.storage.set(NS, 'upsWElapsed', 0);
+  api.storage.set(NS, 'upsUElapsed', 0);
+  api.storage.set(NS, 'upsSlowdown', 0);
+  api.storage.set(NS, 'upsDeficit', 0);
 };
 
-// DE: Nach dem Laden fortsetzen: die Rohwerte kommen aus dem Spielstand, nur der
-// DE: Bezugspunkt fuer performance.now() wird neu gesetzt - sonst wuerde die Zeit
-// DE: zwischen Speichern und Laden als Spielzeit mitgezaehlt. Das war der Fehler,
-// DE: der den Timer nach einem Ladevorgang bei 0 haengen liess: die alten
-// DE: Basiswerte wurden nie wiederhergestellt.
-// EN: Resumes after loading: the raw values come from the save file, only the
-// EN: reference point for performance.now() gets reset - otherwise the time
-// EN: between saving and loading would count as play time. This was the bug
-// EN: that made the timer hang at 0 after a load: the old baselines were
-// EN: never restored.
+// DE: Nach dem Laden genau die gespeicherten Werte weiterzaehlen.
+// EN: After a load, continue exactly from the saved values.
 const resumeClocks = () => {
   const run = readRun();
   if (typeof run.startedAt !== 'number') {
-    u0 = 0; w0 = 0; rMs = 0; lastPerf = null;
+    rMs = 0; wMs = 0; uTicks = 0; 
+    lastPerf = null; lastPlay = null; lastTick = null;
     return;
   }
-  u0 = readClock('upsU0');
-  w0 = readClock('upsW0');
   rMs = readClock('upsRms');
+  wMs = readClock('upsWElapsed');
+  uTicks = readClock('upsUElapsed');
   lastPerf = performance.now();
+  lastPlay = null;
+  lastTick = null;
 };
 
-// DE: Schutznetz, falls ein Ladevorgang nicht ueber game:ready gemeldet wird:
-// DE: faellt der rohe Schrittzaehler unter die gemerkte Basis, wurde zwischendrin
-// DE: ein anderer oder frueherer Spielstand geladen - die Basiswerte werden dann
-// DE: aus dem jetzt aktuellen Spielstand neu eingelesen, statt gegen die alte
-// DE: Welt weiterzuzaehlen.
-// EN: Safety net in case a load isn't reported via game:ready: if the raw
-// EN: step counter drops below the stored baseline, a different or earlier
-// EN: save was loaded in the meantime - the baselines are then re-read from
-// EN: the now-current save instead of continuing to count against the old world.
-const ensureFreshBaseline = () => {
+// DE: Sandustry feuert game:ready nicht bei einem Hot-Reload (Laden im laufenden Spiel).
+// DE: Wir erkennen einen Hot-Reload daran, dass der Spielstand ploetzlich eine voellig
+// DE: andere Echtzeit (R) enthaelt als wir im Speicher haben.
+// EN: Sandustry does not fire game:ready on a hot-reload (loading while in-game).
+// EN: We detect a hot-reload by noticing that the save file suddenly contains a
+// EN: completely different real time (R) than we have in memory.
+const detectHotReload = () => {
+  if (justStarted) {
+    justStarted = false;
+    return false;
+  }
   const run = readRun();
-  if (typeof run.startedAt !== 'number') return;
-  if (tickBuf && rawTick() < u0 - 1) resumeClocks();
+  if (typeof run.startedAt !== 'number') return false;
+  const savedRms = readClock('upsRms');
+  if (Math.abs(savedRms - rMs) > 1000) {
+    resumeClocks();
+    return true;
+  }
+  return false;
 };
 
 const advanceClocks = () => {
+  if (detectHotReload()) return;
+
   const stamp = performance.now();
-  const prev = lastPerf;
+  const prevPerf = lastPerf;
   lastPerf = stamp;
 
-  ensureFreshBaseline();
+  const playStamp = now();
+  const prevPlay = lastPlay;
+  lastPlay = playStamp;
 
-  if (prev === null) return;
+  const tickStamp = rawTick();
+  const prevTick = lastTick;
+  lastTick = tickStamp;
+
+  if (prevPerf === null) return;
   if (!isRunning()) return;
   if (gamePaused()) return;
 
-  const dt = stamp - prev;
-  if (!(dt > 0) || dt > 3600000) return;
+  let changed = false;
 
-  rMs += dt;
-  api.storage.set(NS, 'upsRms', rMs);
+  const dt = stamp - prevPerf;
+  if (dt > 0 && dt <= 3600000) {
+    rMs += dt;
+    api.storage.set(NS, 'upsRms', rMs);
+    changed = true;
+  }
+
+  if (prevPlay !== null) {
+    const playDt = playStamp - prevPlay;
+    if (playDt > 0 && playDt <= 3600000) {
+      wMs += playDt;
+      api.storage.set(NS, 'upsWElapsed', wMs);
+      changed = true;
+    }
+  }
+
+  if (prevTick !== null && rawTickSourceReady()) {
+    const tickDt = tickStamp - prevTick;
+    if (tickDt > 0 && tickDt <= 3600000) {
+      uTicks += tickDt;
+      api.storage.set(NS, 'upsUElapsed', uTicks);
+      changed = true;
+    }
+  }
+
+  if (changed && rMs >= 1000) {
+    const uNow = liveU();
+    api.storage.set(NS, 'upsSlowdown', (uNow * TICK_MS / rMs - 1) * 100);
+    api.storage.set(NS, 'upsDeficit', (rMs / 1000) * TICK_HZ - uNow);
+  }
 };
 
-// DE: U - ausgefuehrte Simulationsschritte seit Laufbeginn. Ist der Lauf beendet,
-// DE: wird der bei finishRun() eingefrorene Wert geliefert - sonst wuerden T
-// DE: und der U-Wert im Ergebnisfenster immer weiterwachsen, wenn nach dem Sieg
-// DE: noch weitergespielt wird (R friert dagegen von selbst ein, siehe
-// DE: advanceClocks()).
-// EN: U - executed simulation steps since the run started. Once the run has
-// EN: finished, the value frozen in finishRun() is returned - otherwise T and
-// EN: the U value in the result screen would keep growing if the player kept
-// EN: playing after the win (R freezes on its own instead, see advanceClocks()).
 const liveU = () => {
   const run = readRun();
   if (typeof run.startedAt !== 'number') return 0;
   if (typeof run.finishedAt === 'number') return Math.max(0, readClock('upsUFinal'));
-  return Math.max(0, rawTick() - u0);
+  return uTicks;
 };
 
 // DE: R - Echtzeit des Laufs in ms. Die offizielle Wertung.
@@ -1134,7 +1273,7 @@ const elapsedPlay = () => {
   const run = readRun();
   if (typeof run.startedAt !== 'number') return 0;
   if (typeof run.finishedAt === 'number') return Math.max(0, readClock('upsWFinal'));
-  return Math.max(0, now() - w0);
+  return wMs;
 };
 
 // DE: Verzoegerung in Prozent: wie weit T von R abweicht. Negativ heisst "die
@@ -1149,8 +1288,10 @@ const elapsedPlay = () => {
 // EN: swing into negative means a real slowdown.
 const slowdownPercent = () => {
   const r = elapsed();
-  if (r < 1000 || !tickSourceReady()) return 0;
-  return (elapsedSim() / r - 1) * 100;
+  const saved = readClock('upsSlowdown');
+  if (r < 1000) return saved;
+  const live = (elapsedSim() / r - 1) * 100;
+  return live;
 };
 
 // DE: Schritte, die eine ideale 60-UPS-Maschine in der bisherigen Echtzeit
@@ -1163,7 +1304,9 @@ const idealTicks = () => (elapsed() / 1000) * TICK_HZ;
 // DE: Ideal", negativ heisst "die Simulation liegt vorn" (Aufholphase).
 // EN: Tick deficit: positive means "this many steps are still missing to
 // EN: reach the ideal", negative means "the simulation is ahead" (a catch-up phase).
-const tickDeficit = () => idealTicks() - liveU();
+const tickDeficit = () => {
+  return idealTicks() - liveU();
+};
 const tickDeficitMs = () => tickDeficit() * TICK_MS;
 
 const avgUps = () => {
@@ -1256,7 +1399,7 @@ const upgradeName = (itemId, upgradeId) =>
 // DE: Zeit seit Laufbeginn und der Goldstand in dem Moment.
 // EN: Every enabled trigger appends an entry here: label, time since the run
 // EN: started, and the gold total at that moment.
-const addSplit = (kind, label) => {
+const addSplit = (kind, label, id) => {
   const run = readRun();
   if (typeof run.startedAt !== 'number' || typeof run.finishedAt === 'number') return;
 
@@ -1267,6 +1410,7 @@ const addSplit = (kind, label) => {
     w: elapsedPlay(),
     kind,
     label,
+    id: splitIdOf(kind, id) || `${kind}:${label}`,
     gold: Math.floor(goldProgress()),
   });
   api.storage.set(NS, 'splits', splits);
@@ -1405,6 +1549,81 @@ const currentGoldMarks = cat => {
   const key = `${cat.id}|${cat.target}|${api.settings.get('splitGold')}`;
   if (markCache.key !== key) markCache = { key, list: goldMarks(cat) };
   return markCache.list;
+};
+
+// DE: Geplante Zwischenzeiten, die noch nicht gefallen sind - wie in LiveSplit
+// DE: die Zeilen unter der aktuellen. Gold-Marken, Raenge und Artefakte haben
+// DE: eine feste Reihenfolge. Forschungen und Aufwertungen nur, wenn eine
+// DE: Bestzeit sie schon einmal in einer Route festgehalten hat.
+// EN: Planned splits that have not fired yet - like the rows below the
+// EN: current one in LiveSplit. Gold marks, ranks and artifacts have a fixed
+// EN: order. Research and upgrades only appear if a personal best already
+// EN: recorded them as a route.
+const upcomingSplits = (cat, done) => {
+  const seen = new Set();
+  for (const s of done) {
+    if (s && s.id) seen.add(s.id);
+    if (s && s.kind && s.label) seen.add(`${s.kind}\0${s.label}`);
+  }
+  const out = [];
+  const push = (kind, label, id) => {
+    const key = id || `${kind}\0${label}`;
+    if (seen.has(key) || seen.has(`${kind}\0${label}`)) return;
+    seen.add(key);
+    seen.add(`${kind}\0${label}`);
+    out.push({ kind, label, id: id || `${kind}:${label}`, upcoming: true, t: NaN });
+  };
+
+  for (const p of readBestSplits()) {
+    if (p && p.kind && p.label) push(p.kind, p.label, p.id);
+  }
+
+  const marks = currentGoldMarks(cat);
+  let index = api.storage.get(NS, 'goldMarkIndex');
+  if (!Number.isFinite(index)) index = 0;
+  for (let i = index; i < marks.length; i++) {
+    if (triggerEnabled('gold', marks[i].value, true)) {
+      push('gold', marks[i].label, `gold:${marks[i].value}`);
+    }
+  }
+
+  const rank = getFactoryLevel();
+  for (const lvl of rankIds()) {
+    if (lvl <= rank) continue;
+    if (!triggerEnabled('rank', lvl, splitOn('splitRank'))) continue;
+    push('rank', t('mods|goldSpeedrun|split|rank', { level: lvl }), `rank:${lvl}`);
+  }
+
+  if (triggerEnabled('artifact', 'any', splitOn('splitArtifact'))) {
+    const found = getArtifactsFound();
+    const last = artifactTotal() > 0 ? artifactTotal() : (cat.kind === 'artifacts' ? cat.target : 0);
+    for (let n = found + 1; n <= last; n++) {
+      push('artifact', t('mods|goldSpeedrun|split|artifact', { index: n }), `artifact:${n}`);
+    }
+  }
+
+  push('goal', t('mods|goldSpeedrun|split|goal'), 'goal');
+  return out;
+};
+
+const hudSplitRows = () => {
+  const v = api.settings.get('hudSplitRows');
+  const n = Number.isFinite(v) ? Math.floor(v) : 6;
+  return Math.max(2, Math.min(24, n));
+};
+
+const hudSplitWindow = (done, upcoming) => {
+  const limit = hudSplitRows();
+  const pastKeep = Math.max(1, Math.min(4, Math.floor(limit / 3)));
+  if (upcoming.length === 0) {
+    const rows = done.slice(-limit);
+    return { rows, hiddenPast: done.length - rows.length };
+  }
+  if (done.length === 0) return { rows: upcoming.slice(0, limit), hiddenPast: 0 };
+  const past = done.slice(-pastKeep);
+  const hiddenPast = done.length - past.length;
+  const room = Math.max(1, limit - past.length);
+  return { rows: past.concat(upcoming.slice(0, room)), hiddenPast };
 };
 
 // --- DE: Start durch die erste Aktion / EN: Start on the first action -------
@@ -1800,7 +2019,7 @@ const trigger = (eventName, build) => {
         log(`Ausloeser "${eventName}" fehlgeschlagen:`, e);
         return;
       }
-      if (entry) addSplit(entry.kind, entry.label);
+      if (entry) addSplit(entry.kind, entry.label, entry.id);
     });
   } catch (e) {
     log('Ausloeser nicht verfuegbar, uebersprungen:', eventName);
@@ -1811,13 +2030,13 @@ trigger('tech:unlocked', payload => {
   const techId = payload && payload.techId;
   if (!techId) return null;
   if (!triggerEnabled('tech', techId, splitOn('splitTech'))) return null;
-  return { kind: 'tech', label: techName(techId) };
+  return { kind: 'tech', label: techName(techId), id: `tech:${techId}` };
 });
 
 trigger('factory:levelUp', payload => {
   const level = (payload && payload.newLevel) || getFactoryLevel();
   if (!triggerEnabled('rank', level, splitOn('splitRank'))) return null;
-  return { kind: 'rank', label: t('mods|goldSpeedrun|split|rank', { level }) };
+  return { kind: 'rank', label: t('mods|goldSpeedrun|split|rank', { level }), id: `rank:${level}` };
 });
 
 // DE: Artifact ist 1; der Enum-Zugriff bleibt trotzdem der Normalweg, damit eine
@@ -1834,6 +2053,7 @@ trigger('worldItem:pickedUp', payload => {
   return {
     kind: 'artifact',
     label: t('mods|goldSpeedrun|split|artifact', { index: getArtifactsFound() }),
+    id: `artifact:${getArtifactsFound()}`,
   };
 });
 
@@ -1844,6 +2064,7 @@ trigger('upgrade:purchased', payload => {
     label: t('mods|goldSpeedrun|split|upgrade', {
       name: upgradeName(payload && payload.itemId, payload && payload.upgradeId),
     }),
+    id: `upgrade:${payload && payload.itemId}:${payload && payload.upgradeId}`,
   };
 });
 
@@ -1864,12 +2085,23 @@ let lastWrite = -1;
 // EN: Set as soon as a run ends, and read by the result screen.
 let resultDismissed = false;
 
+const scoredRealTime = () => {
+  const live = elapsed();
+  if (live > 0) return live;
+  const stored = readClock('upsRms');
+  if (stored > 0) {
+    rMs = stored;
+    return stored;
+  }
+  return 0;
+};
+
 const finishRun = cat => {
   // DE: Alle drei Uhren werden im selben Moment abgelesen, bevor der Lauf als
   // DE: beendet markiert wird - danach zaehlt advanceClocks() nicht mehr weiter.
   // EN: All three clocks are read at the same instant, before the run is
   // EN: marked finished - after that, advanceClocks() no longer keeps counting.
-  const time = elapsed();
+  const time = scoredRealTime();
   const simTime = elapsedSim();
   const playTime = elapsedPlay();
   const slowdown = slowdownPercent();
@@ -1881,6 +2113,7 @@ const finishRun = cat => {
   splits.push({
     kind: 'goal',
     label: t('mods|goldSpeedrun|split|goal'),
+    id: 'goal',
     t: time,
     sim: simTime,
     w: playTime,
@@ -1914,9 +2147,14 @@ const finishRun = cat => {
       '- ACHTUNG: Regelwerk waehrend des Laufs verstellt, keine Bestzeit gespeichert.');
   } else {
     const best = readBest();
-    if (best === null || time < best) {
-      api.storage.local.set(bestKey(), time);
+    if (time > 0 && (best === null || time < best)) {
+      writeBestTime(time);
+      writeBestSplits(splits);
       api.ui.toast({ key: 'mods|goldSpeedrun|newBest', params: { time: formatTime(time, fmt) } });
+    } else if (time > 0 && readBestSplits().length === 0 && best !== null && Math.abs(time - best) < 50) {
+      writeBestSplits(splits);
+    } else if (!(time > 0)) {
+      log('Lauf beendet, aber Echtzeit war 0 - Bestzeit nicht geschrieben.');
     }
   }
 
@@ -1975,7 +2213,7 @@ const checkGoal = () => {
       // DE: Abgewaehlte Marken werden nur uebersprungen, nicht neu geprueft.
       // EN: Deselected marks are only skipped, not re-checked.
       if (triggerEnabled('gold', marks[index].value, true)) {
-        addSplit('gold', marks[index].label);
+        addSplit('gold', marks[index].label, `gold:${marks[index].value}`);
       }
       index++;
       moved = true;
@@ -2086,8 +2324,6 @@ const CORNERS = {
 // EN: therefore based on the chosen format.
 const HUD_INTERVAL = { seconds: 250, centis: 50, millis: 16 };
 
-const HUD_SPLIT_ROWS = 6;
-
 const useTick = fmt => {
   const [, bump] = react.useState(0);
   react.useEffect(() => {
@@ -2096,13 +2332,17 @@ const useTick = fmt => {
   }, [fmt]);
 };
 
-// DE: Eine Zeile der Split-Tabelle. Im HUD schmal, im Ergebnisfenster mit
-// DE: Abschnittszeit und Goldzuwachs.
-// EN: One row of the split table. Narrow in the HUD, with segment time and
-// EN: gold gain in the result screen.
-function SplitRow({ split, previous, fmt, wide }) {
-  const segment = split.t - (previous ? previous.t : 0);
-  const goldGain = split.gold - (previous ? previous.gold : 0);
+// DE: Eine Zeile der Split-Tabelle. Im HUD schmal mit Delta zur Bestzeit, im
+// DE: Ergebnisfenster mit Abschnittszeit und Goldstand.
+// EN: One row of the split table. Narrow in the HUD with the PB delta, and
+// EN: with segment time and gold total in the result screen.
+function SplitRow({ split, previous, fmt, wide, pb }) {
+  const upcoming = split.upcoming === true;
+  const live = Number.isFinite(split.t);
+  const prevT = previous && Number.isFinite(previous.t) ? previous.t : 0;
+  const segment = live ? split.t - prevT : 0;
+  const pbTime = pb && Number.isFinite(pb.t) ? pb.t : null;
+  const delta = live && pbTime !== null ? split.t - pbTime : null;
 
   const cell = (key, value, style) => h('span', { key, style }, value);
 
@@ -2112,37 +2352,49 @@ function SplitRow({ split, previous, fmt, wide }) {
       padding: wide ? '3px 0' : '1px 0',
       borderBottom: wide ? '1px solid rgba(255,255,255,0.05)' : 'none',
       fontVariantNumeric: 'tabular-nums',
+      opacity: upcoming ? 0.55 : 1,
     },
   }, [
     cell('label', split.label, {
       flex: 1, minWidth: 0,
-      color: KIND_COLOR[split.kind] || COLORS.text,
-      fontWeight: split.kind === 'goal' ? 700 : 500,
+      color: upcoming ? COLORS.dim : (KIND_COLOR[split.kind] || COLORS.text),
+      fontWeight: split.kind === 'goal' && !upcoming ? 700 : 500,
       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
     }),
     wide
-      ? cell('seg', segment > 0 ? '+' + formatShort(segment, fmt) : '-', {
+      ? cell('seg', live && segment > 0 ? '+' + formatShort(segment, fmt) : '-', {
           color: COLORS.dim, minWidth: '72px', textAlign: 'right',
         })
       : null,
     // DE: Absolute Zeit immer vollstaendig: Stunden, Minuten, Sekunden,
     // DE: Millisekunden. Nur die Abschnittsdauer daneben wird gekuerzt, dort ist
-    // DE: ein fuehrendes "00:" nur Rauschen.
+    // DE: ein fuehrendes "00:" nur Rauschen. Kommende Zeilen zeigen die Bestzeit
+    // DE: an dieser Stelle, falls eine vorliegt - sonst einen Gedankenstrich.
     // EN: The absolute time is always shown in full: hours, minutes, seconds,
     // EN: milliseconds. Only the segment duration next to it is shortened -
-    // EN: there, a leading "00:" is just noise.
-    cell('time', formatTime(split.t, fmt), {
+    // EN: there, a leading "00:" is just noise. Upcoming rows show the PB
+    // EN: time in that slot if there is one - otherwise a dash.
+    cell('time', live
+      ? formatTime(split.t, fmt)
+      : (pbTime !== null ? formatTime(pbTime, fmt) : '—'), {
       minWidth: wide ? '104px' : '92px', textAlign: 'right',
+      color: upcoming ? COLORS.dim : undefined,
     }),
-    cell('gold', wide
-      ? formatGold(split.gold)
-      : (goldGain > 0 ? '+' + shortGold(goldGain) : ''), {
-      color: COLORS.gold, minWidth: wide ? '76px' : '52px', textAlign: 'right',
-    }),
+    wide
+      ? cell('gold', live ? formatGold(split.gold) : '', {
+          color: COLORS.gold, minWidth: '76px', textAlign: 'right',
+        })
+      : cell('delta', delta !== null
+          ? (delta >= 0 ? '+' : '-') + formatShort(Math.abs(delta), fmt)
+          : (!upcoming && live && segment > 0 ? '+' + formatShort(segment, fmt) : ''), {
+          color: delta === null ? COLORS.dim : delta <= 0 ? COLORS.green : COLORS.red,
+          minWidth: '64px', textAlign: 'right',
+        }),
   ]);
 }
 
-function SplitTable({ splits, fmt, wide }) {
+function SplitTable({ splits, fmt, wide, pbSplits }) {
+  const pbs = Array.isArray(pbSplits) ? pbSplits : [];
   return h('div', { style: { display: 'flex', flexDirection: 'column' } },
     splits.map((s, i) => h(SplitRow, {
       key: i,
@@ -2150,6 +2402,7 @@ function SplitTable({ splits, fmt, wide }) {
       previous: i > 0 ? splits[i - 1] : null,
       fmt,
       wide,
+      pb: findPbSplit(s, pbs),
     })));
 }
 
@@ -2172,9 +2425,10 @@ function SplitTable({ splits, fmt, wide }) {
 const HISTORY_SAMPLE_MS = 100;     // DE: 10 Hz Abtastung im Hauptthread / EN: 10 Hz sampling on the main thread
 const HISTORY_BUCKET_MS = 1000;    // DE: 1 Hz gespeicherte Eimer / EN: 1 Hz stored buckets
 const HISTORY_MAX_BUCKETS = 5000;  // DE: ab hier je zwei Eimer zu einem verschmelzen / EN: beyond this, merge two buckets into one
-const SPARKLINE_WINDOW_MS = 60000; // DE: Live-Grafik: letzte 60 Sekunden / EN: live graph: last 60 seconds
+const SPARKLINE_MAX_BUCKETS = 60;  // DE: Live-Grafik: 60 abgeschlossene Sekunden / EN: live graph: 60 finalized seconds
 
-let sparklineRing = [];       // DE: { atMs, ups }[] - letzte 60 s, nur im Speicher / EN: { atMs, ups }[] - last 60 s, memory only
+let sparklineBuckets = [];    // DE: abgeschlossene 1-s-Eimer, Farbe bleibt / EN: finalized 1 s buckets, color stays
+let sparklineAccum = null;    // DE: laufender Live-Eimer / EN: current live bucket
 let bucketAccum = null;       // DE: laufender 1-Hz-Eimer / EN: running 1 Hz bucket
 let historyBuf = [];          // DE: { min, max, avg }[] - kompletter Lauf / EN: { min, max, avg }[] - the whole run
 let lastHistorySample = null; // DE: { tick, atMs } fuer die Momentan-UPS / EN: { tick, atMs } for the instantaneous UPS
@@ -2186,18 +2440,36 @@ const loadHistoryFromSave = () => {
   const v = api.storage.get(NS, 'upsHistory');
   historyBuf = Array.isArray(v) ? v.filter(b => b && Number.isFinite(b.avg)) : [];
   bucketAccum = null;
+  const spark = api.storage.get(NS, 'upsSparkline');
+  sparklineBuckets = Array.isArray(spark) ? spark.filter(b => b && Number.isFinite(b.avg)) : [];
+  sparklineAccum = null;
 };
 
 const flushHistoryToSave = () => {
   api.storage.set(NS, 'upsHistory', historyBuf);
+  api.storage.set(NS, 'upsSparkline', sparklineBuckets);
 };
 
 const resetHistory = () => {
-  sparklineRing = [];
+  sparklineBuckets = [];
+  sparklineAccum = null;
   bucketAccum = null;
   historyBuf = [];
   lastHistorySample = null;
   api.storage.set(NS, 'upsHistory', []);
+  api.storage.set(NS, 'upsSparkline', []);
+};
+
+const finalizeSparklineBucket = accum => ({
+  min: Math.round(accum.min * 10) / 10,
+  max: Math.round(accum.max * 10) / 10,
+  avg: Math.round((accum.sum / accum.n) * 10) / 10,
+});
+
+const sparklineColumns = () => {
+  const out = sparklineBuckets.slice();
+  if (sparklineAccum && sparklineAccum.n > 0) out.push(finalizeSparklineBucket(sparklineAccum));
+  return out;
 };
 
 // DE: Haelt sehr lange Laeufe im Rahmen: benachbarte Eimer paarweise
@@ -2235,9 +2507,19 @@ const sampleHistoryTick = () => {
       const ups = Math.min(120, (dTick / dtMs) * 1000);
 
       if (wantSparkline) {
-        sparklineRing.push({ atMs, ups });
-        const cutoff = atMs - SPARKLINE_WINDOW_MS;
-        while (sparklineRing.length > 0 && sparklineRing[0].atMs < cutoff) sparklineRing.shift();
+        if (!sparklineAccum) {
+          sparklineAccum = { startMs: atMs, min: ups, max: ups, sum: ups, n: 1 };
+        } else {
+          if (ups < sparklineAccum.min) sparklineAccum.min = ups;
+          if (ups > sparklineAccum.max) sparklineAccum.max = ups;
+          sparklineAccum.sum += ups;
+          sparklineAccum.n += 1;
+        }
+        if (atMs - sparklineAccum.startMs >= HISTORY_BUCKET_MS) {
+          sparklineBuckets.push(finalizeSparklineBucket(sparklineAccum));
+          sparklineAccum = null;
+          while (sparklineBuckets.length > SPARKLINE_MAX_BUCKETS) sparklineBuckets.shift();
+        }
       }
 
       if (wantHistory) {
@@ -2268,11 +2550,11 @@ setInterval(sampleHistoryTick, HISTORY_SAMPLE_MS);
 
 let lastHistoryFlush = 0;
 const maybeFlushHistory = () => {
-  if (!trackHistoryEnabled()) return;
   const stamp = Date.now();
   if (stamp - lastHistoryFlush < 1000) return;
   lastHistoryFlush = stamp;
-  flushHistoryToSave();
+  if (trackHistoryEnabled()) flushHistoryToSave();
+  else if (liveSparklineEnabled()) api.storage.set(NS, 'upsSparkline', sparklineBuckets);
 };
 
 // DE: Reduziert eine Punktreihe auf eine feste Spaltenzahl fuer die Grafik - jede
@@ -2303,7 +2585,6 @@ const downsampleToColumns = (items, cols, toStats) => {
 };
 
 const bucketStats = b => b;
-const ringStats = p => ({ min: p.ups, max: p.ups, avg: p.ups });
 
 // DE: Min/Max-Umschlag ueber UPS 0-60 mit gestrichelter 60er-Referenzlinie. Divs
 // DE: statt Canvas/SVG - genuegt fuer ein paar Dutzend bis anderthalbhundert
@@ -2379,6 +2660,7 @@ function SpeedrunHud() {
   const run = readRun();
   const waiting = typeof run.startedAt !== 'number';
   const done = typeof run.finishedAt === 'number';
+  const horizontal = hudLayout() === 'horizontal';
 
   const cat = category();
   const current = progressOf(cat);
@@ -2396,18 +2678,18 @@ function SpeedrunHud() {
   const sparkline = liveSparklineEnabled();
   // DE: Die Bestzeit ist immer die Echtzeit - unabhaengig von der gross gezeigten Uhr.
   // EN: The best time is always real time - regardless of which clock is shown large.
+  if (done) maybeAdoptFinishedAsBest();
   const best = readBest();
   const tainted = cheatsUsed();
   const rules = showRuleset() ? rulesetView() : null;
 
   const allSplits = readSplits();
-  const showSplits = api.settings.get('showSplits') !== false && allSplits.length > 0;
-  // DE: Im laufenden Betrieb nur die letzten Zeilen - sonst waechst der Kasten
-  // DE: ueber den halben Bildschirm. Die ganze Tabelle steht im Ergebnisfenster.
-  // EN: Only the last rows while running - otherwise the box would grow over
-  // EN: half the screen. The full table is in the result screen.
-  const visible = allSplits.slice(-HUD_SPLIT_ROWS);
-  const firstVisible = allSplits.length - visible.length;
+  const upcoming = done ? [] : upcomingSplits(cat, allSplits);
+  const windowed = hudSplitWindow(allSplits, upcoming);
+  const visible = windowed.rows;
+  const firstVisible = windowed.hiddenPast;
+  const showSplits = api.settings.get('showSplits') !== false && visible.length > 0;
+  const pbSplits = readBestSplits();
 
   let progressText;
   if (cat.kind === 'artifacts') {
@@ -2431,27 +2713,19 @@ function SpeedrunHud() {
   };
   const otherClocks = ['real', 'sim', 'play'].filter(k => k !== mode);
 
-  const box = {
-    position: 'absolute',
-    ...corner,
-    minWidth: fmt === 'seconds' ? '210px' : '235px',
-    maxWidth: '320px',
-    padding: '8px 10px',
-    borderRadius: '6px',
-    border: `1px solid ${tainted ? COLORS.red : done ? COLORS.gold : waiting ? COLORS.border : '#5a6472'}`,
-    opacity: waiting ? 0.75 : 1,
-    background: COLORS.box,
-    color: COLORS.text,
-    font: '500 13px/1.35 system-ui, sans-serif',
-    pointerEvents: 'none',
-    // DE: Ueber der Tutorial-Box (die liegt auf 10006) - sonst verdeckt sie den
-    // DE: Timer genau dort, wo er standardmaessig sitzt.
-    // EN: Above the tutorial box (which sits at 10006) - otherwise it would
-    // EN: cover the timer exactly where it sits by default.
-    zIndex: 10010,
-  };
+  const none = { pointerEvents: 'none' };
+  const col = (key, children, extra) => h('div', {
+    key,
+    style: {
+      ...none,
+      display: 'flex',
+      flexDirection: 'column',
+      minWidth: 0,
+      ...extra,
+    },
+  }, children);
 
-  return h('div', { style: box }, [
+  const clockBlock = [
     h('div', {
       key: 'time',
       style: {
@@ -2460,11 +2734,6 @@ function SpeedrunHud() {
         fontVariantNumeric: 'tabular-nums',
       },
     }, headlineText),
-
-    // DE: Die beiden anderen Uhren, klein darunter - immer beide, unabhaengig
-    // DE: davon, welche gross im Bild steht.
-    // EN: The other two clocks, small underneath - always both, regardless
-    // EN: of which one stands large on screen.
     !waiting
       ? h('div', {
           key: 'others',
@@ -2475,13 +2744,6 @@ function SpeedrunHud() {
           },
         }, otherClocks.map(k => h('span', { key: k }, otherClock(k))))
       : null,
-
-    // DE: Immer sichtbar: Verzoegerung und Schritt-Rueckstand. Kein Ausschalten -
-    // DE: das war explizit die Vorgabe, verlorene UPS sollen nie unter den Tisch
-    // DE: fallen koennen.
-    // EN: Always visible: slowdown and tick deficit. No way to turn them off -
-    // EN: that was explicitly the requirement, lost UPS should never be
-    // EN: allowed to disappear from view.
     h('div', {
       key: 'always',
       style: {
@@ -2504,7 +2766,6 @@ function SpeedrunHud() {
         color: waiting || !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green,
       }),
     ]),
-
     advanced && !waiting
       ? h('div', {
           key: 'advanced',
@@ -2520,16 +2781,10 @@ function SpeedrunHud() {
           h(MetricLine, { key: 'wr', label: t('mods|goldSpeedrun|metric|wrProbe'), value: `${fmtSigned(wMinusR(), 0)} ms` }),
         ])
       : null,
+  ];
 
-    sparkline && !waiting
-      ? h('div', { key: 'spark', style: { marginTop: '5px' } },
-          h(UpsEnvelopeGraph, {
-            columns: downsampleToColumns(sparklineRing, 40, ringStats),
-            height: 26,
-          }))
-      : null,
-
-    h('div', { key: 'goal', style: { marginTop: '4px', opacity: 0.85 } },
+  const progressBlock = [
+    h('div', { key: 'goal', style: { marginTop: horizontal ? 0 : '4px', opacity: 0.85 } },
       waiting
         ? t(startMode() === 'move'
             ? 'mods|goldSpeedrun|waitingMove'
@@ -2539,7 +2794,6 @@ function SpeedrunHud() {
                 ? 'mods|goldSpeedrun|waitingClick'
                 : 'mods|goldSpeedrun|waitingMouse')
         : progressText),
-
     h('div', {
       key: 'bar',
       style: {
@@ -2552,7 +2806,6 @@ function SpeedrunHud() {
         background: done ? COLORS.gold : COLORS.blue,
       },
     })),
-
     showSplits
       ? h('div', {
           key: 'splits',
@@ -2568,30 +2821,30 @@ function SpeedrunHud() {
                 style: { color: COLORS.dim, opacity: 0.7, paddingBottom: '2px' },
               }, `+${firstVisible} …`)
             : null,
-          h(SplitTable, { key: 'tbl', splits: visible, fmt, wide: false }),
+          h(SplitTable, { key: 'tbl', splits: visible, fmt, wide: false, pbSplits }),
         ])
       : null,
+  ];
 
-    // DE: Fusszeile: welche Kategorie gilt (wichtig fuer Zuschauer), die Bestzeit
-    // DE: und die Bestzeit.
-    // EN: Footer: which category applies (important for viewers), and the personal best.
+  const graphBlock = sparkline && !waiting
+    ? h('div', { key: 'spark', style: { marginTop: horizontal ? 0 : '5px', minWidth: horizontal ? '180px' : undefined } },
+        h(UpsEnvelopeGraph, {
+          columns: sparklineColumns(),
+          height: horizontal ? 52 : 26,
+        }))
+    : null;
+
+  const infoBlock = [
     h('div', {
       key: 'foot',
       style: {
-        marginTop: '5px', fontSize: '11px', opacity: 0.6,
+        marginTop: graphBlock ? '5px' : 0, fontSize: '11px', opacity: 0.6,
         display: 'flex', gap: '10px', justifyContent: 'space-between',
       },
     }, [
       h('span', { key: 'mode' }, categoryLabel()),
-      best !== null ? h('span', { key: 'pb' }, `PB ${formatTime(best, fmt)}`) : null,
+      best !== null && best > 0 ? h('span', { key: 'pb' }, `PB ${formatTime(best, fmt)}`) : null,
     ]),
-
-    // DE: Regelwerk-Abzeichen: gruen, sobald alle vier Vorgaben der offiziellen
-    // DE: Kategorien stimmen - sonst der dezente Hinweis, dass eigene Regeln
-    // DE: gelten. Damit sieht auch ein Zuschauer sofort, woran er ist.
-    // EN: Ruleset badge: green as soon as all four official-category
-    // EN: requirements are met - otherwise a subtle note that custom rules
-    // EN: apply. That way even a viewer instantly knows where they stand.
     rules
       ? h('div', {
           key: 'rules',
@@ -2608,13 +2861,52 @@ function SpeedrunHud() {
             ? t('mods|goldSpeedrun|rules|broken')
             : t('mods|goldSpeedrun|rules|custom'))
       : null,
-
     tainted
       ? h('div', {
           key: 'tainted',
           style: { marginTop: '4px', fontSize: '11px', color: COLORS.red, fontWeight: 700 },
         }, t('mods|goldSpeedrun|tainted'))
       : null,
+  ];
+
+  const box = {
+    position: 'absolute',
+    ...corner,
+    width: 'fit-content',
+    maxWidth: '92vw',
+    minWidth: horizontal ? undefined : (fmt === 'seconds' ? '210px' : '235px'),
+    padding: horizontal ? '6px 8px' : '8px 10px',
+    borderRadius: '6px',
+    border: `1px solid ${tainted ? COLORS.red : done ? COLORS.gold : waiting ? COLORS.border : '#5a6472'}`,
+    opacity: waiting ? 0.75 : 1,
+    background: COLORS.box,
+    color: COLORS.text,
+    font: '500 13px/1.35 system-ui, sans-serif',
+    pointerEvents: 'none',
+    display: 'flex',
+    flexDirection: horizontal ? 'row' : 'column',
+    alignItems: horizontal ? 'flex-start' : 'stretch',
+    gap: horizontal ? '12px' : 0,
+    // DE: Ueber der Tutorial-Box (die liegt auf 10006) - sonst verdeckt sie den
+    // DE: Timer genau dort, wo er standardmaessig sitzt.
+    // EN: Above the tutorial box (which sits at 10006) - otherwise it would
+    // EN: cover the timer exactly where it sits by default.
+    zIndex: 10010,
+  };
+
+  if (horizontal) {
+    return h('div', { style: box }, [
+      col('left', progressBlock, { minWidth: '210px', maxWidth: '280px' }),
+      col('mid', clockBlock, { minWidth: fmt === 'seconds' ? '200px' : '220px' }),
+      col('right', [graphBlock, ...infoBlock], { minWidth: sparkline ? '180px' : '140px' }),
+    ]);
+  }
+
+  return h('div', { style: box }, [
+    ...clockBlock,
+    graphBlock,
+    ...progressBlock,
+    ...infoBlock,
   ]);
 }
 
@@ -2940,7 +3232,7 @@ function Switch({ on, onClick, label }) {
       font: '700 10px/1 system-ui, sans-serif',
       letterSpacing: '0.06em',
     },
-  }, label || (on ? 'AN' : 'AUS'));
+  }, label || t(on ? 'mods|goldSpeedrun|btn|on' : 'mods|goldSpeedrun|btn|off'));
 }
 
 function SmallButton({ onClick, children }) {
@@ -3208,11 +3500,14 @@ api.ui.inject('panel', TriggerPanel);
 // --- DE: Tastenkuerzel / EN: Keyboard shortcuts ------------------------------
 // DE: F8 und F10 sind in den Standardbelegungen frei (belegt sind F2, F4, F5, F9).
 // EN: F8 and F10 are free in the default bindings (F2, F4, F5, F9 are taken).
+let lastResetToggle = 0;
 api.input.registerBinding('GoldSpeedrunReset', ['F8'], {
   displayNameKey: 'mods|goldSpeedrun|resetKey',
   category: 'mods|goldSpeedrun|name',
   handlers: {
     pressed: () => {
+      if (Date.now() - lastResetToggle < 250) return;
+      lastResetToggle = Date.now();
       api.storage.set(NS, 'startedAt', null);
       api.storage.set(NS, 'finishedAt', null);
       api.storage.set(NS, 'splits', []);
@@ -3236,13 +3531,18 @@ api.input.registerBinding('GoldSpeedrunResult', ['F10'], {
   },
 });
 
+let lastTriggerToggle = 0;
 // DE: F3 ist in den Standardbelegungen frei (belegt sind F2, F4, F5, F9).
 // EN: F3 is free in the default bindings (F2, F4, F5, F9 are taken).
 api.input.registerBinding('GoldSpeedrunTriggers', ['F3'], {
   displayNameKey: 'mods|goldSpeedrun|trg|key',
   category: 'mods|goldSpeedrun|name',
   handlers: {
-    pressed: () => setTriggerPanelOpen(!triggerPanelOpen),
+    pressed: () => {
+      if (Date.now() - lastTriggerToggle < 250) return;
+      lastTriggerToggle = Date.now();
+      setTriggerPanelOpen(!triggerPanelOpen);
+    },
   },
 });
 
@@ -3574,22 +3874,21 @@ try {
 let bootTimer = null;
 
 api.events.on('game:ready', () => {
+  // DE: Uhren immer wiederherstellen, auch wenn der Mod gerade aus ist - ein
+  // DE: laufender Lauf zaehlt im Hintergrund weiter und darf nach dem Laden
+  // DE: nicht bei 0 neu beginnen.
+  // EN: Always restore the clocks, even if the mod is currently off - a run
+  // EN: in progress keeps counting in the background and must not restart at
+  // EN: 0 after a load.
+  resumeClocks();
+  loadHistoryFromSave();
+  maybeAdoptFinishedAsBest();
+
   if (!modEnabled()) return;
   if (bootTimer !== null) {
     clearInterval(bootTimer);
     bootTimer = null;
   }
-
-  // DE: Die Basiswerte der drei Uhren aus dem (jetzt aktuellen) Spielstand neu
-  // DE: einlesen - das behebt den Fehler, der den Timer nach einem Ladevorgang
-  // DE: bei 0 haengen liess: die alten Basiswerte wurden nie wiederhergestellt.
-  // DE: Gefahrlos wiederholbar, auch wenn game:ready kein zweites Mal noetig war.
-  // EN: Re-reads the three clocks' baselines from the (now current) save file
-  // EN: - this fixes the bug that made the timer hang at 0 after a load: the
-  // EN: old baselines were never restored. Safe to repeat, even if game:ready
-  // EN: didn't strictly need to fire a second time.
-  resumeClocks();
-  loadHistoryFromSave();
 
   artifactTotalCache = null;
   markCache = { key: null, list: [] };
