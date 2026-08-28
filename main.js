@@ -25,8 +25,17 @@ const MOD_ID = 'gold-speedrun';
 const NS = 'goldSpeedrun';          // DE: Namespace im Savegame / EN: namespace inside the save file
 const BEST_PREFIX = 'goldSpeedrun.best'; // DE: localStorage, savegame-uebergreifend / EN: localStorage, shared across save files
 const LEGACY_BEST_KEY = 'goldSpeedrun.best'; // DE: Bestzeit aus Version <= 1.4 / EN: best time from version <= 1.4
+const MIN_PB_MS = 60000; // DE: Kuerzere Laeufe zaehlen nicht als Bestzeit / EN: shorter runs are never stored as a best
+const LOAD_ARTIFACT_MS = 2000; // DE: Ziel schon in den ersten 2s = Load-Artefakt / EN: goal met in the first 2s is a load artifact
+const CATEGORIES_KEY = 'goldSpeedrun.categories.v1';
+const ACTIVE_CATEGORY_KEY = 'goldSpeedrun.activeCategory';
+const TRIGGER_KEY = 'goldSpeedrun.triggers'; // DE: Legacy-Global, Fallback / EN: legacy global, fallback
+const TRIGGER_PREFIX = 'goldSpeedrun.triggers.';
+const GOLD_MODE_HARD_MIGRATE_KEY = 'goldSpeedrun.migratedGoldModeHard.v1';
+const KEY_STABILITY_MIGRATE_KEY = 'goldSpeedrun.migratedKeyStability.v1';
+const PB_RUN_ID = '__pb__';
 
-const MOD_VERSION = '2.8.1';
+const MOD_VERSION = '3.0.0';
 const log = (...a) => console.log(`[${MOD_ID} v${MOD_VERSION}]`, ...a);
 
 // --- DE: Schalter der Mod-Verwaltung / EN: Mod-manager switch ---------------
@@ -83,6 +92,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|running': 'Category: {category}',
   'mods|goldSpeedrun|done': 'Challenge complete! Time: {time}',
   'mods|goldSpeedrun|newBest': 'New personal best: {time}',
+  'mods|goldSpeedrun|pbTooShort': 'Finished in {time} — under the 1:00 minimum, not stored as a best time',
   'mods|goldSpeedrun|waiting': 'Any action starts the run',
   'mods|goldSpeedrun|waitingMove': 'Press W/A/S/D to start',
   'mods|goldSpeedrun|waitingClick': 'Your first action starts the run',
@@ -104,7 +114,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|split|goal': 'GOAL',
   'mods|goldSpeedrun|result|title': 'Run complete',
   'mods|goldSpeedrun|result|total': 'Final time',
-  'mods|goldSpeedrun|result|best': 'Personal best',
+  'mods|goldSpeedrun|result|best': 'Personal Best / Target',
   'mods|goldSpeedrun|result|noBest': 'first finish',
   'mods|goldSpeedrun|result|sim': 'Simulation time',
   'mods|goldSpeedrun|result|play': 'Play-clock',
@@ -114,7 +124,8 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|clock|playShort': 'play',
   'mods|goldSpeedrun|result|colSplit': 'Trigger',
   'mods|goldSpeedrun|result|colTime': 'Time',
-  'mods|goldSpeedrun|result|colSegment': 'Segment',
+  'mods|goldSpeedrun|result|colSegment': 'Segment duration',
+  'mods|goldSpeedrun|result|colDelta': 'Δ vs PB',
   'mods|goldSpeedrun|result|colGold': 'Gold',
   'mods|goldSpeedrun|result|noSplits': 'No triggers fired - enable some under Splits.',
   'mods|goldSpeedrun|result|close': 'Close',
@@ -137,6 +148,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|graph|title': 'UPS over the whole run',
   'mods|goldSpeedrun|graph|live': 'Live UPS (last 60 s)',
   'mods|goldSpeedrun|graph|empty': 'No data yet - turn on "Record UPS history" before starting a run.',
+  'mods|goldSpeedrun|graph|emptyRun': 'No data yet - start a run to record UPS.',
 
   // DE: Ausloeser-Fenster / EN: Triggers window
   'mods|goldSpeedrun|trg|title': 'Split triggers',
@@ -190,7 +202,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|cfg|startMode|any': 'Any action, movement included',
   'mods|goldSpeedrun|cfg|startMode|move': 'Movement only',
   'mods|goldSpeedrun|cfg|clockMode': 'Headline clock',
-  'mods|goldSpeedrun|cfg|clockMode|desc': 'All three times are always measured and always shown - this only decides which one stands large on the timer, the other two stay underneath. Real time (R) is the official scoring: the number a stopwatch next to the screen shows, and the only one a verifier can check against a video. Simulation time (T) counts the simulation steps the world actually ran, divided by 60 - a run on a machine that cannot hold 60 UPS stays comparable with one that can, but it also gives more real thinking time per world-tick on slow hardware. Play-clock (W) is the game\'s own save-file clock.',
+  'mods|goldSpeedrun|cfg|clockMode|desc': 'All three times are always measured and always recorded - this only decides which one stands large on the timer, the other two stay underneath. Play-clock (W) is the official community metric: the game\'s own save-file clock. Real time (R) is the number a stopwatch next to the screen shows. Simulation time (T) counts the simulation steps the world actually ran, divided by 60.',
   'mods|goldSpeedrun|cfg|clockMode|real': 'Real time (R)',
   'mods|goldSpeedrun|cfg|clockMode|sim': 'Simulation time (T)',
   'mods|goldSpeedrun|cfg|clockMode|play': 'Play-clock (W)',
@@ -247,6 +259,8 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|rules|locked': 'locked in when the run started',
   'mods|goldSpeedrun|rules|mods': 'Other mods enabled',
   'mods|goldSpeedrun|rules|modsNone': 'none',
+  'mods|goldSpeedrun|mods|clean': 'No additional mods',
+  'mods|goldSpeedrun|mods|count': '{count} other mods',
   'mods|goldSpeedrun|rules|badge': 'OFFICIAL',
   'mods|goldSpeedrun|rules|broken': 'RULES BROKEN',
   'mods|goldSpeedrun|rules|custom': 'CUSTOM',
@@ -259,6 +273,87 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|cfg|showLiveSparkline': 'Show live UPS graph',
   'mods|goldSpeedrun|cfg|showLiveSparkline|desc': 'Adds a small live graph of the last 60 seconds of UPS under the timer. Sampled on the main thread only - no measurable cost to the simulation.',
 
+  // DE: Kategorien und Routen / EN: Categories and routes
+  'mods|goldSpeedrun|dash|run': 'Run',
+  'mods|goldSpeedrun|dash|categories': 'Categories',
+  'mods|goldSpeedrun|cat|title': 'Categories',
+  'mods|goldSpeedrun|cat|preset': 'preset',
+  'mods|goldSpeedrun|cat|custom': 'custom',
+  'mods|goldSpeedrun|cat|active': 'Active',
+  'mods|goldSpeedrun|cat|activate': 'Activate',
+  'mods|goldSpeedrun|cat|new': 'New category',
+  'mods|goldSpeedrun|cat|name': 'Name',
+  'mods|goldSpeedrun|cat|kind': 'Goal',
+  'mods|goldSpeedrun|cat|kind|gold': 'Gold',
+  'mods|goldSpeedrun|cat|kind|artifacts': 'Artifacts',
+  'mods|goldSpeedrun|cat|kind|factory': 'Factory rank',
+  'mods|goldSpeedrun|cat|target': 'Target',
+  'mods|goldSpeedrun|cat|goldMode': 'Gold ruleset',
+  'mods|goldSpeedrun|cat|create': 'Create',
+  'mods|goldSpeedrun|cat|rename': 'Rename',
+  'mods|goldSpeedrun|cat|delete': 'Delete',
+  'mods|goldSpeedrun|cat|clearPb': 'Clear PB',
+  'mods|goldSpeedrun|cat|openTriggers': 'Edit split triggers (F3)',
+  'mods|goldSpeedrun|cat|noPb': 'no PB',
+  'mods|goldSpeedrun|route|title': 'Runs',
+  'mods|goldSpeedrun|route|fromPb': 'Auto-updates on PB',
+  'mods|goldSpeedrun|route|new': 'New run',
+  'mods|goldSpeedrun|route|duplicate': 'Duplicate',
+  'mods|goldSpeedrun|route|delete': 'Delete',
+  'mods|goldSpeedrun|route|rename': 'Rename',
+  'mods|goldSpeedrun|route|empty': 'No splits yet — import a CSV or add one below.',
+  'mods|goldSpeedrun|route|up': 'Up',
+  'mods|goldSpeedrun|route|down': 'Down',
+  'mods|goldSpeedrun|route|remove': 'Remove',
+  'mods|goldSpeedrun|route|add': 'Add',
+  'mods|goldSpeedrun|route|addLabel': 'Type to search triggers…',
+  'mods|goldSpeedrun|route|addTime': 'm:ss.s',
+  'mods|goldSpeedrun|route|invalidTime': 'Could not read that time. Use m:ss or h:mm:ss.',
+  'mods|goldSpeedrun|route|export': 'Export',
+  'mods|goldSpeedrun|route|import': 'Import CSV',
+  'mods|goldSpeedrun|route|setPb': 'Mark as PB',
+  'mods|goldSpeedrun|route|setPbDone': 'Personal Best set to {time} (previous PB backed up)',
+  'mods|goldSpeedrun|route|setPbFail': 'Need a split of at least 1:00 to set a PB.',
+  'mods|goldSpeedrun|route|compareTitle': 'In-game comparison target',
+  'mods|goldSpeedrun|route|comparePb': 'Official Personal Best',
+  'mods|goldSpeedrun|route|compareCustom': 'Custom route: {name}',
+  'mods|goldSpeedrun|route|noRoutes': 'No other runs yet. Comparing against Personal Best.',
+  'mods|goldSpeedrun|route|editing': 'Editing: {name}',
+  'mods|goldSpeedrun|route|editSplits': 'Edit',
+  'mods|goldSpeedrun|route|doneEdit': 'Done',
+  'mods|goldSpeedrun|route|searchTrigger': 'Type to search triggers…',
+  'mods|goldSpeedrun|route|customTrigger': 'Custom: {label}',
+  'mods|goldSpeedrun|route|customGroup': 'Custom / imported',
+  'mods|goldSpeedrun|route|noMatch': 'No matching triggers',
+  'mods|goldSpeedrun|route|splitsCount': '{count} splits',
+  'mods|goldSpeedrun|run|title': 'Runs',
+  'mods|goldSpeedrun|run|pb': 'Personal Best',
+  'mods|goldSpeedrun|run|compareThis': 'Compare against this',
+  'mods|goldSpeedrun|run|markPb': 'Mark as PB',
+  'mods|goldSpeedrun|run|new': 'New run',
+  'mods|goldSpeedrun|run|edit': 'Edit',
+  'mods|goldSpeedrun|run|history': 'Previous PBs ({count})',
+  'mods|goldSpeedrun|run|deletePbConfirm': 'Clear this Personal Best? It will be saved in Previous PBs.',
+  'mods|goldSpeedrun|run|badgePb': 'PB',
+  'mods|goldSpeedrun|csv|imported': 'Imported {count} splits as “{name}”',
+  'mods|goldSpeedrun|csv|importEmpty': 'No splits in that CSV — nothing imported.',
+  'mods|goldSpeedrun|csv|importedName': 'Imported route',
+  'mods|goldSpeedrun|csv|exportRun': 'Export this run',
+  'mods|goldSpeedrun|csv|exportPb': 'Export PB CSV',
+  'mods|goldSpeedrun|csv|importPb': 'Import CSV as PB',
+  'mods|goldSpeedrun|csv|importedPb': 'Imported {count} splits as PB/Target {time}',
+  'mods|goldSpeedrun|pb|history': 'PB History ({count})',
+  'mods|goldSpeedrun|pb|historyEmpty': 'No previous PBs saved yet.',
+  'mods|goldSpeedrun|pb|restore': 'Restore',
+  'mods|goldSpeedrun|pb|restored': 'Restored PB to {time}',
+  'mods|goldSpeedrun|pb|historyHide': 'Hide history',
+  'mods|goldSpeedrun|pb|sourceInGame': 'In-game run',
+  'mods|goldSpeedrun|pb|sourcePromote': 'Replaced by route: {name}',
+  'mods|goldSpeedrun|pb|sourceImport': 'Replaced by CSV import',
+  'mods|goldSpeedrun|pb|sourceClear': 'Cleared',
+  'mods|goldSpeedrun|pb|sourceRestore': 'Replaced by restore',
+  'mods|goldSpeedrun|pb|sourceEdit': 'Edited by hand',
+
 });
 
 api.i18n.register('de', {
@@ -266,6 +361,7 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|running': 'Kategorie: {category}',
   'mods|goldSpeedrun|done': 'Challenge geschafft! Zeit: {time}',
   'mods|goldSpeedrun|newBest': 'Neue Bestzeit: {time}',
+  'mods|goldSpeedrun|pbTooShort': 'Geschafft in {time} — unter der 1:00-Mindestzeit, nicht als Bestzeit gespeichert',
   'mods|goldSpeedrun|waiting': 'Jede Aktion startet den Lauf',
   'mods|goldSpeedrun|waitingMove': 'W/A/S/D startet den Lauf',
   'mods|goldSpeedrun|waitingClick': 'Die erste Aktion startet den Lauf',
@@ -286,7 +382,7 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|split|goal': 'ZIEL',
   'mods|goldSpeedrun|result|title': 'Lauf beendet',
   'mods|goldSpeedrun|result|total': 'Endzeit',
-  'mods|goldSpeedrun|result|best': 'Bestzeit',
+  'mods|goldSpeedrun|result|best': 'Bestzeit / Ziel',
   'mods|goldSpeedrun|result|noBest': 'erster Durchlauf',
   'mods|goldSpeedrun|result|sim': 'Simulationszeit',
   'mods|goldSpeedrun|result|play': 'Spielzeit-Uhr',
@@ -296,7 +392,8 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|clock|playShort': 'spiel',
   'mods|goldSpeedrun|result|colSplit': 'Auslöser',
   'mods|goldSpeedrun|result|colTime': 'Zeit',
-  'mods|goldSpeedrun|result|colSegment': 'Abschnitt',
+  'mods|goldSpeedrun|result|colSegment': 'Abschnittsdauer',
+  'mods|goldSpeedrun|result|colDelta': 'Δ zur PB',
   'mods|goldSpeedrun|result|colGold': 'Gold',
   'mods|goldSpeedrun|result|noSplits': 'Kein Auslöser gefeuert - unter Splits welche einschalten.',
   'mods|goldSpeedrun|result|close': 'Schließen',
@@ -319,6 +416,7 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|graph|title': 'UPS über den ganzen Lauf',
   'mods|goldSpeedrun|graph|live': 'UPS live (letzte 60 s)',
   'mods|goldSpeedrun|graph|empty': 'Noch keine Daten - "UPS-Verlauf aufzeichnen" vor Laufstart einschalten.',
+  'mods|goldSpeedrun|graph|emptyRun': 'Noch keine Daten - starte einen Lauf, um UPS aufzuzeichnen.',
 
   'mods|goldSpeedrun|trg|title': 'Split-Auslöser',
   'mods|goldSpeedrun|trg|key': 'Split-Auslöser öffnen',
@@ -370,7 +468,7 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|cfg|startMode|any': 'Jede Aktion, auch Bewegung',
   'mods|goldSpeedrun|cfg|startMode|move': 'Nur Bewegung',
   'mods|goldSpeedrun|cfg|clockMode': 'Große Uhr',
-  'mods|goldSpeedrun|cfg|clockMode|desc': 'Alle drei Zeiten werden immer gemessen und immer gezeigt - das hier entscheidet nur, welche groß auf dem Timer steht, die anderen beiden stehen darunter. Die Echtzeit (R) ist die offizielle Wertung: die Zahl, die auch eine Stoppuhr neben dem Bildschirm zeigt, und die einzige, die sich an einem Video nachprüfen lässt. Die Simulationszeit (T) zählt die Schritte, die die Welt tatsächlich gelaufen ist, geteilt durch 60 - damit bleibt ein Lauf auf einem Rechner, der keine 60 UPS hält, mit einem vergleichbar, der sie hält, gibt auf schwacher Hardware aber auch mehr reale Bedenkzeit je Weltschritt. Die Spielzeit-Uhr (W) ist die eigene Uhr des Spielstands.',
+  'mods|goldSpeedrun|cfg|clockMode|desc': 'Alle drei Zeiten werden immer gemessen und immer festgehalten - das hier entscheidet nur, welche groß auf dem Timer steht, die anderen beiden stehen darunter. Die Spielzeit-Uhr (W) ist die offizielle Community-Wertung: die eigene Uhr des Spielstands. Die Echtzeit (R) ist die Zahl, die auch eine Stoppuhr neben dem Bildschirm zeigt. Die Simulationszeit (T) zählt die Schritte, die die Welt tatsächlich gelaufen ist, geteilt durch 60.',
   'mods|goldSpeedrun|cfg|clockMode|real': 'Echtzeit (R)',
   'mods|goldSpeedrun|cfg|clockMode|sim': 'Simulationszeit (T)',
   'mods|goldSpeedrun|cfg|clockMode|play': 'Spielzeit-Uhr (W)',
@@ -426,6 +524,8 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|rules|locked': 'festgehalten beim Start des Laufs',
   'mods|goldSpeedrun|rules|mods': 'Andere Mods aktiv',
   'mods|goldSpeedrun|rules|modsNone': 'keine',
+  'mods|goldSpeedrun|mods|clean': 'Keine weiteren Mods',
+  'mods|goldSpeedrun|mods|count': '{count} weitere Mods',
   'mods|goldSpeedrun|rules|badge': 'OFFIZIELL',
   'mods|goldSpeedrun|rules|broken': 'REGELBRUCH',
   'mods|goldSpeedrun|rules|custom': 'EIGENES REGELWERK',
@@ -437,6 +537,86 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|cfg|trackUpsHistory|desc': 'Hält eine Min/Max/Mittel-Grafik der UPS des ganzen Laufs für das Ergebnisfenster fest, einmal pro Sekunde abgetastet und im Spielstand gespeichert. Standardmäßig aus - ein sehr langer Lauf legt dadurch etwas mehr Spielstanddaten an.',
   'mods|goldSpeedrun|cfg|showLiveSparkline': 'Live-UPS-Grafik zeigen',
   'mods|goldSpeedrun|cfg|showLiveSparkline|desc': 'Zeigt eine kleine Live-Grafik der letzten 60 Sekunden UPS unter dem Timer. Wird nur im Hauptthread abgetastet - keine messbaren Kosten für die Simulation.',
+
+  'mods|goldSpeedrun|dash|run': 'Lauf',
+  'mods|goldSpeedrun|dash|categories': 'Kategorien',
+  'mods|goldSpeedrun|cat|title': 'Kategorien',
+  'mods|goldSpeedrun|cat|preset': 'Vorgabe',
+  'mods|goldSpeedrun|cat|custom': 'eigen',
+  'mods|goldSpeedrun|cat|active': 'Aktiv',
+  'mods|goldSpeedrun|cat|activate': 'Aktivieren',
+  'mods|goldSpeedrun|cat|new': 'Neue Kategorie',
+  'mods|goldSpeedrun|cat|name': 'Name',
+  'mods|goldSpeedrun|cat|kind': 'Ziel',
+  'mods|goldSpeedrun|cat|kind|gold': 'Gold',
+  'mods|goldSpeedrun|cat|kind|artifacts': 'Artefakte',
+  'mods|goldSpeedrun|cat|kind|factory': 'Fabrikrang',
+  'mods|goldSpeedrun|cat|target': 'Zielwert',
+  'mods|goldSpeedrun|cat|goldMode': 'Gold-Regelwerk',
+  'mods|goldSpeedrun|cat|create': 'Anlegen',
+  'mods|goldSpeedrun|cat|rename': 'Umbenennen',
+  'mods|goldSpeedrun|cat|delete': 'Löschen',
+  'mods|goldSpeedrun|cat|clearPb': 'Bestzeit löschen',
+  'mods|goldSpeedrun|cat|openTriggers': 'Split-Auslöser bearbeiten (F3)',
+  'mods|goldSpeedrun|cat|noPb': 'keine PB',
+  'mods|goldSpeedrun|route|title': 'Läufe',
+  'mods|goldSpeedrun|route|fromPb': 'wird bei neuer PB überschrieben',
+  'mods|goldSpeedrun|route|new': 'Neuer Lauf',
+  'mods|goldSpeedrun|route|duplicate': 'Duplizieren',
+  'mods|goldSpeedrun|route|delete': 'Löschen',
+  'mods|goldSpeedrun|route|rename': 'Umbenennen',
+  'mods|goldSpeedrun|route|empty': 'Noch keine Splits — CSV importieren oder unten eine Zeile anlegen.',
+  'mods|goldSpeedrun|route|up': 'Hoch',
+  'mods|goldSpeedrun|route|down': 'Runter',
+  'mods|goldSpeedrun|route|remove': 'Entfernen',
+  'mods|goldSpeedrun|route|add': 'Hinzufügen',
+  'mods|goldSpeedrun|route|addLabel': 'Auslöser suchen…',
+  'mods|goldSpeedrun|route|addTime': 'm:ss.s',
+  'mods|goldSpeedrun|route|invalidTime': 'Zeit nicht erkannt. Nutze m:ss oder h:mm:ss.',
+  'mods|goldSpeedrun|route|export': 'Export',
+  'mods|goldSpeedrun|route|import': 'CSV importieren',
+  'mods|goldSpeedrun|route|setPb': 'Als Bestzeit setzen',
+  'mods|goldSpeedrun|route|setPbDone': 'Bestzeit auf {time} gesetzt (vorherige PB gesichert)',
+  'mods|goldSpeedrun|route|setPbFail': 'Zum Setzen braucht es einen Split von mindestens 1:00.',
+  'mods|goldSpeedrun|route|compareTitle': 'Vergleichsziel im Spiel',
+  'mods|goldSpeedrun|route|comparePb': 'Offizielle Bestzeit',
+  'mods|goldSpeedrun|route|compareCustom': 'Eigene Route: {name}',
+  'mods|goldSpeedrun|route|noRoutes': 'Noch keine weiteren Läufe. Vergleich gegen die Bestzeit.',
+  'mods|goldSpeedrun|route|editing': 'Bearbeiten: {name}',
+  'mods|goldSpeedrun|route|editSplits': 'Bearbeiten',
+  'mods|goldSpeedrun|route|doneEdit': 'Fertig',
+  'mods|goldSpeedrun|route|searchTrigger': 'Auslöser suchen…',
+  'mods|goldSpeedrun|route|customTrigger': 'Eigene: {label}',
+  'mods|goldSpeedrun|route|customGroup': 'Eigene / importiert',
+  'mods|goldSpeedrun|route|noMatch': 'Kein passender Auslöser',
+  'mods|goldSpeedrun|route|splitsCount': '{count} Splits',
+  'mods|goldSpeedrun|run|title': 'Läufe',
+  'mods|goldSpeedrun|run|pb': 'Bestzeit',
+  'mods|goldSpeedrun|run|compareThis': 'Hiermit vergleichen',
+  'mods|goldSpeedrun|run|markPb': 'Als Bestzeit setzen',
+  'mods|goldSpeedrun|run|new': 'Neuer Lauf',
+  'mods|goldSpeedrun|run|edit': 'Bearbeiten',
+  'mods|goldSpeedrun|run|history': 'Frühere Bestzeiten ({count})',
+  'mods|goldSpeedrun|run|deletePbConfirm': 'Diese Bestzeit löschen? Sie wird unter Frühere Bestzeiten gesichert.',
+  'mods|goldSpeedrun|run|badgePb': 'PB',
+  'mods|goldSpeedrun|csv|imported': '{count} Splits als „{name}“ importiert',
+  'mods|goldSpeedrun|csv|importEmpty': 'Keine Splits in dieser CSV — nichts importiert.',
+  'mods|goldSpeedrun|csv|importedName': 'Importierte Route',
+  'mods|goldSpeedrun|csv|exportRun': 'Diesen Lauf exportieren',
+  'mods|goldSpeedrun|csv|exportPb': 'PB als CSV',
+  'mods|goldSpeedrun|csv|importPb': 'CSV als PB importieren',
+  'mods|goldSpeedrun|csv|importedPb': '{count} Splits als PB/Ziel {time} importiert',
+  'mods|goldSpeedrun|pb|history': 'PB-Verlauf ({count})',
+  'mods|goldSpeedrun|pb|historyEmpty': 'Noch keine früheren Bestzeiten gesichert.',
+  'mods|goldSpeedrun|pb|restore': 'Wiederherstellen',
+  'mods|goldSpeedrun|pb|restored': 'Bestzeit auf {time} wiederhergestellt',
+  'mods|goldSpeedrun|pb|historyHide': 'Verlauf schließen',
+  'mods|goldSpeedrun|pb|sourceInGame': 'Lauf im Spiel',
+  'mods|goldSpeedrun|pb|sourcePromote': 'Ersetzt durch Route: {name}',
+  'mods|goldSpeedrun|pb|sourceImport': 'Ersetzt durch CSV-Import',
+  'mods|goldSpeedrun|pb|sourceClear': 'Gelöscht',
+  'mods|goldSpeedrun|pb|sourceRestore': 'Ersetzt durch Wiederherstellung',
+  'mods|goldSpeedrun|pb|sourceEdit': 'Von Hand bearbeitet',
 
 });
 
@@ -512,20 +692,91 @@ const artifactTotal = () => {
   return artifactTotalCache > 0 ? artifactTotalCache : 0;
 };
 
-const category = () => {
-  const id = api.settings.get('goalPreset') || '100000';
-  const def = CATEGORIES[id] || CATEGORIES['100000'];
+const parseStoredJson = (v, fallback) => {
+  if (v == null) return fallback;
+  if (typeof v === 'object') return v;
+  if (typeof v === 'string' && (v.charAt(0) === '{' || v.charAt(0) === '[')) {
+    try { return JSON.parse(v); } catch (e) { /* DE: kein JSON / EN: not JSON */ }
+  }
+  return fallback;
+};
 
+const readCustomCategories = () => {
+  const list = parseStoredJson(api.storage.local.get(CATEGORIES_KEY), []);
+  return Array.isArray(list) ? list.filter(c => c && typeof c === 'object' && typeof c.id === 'string') : [];
+};
+
+const writeCustomCategories = list => {
+  try { api.storage.local.set(CATEGORIES_KEY, JSON.stringify(Array.isArray(list) ? list : [])); } catch (e) { /* ignore */ }
+};
+
+const getActiveCategoryId = () => {
+  const v = api.storage.local.get(ACTIVE_CATEGORY_KEY);
+  return typeof v === 'string' && v.length > 0 ? v : null;
+};
+
+const setActiveCategoryId = id => {
+  try { api.storage.local.set(ACTIVE_CATEGORY_KEY, id || null); } catch (e) { /* ignore */ }
+};
+
+const newCustomId = () => 'c' + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36);
+
+const presetCategoryFromId = id => {
+  const def = CATEGORIES[id] || CATEGORIES['100000'];
+  const resolved = CATEGORIES[id] ? id : '100000';
   if (def.kind === 'gold') {
     let target = def.target;
     if (!Number.isFinite(target)) {
       const v = api.settings.get('goalGold');
       target = Number.isFinite(v) && v > 0 ? v : 100000;
     }
-    return { id, kind: 'gold', target };
+    return { id: resolved, kind: 'gold', target, custom: false };
   }
-  if (def.kind === 'artifacts') return { id, kind: 'artifacts', target: artifactTotal() };
-  return { id, kind: 'factory', target: def.target };
+  if (def.kind === 'artifacts') return { id: resolved, kind: 'artifacts', target: artifactTotal(), custom: false };
+  return { id: resolved, kind: 'factory', target: def.target, custom: false };
+};
+
+const categoryFromCustom = custom => {
+  const kind = custom.kind === 'artifacts' || custom.kind === 'factory' ? custom.kind : 'gold';
+  let target = Number(custom.target);
+  if (kind === 'artifacts') target = target > 0 ? Math.floor(target) : artifactTotal();
+  else if (kind === 'factory') target = target > 0 ? Math.floor(target) : 6;
+  else target = target > 0 ? Math.floor(target) : 100000;
+  const gm = custom.goldMode === 'balance' || custom.goldMode === 'official' ? custom.goldMode : 'earned';
+  return {
+    id: custom.id,
+    kind,
+    target,
+    goldMode: gm,
+    name: typeof custom.name === 'string' && custom.name.trim() ? custom.name.trim() : custom.id,
+    custom: true,
+  };
+};
+
+const category = () => {
+  const activeId = getActiveCategoryId();
+  if (activeId && !CATEGORIES[activeId]) {
+    const custom = readCustomCategories().find(c => c.id === activeId);
+    if (custom) return categoryFromCustom(custom);
+  }
+  const presetId = (activeId && CATEGORIES[activeId])
+    ? activeId
+    : (api.settings.get('goalPreset') || '100000');
+  return presetCategoryFromId(presetId);
+};
+
+let lastSeenPreset = null;
+const syncActiveFromPresetSetting = () => {
+  const preset = api.settings.get('goalPreset') || '100000';
+  if (lastSeenPreset === null) {
+    lastSeenPreset = preset;
+    if (!getActiveCategoryId()) setActiveCategoryId(preset);
+    return;
+  }
+  if (preset !== lastSeenPreset) {
+    lastSeenPreset = preset;
+    setActiveCategoryId(preset);
+  }
 };
 
 // --- DE: Messwerte / EN: Measured values ------------------------------------
@@ -594,6 +845,12 @@ let lastBalance = null;
 const officialMode = () => api.settings.get('goldMode') === 'official';
 
 const goldMode = () => {
+  try {
+    const cat = category();
+    if (cat && cat.custom) {
+      return cat.goldMode === 'balance' || cat.goldMode === 'official' ? 'balance' : 'earned';
+    }
+  } catch (e) { /* DE: Kategorie noch nicht bereit / EN: category not ready yet */ }
   const v = api.settings.get('goldMode');
   return v === 'balance' || v === 'official' ? 'balance' : 'earned';
 };
@@ -668,6 +925,26 @@ const writeSetting = (key, value) => {
     return false;
   }
   return bag[key] === value;
+};
+
+// DE: 2.9 hat Installationen einmalig auf Hard Mode (balance) gestellt und
+// DE: damit die Bestzeiten unter ...earned unsichtbar gemacht. Wer nur durch
+// DE: jene Umstellung auf balance steht, kommt zurueck auf Normal.
+// EN: 2.9 switched installs to Hard Mode (balance) once and thereby hid
+// EN: bests stored under ...earned. Anyone who is on balance only because of
+// EN: that switch is put back on Normal.
+const undoGoldModeHardMigrate = () => {
+  try {
+    if (api.storage.local.get(GOLD_MODE_HARD_MIGRATE_KEY) !== true) return false;
+    const v = api.settings.get('goldMode');
+    if (v === 'balance' && writeSetting('goldMode', 'earned')) {
+      log('Gold-Regelwerk zurueck auf Normal (Bestzeiten lagen unter earned)');
+    }
+    try { api.storage.local.set(GOLD_MODE_HARD_MIGRATE_KEY, null); } catch (e) { /* ignore */ }
+    return v === 'balance';
+  } catch (e) {
+    return false;
+  }
 };
 
 // DE: Haelt die Anzeige der Einstellungen mit dem tatsaechlichen Zustand gleich:
@@ -762,7 +1039,15 @@ const categoryLabel = () => {
   const cat = category();
   const parts = [];
 
-  if (cat.kind === 'gold') {
+  if (cat.custom && cat.name) {
+    parts.push(cat.name);
+    if (cat.kind === 'gold') {
+      parts.push(`${shortGold(cat.target)} Gold %`);
+      parts.push(t(goldMode() === 'balance'
+        ? 'mods|goldSpeedrun|modeHard'
+        : 'mods|goldSpeedrun|modeNormal'));
+    }
+  } else if (cat.kind === 'gold') {
     parts.push(`${shortGold(cat.target)} Gold %`);
     parts.push(t(goldMode() === 'balance'
       ? 'mods|goldSpeedrun|modeHard'
@@ -783,33 +1068,54 @@ const categoryLabel = () => {
 
 // DE: Schluessel der Bestzeit: pro Kategorie und Regelwerk getrennt, sonst
 // DE: stehen 1M-Zeiten neben 100k-Zeiten.
-// DE: Die Bestzeit ist immer die Echtzeit (R) - die einzige, die sich an einem
-// DE: Video nachpruefen laesst und deshalb die offizielle Wertung bleibt.
+// DE: Die Bestzeit ist die Spielzeit-Uhr (W) - die offizielle Community-Wertung.
 // EN: Best-time key: kept separate per category and ruleset, otherwise 1M
 // EN: times would sit next to 100k times.
-// EN: The best time is always real time (R) - the only one that can be
-// EN: checked against a video, which is why it stays the official scoring.
-const bestKey = () => {
-  const cat = category();
-  const bits = [cat.id, cat.kind === 'gold' ? goldMode() : 'x'];
-  if (cat.id === 'custom') bits.push(String(cat.target));
-  if (skipTutorialEnabled()) bits.push('notut');
+// EN: The best time is the play-clock (W) - the official community metric.
+const goldModeFor = cat => {
+  if (cat && cat.custom) {
+    return cat.goldMode === 'balance' || cat.goldMode === 'official' ? 'balance' : 'earned';
+  }
+  return goldMode();
+};
+
+const bestKeyFor = (cat, mode) => {
+  const c = cat || category();
+  const gm = c.kind === 'gold' ? (mode || goldModeFor(c)) : 'x';
+  if (c.custom) return `${BEST_PREFIX}.custom.${c.id}.${gm}`;
+  const bits = [c.id, gm];
+  if (c.id === 'custom') bits.push(String(c.target));
   return `${BEST_PREFIX}.${bits.join('.')}`;
 };
 
+const bestKey = () => bestKeyFor(category());
+
+const acceptBest = v => (Number.isFinite(v) && v >= MIN_PB_MS) ? v : null;
+
+const clearStoredBest = key => {
+  try { api.storage.local.set(key, null); } catch (e) { /* ignore */ }
+};
+
+const readBestAt = key => {
+  const v = api.storage.local.get(key);
+  if (Number.isFinite(v) && v > 0 && v < MIN_PB_MS) clearStoredBest(key);
+  return acceptBest(v);
+};
+
 const readBest = () => {
-  const v = api.storage.local.get(bestKey());
-  // DE: 0 ist keine Bestzeit - das war ein Schreibfehler, der jeden echten Lauf
-  // DE: als "langsamer als 00:00" verworfen hat.
-  // EN: 0 is not a best time - that was a write error that made every real
-  // EN: run look slower than 00:00 and so never get stored.
-  if (Number.isFinite(v) && v > 0) return v;
+  const key = bestKey();
+  const fromLocal = readBestAt(key);
+  if (fromLocal !== null) return fromLocal;
   const fromSave = api.storage.get(NS, 'pbTime');
-  if (Number.isFinite(fromSave) && fromSave > 0) return fromSave;
+  if (Number.isFinite(fromSave) && fromSave > 0 && fromSave < MIN_PB_MS) {
+    api.storage.set(NS, 'pbTime', null);
+  }
+  if (acceptBest(fromSave)) return fromSave;
   const cat = category();
   if (cat.id === '100000' && goldMode() === 'earned' && !skipTutorialEnabled()) {
     const legacy = api.storage.local.get(LEGACY_BEST_KEY);
-    if (Number.isFinite(legacy) && legacy > 0) return legacy;
+    if (Number.isFinite(legacy) && legacy > 0 && legacy < MIN_PB_MS) clearStoredBest(LEGACY_BEST_KEY);
+    if (acceptBest(legacy)) return legacy;
   }
   return null;
 };
@@ -842,22 +1148,93 @@ const parseSplitList = v => {
   return [];
 };
 
-const writeBestTime = time => {
-  if (!(time > 0)) return false;
-  try { api.storage.local.set(bestKey(), time); } catch (e) { /* DE: kein localStorage / EN: no localStorage */ }
-  api.storage.set(NS, 'pbTime', time);
+const writeBestTimeAt = (key, time) => {
+  if (!(time >= MIN_PB_MS) || !key) return false;
+  try { api.storage.local.set(key, time); } catch (e) { /* DE: kein localStorage / EN: no localStorage */ }
+  if (key === bestKey()) api.storage.set(NS, 'pbTime', time);
   return true;
 };
 
-const writeBestSplits = splits => {
-  if (!Array.isArray(splits) || splits.length === 0) return;
-  const json = JSON.stringify(splits);
-  try { api.storage.local.set(bestSplitsKey(), json); } catch (e) { /* DE: localStorage voll / EN: localStorage full */ }
-  api.storage.set(NS, 'pbSplits', splits);
+const writeBestSplitsAt = (key, splits) => {
+  if (!key || !Array.isArray(splits) || splits.length === 0) return;
+  try { api.storage.local.set(key + '.splits', JSON.stringify(splits)); } catch (e) { /* DE: localStorage voll / EN: localStorage full */ }
+  if (key === bestKey()) api.storage.set(NS, 'pbSplits', splits);
+};
+
+const writeBestTime = time => writeBestTimeAt(bestKey(), time);
+
+const writeBestSplits = splits => writeBestSplitsAt(bestKey(), splits);
+
+const readBestSplitsAt = key => parseSplitList(api.storage.local.get(key + '.splits'));
+
+const PB_HISTORY_MAX = 5;
+
+const pbHistoryKey = cat => bestKeyFor(cat) + '.history.v1';
+
+const readPbHistory = cat => {
+  const raw = parseStoredJson(api.storage.local.get(pbHistoryKey(cat)), []);
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(e => e && typeof e === 'object' && (Number.isFinite(e.time) || (Array.isArray(e.splits) && e.splits.length > 0)));
+};
+
+const writePbHistory = (cat, list) => {
+  try {
+    api.storage.local.set(pbHistoryKey(cat), JSON.stringify((list || []).slice(0, PB_HISTORY_MAX)));
+  } catch (e) { /* ignore */ }
+};
+
+const pushPbHistory = (cat, previousTime, previousSplits, source, sourceName) => {
+  const time = Number.isFinite(previousTime) ? previousTime : null;
+  const splits = Array.isArray(previousSplits) ? previousSplits.slice() : [];
+  if (time === null && splits.length === 0) return;
+  const prev = readPbHistory(cat);
+  if (prev[0] && prev[0].time === time && (prev[0].splits || []).length === splits.length) return;
+  writePbHistory(cat, [{
+    time,
+    splits,
+    timestamp: Date.now(),
+    source: source || 'unknown',
+    sourceName: sourceName || '',
+  }].concat(prev));
+};
+
+const backupCurrentPb = (cat, source, sourceName) => {
+  const key = bestKeyFor(cat);
+  pushPbHistory(cat, readBestAt(key), readBestSplitsAt(key), source, sourceName);
+};
+
+const commitBestFor = (cat, time, splits, source, sourceName) => {
+  backupCurrentPb(cat, source, sourceName);
+  const key = bestKeyFor(cat);
+  writeBestTimeAt(key, time);
+  writeBestSplitsAt(key, splits);
+};
+
+const restorePbFromHistory = (cat, index) => {
+  const list = readPbHistory(cat);
+  const entry = list[index];
+  if (!entry) return null;
+  backupCurrentPb(cat, 'restore', '');
+  const key = bestKeyFor(cat);
+  if (Number.isFinite(entry.time) && entry.time >= MIN_PB_MS) writeBestTimeAt(key, entry.time);
+  if (Array.isArray(entry.splits) && entry.splits.length > 0) writeBestSplitsAt(key, entry.splits);
+  return entry;
+};
+
+const clearBest = (cat) => {
+  backupCurrentPb(cat, 'clear', '');
+  const key = bestKeyFor(cat);
+  clearStoredBest(key);
+  try { api.storage.local.set(key + '.splits', null); } catch (e) { /* ignore */ }
+  try { api.storage.local.set(key + '.global', null); } catch (e) { /* ignore */ }
+  if (!cat || cat.id === category().id) {
+    api.storage.set(NS, 'pbTime', null);
+    api.storage.set(NS, 'pbSplits', null);
+  }
 };
 
 const readBestSplits = () => {
-  const fromLocal = parseSplitList(api.storage.local.get(bestSplitsKey()));
+  const fromLocal = readBestSplitsAt(bestKey());
   if (fromLocal.length > 0) return fromLocal;
   const fromSave = parseSplitList(api.storage.get(NS, 'pbSplits'));
   if (fromSave.length > 0) {
@@ -875,7 +1252,7 @@ const maybeBackfillBestSplits = () => {
   if (typeof run.finishedAt !== 'number') return;
   const splits = readSplits();
   if (splits.length === 0) return;
-  const time = elapsed();
+  const time = scoredTime();
   if (!Number.isFinite(time) || Math.abs(time - best) > 50) return;
   writeBestSplits(splits);
 };
@@ -890,12 +1267,11 @@ const maybeAdoptFinishedAsBest = () => {
   try {
     if (cheatsUsed() || runRulesBroken()) return;
   } catch (e) { return; }
-  const time = Math.max(elapsed(), readClock('upsRms'));
-  if (!(time > 0)) return;
+  const time = scoredTime();
+  if (!(time >= MIN_PB_MS)) return;
   const best = readBest();
   if (best === null || time < best) {
-    writeBestTime(time);
-    writeBestSplits(readSplits());
+    commitBestFor(category(), time, readSplits(), 'in_game', '');
     return;
   }
   maybeBackfillBestSplits();
@@ -917,6 +1293,125 @@ const findPbSplit = (split, pbSplits) => {
   return pbSplits.find(p => p && p.kind === split.kind && normLabel(p.label) === want) || null;
 };
 
+const newRouteId = () => 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36);
+
+const routesKeyFor = key => (key || bestKey()) + '.routes.v1';
+
+const emptyRoutes = () => ({ activeRouteId: null, routes: [] });
+
+const readRoutesStore = key => {
+  const raw = parseStoredJson(api.storage.local.get(routesKeyFor(key)), null);
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Array.isArray(raw.routes)) return emptyRoutes();
+  const hadFromPb = raw.routes.some(r => r && r.fromPb);
+  const routes = raw.routes.filter(r => r && typeof r === 'object' && r.id && !r.fromPb);
+  const active = typeof raw.activeRouteId === 'string' && routes.some(r => r.id === raw.activeRouteId)
+    ? raw.activeRouteId
+    : null;
+  const store = { activeRouteId: active, routes };
+  if (hadFromPb) writeRoutesStore(store, key);
+  return store;
+};
+
+const writeRoutesStore = (store, key) => {
+  if (!store || typeof store !== 'object') return;
+  const routes = (store.routes || []).filter(r => r && r.id && !r.fromPb);
+  const active = store.activeRouteId && routes.some(r => r.id === store.activeRouteId)
+    ? store.activeRouteId
+    : null;
+  try { api.storage.local.set(routesKeyFor(key), JSON.stringify({ activeRouteId: active, routes })); } catch (e) { /* ignore */ }
+};
+
+const copyLocalIfEmpty = (fromKey, toKey) => {
+  if (!fromKey || !toKey || fromKey === toKey) return;
+  let dest;
+  let src;
+  try { dest = api.storage.local.get(toKey); } catch (e) { dest = null; }
+  try { src = api.storage.local.get(fromKey); } catch (e) { src = null; }
+  const destEmpty = dest == null || dest === '';
+  const srcEmpty = src == null || src === '';
+  if (!destEmpty || srcEmpty) return;
+  try { api.storage.local.set(toKey, src); } catch (e) { /* ignore */ }
+};
+
+const migrateNotutAlias = stableKey => {
+  const legacy = stableKey + '.notut';
+  copyLocalIfEmpty(legacy, stableKey);
+  copyLocalIfEmpty(legacy + '.splits', stableKey + '.splits');
+  copyLocalIfEmpty(legacy + '.routes.v1', stableKey + '.routes.v1');
+  copyLocalIfEmpty(legacy + '.history.v1', stableKey + '.history.v1');
+  copyLocalIfEmpty(legacy + '.global', stableKey + '.global');
+};
+
+const migrateKeyStability = () => {
+  try {
+    if (api.storage.local.get(KEY_STABILITY_MIGRATE_KEY) === true) return;
+  } catch (e) { return; }
+  const cats = [];
+  try {
+    for (const id of Object.keys(CATEGORIES)) cats.push(presetCategoryFromId(id));
+    for (const c of readCustomCategories()) cats.push(categoryFromCustom(c));
+  } catch (e) { /* ignore */ }
+  for (const cat of cats) {
+    if (cat.kind === 'gold') {
+      migrateNotutAlias(bestKeyFor(cat, 'earned'));
+      migrateNotutAlias(bestKeyFor(cat, 'balance'));
+    } else {
+      migrateNotutAlias(bestKeyFor(cat));
+    }
+  }
+  try { api.storage.local.set(KEY_STABILITY_MIGRATE_KEY, true); } catch (e) { /* ignore */ }
+};
+
+const purgeFromPbRoutes = () => {
+  const cats = [];
+  try {
+    for (const id of Object.keys(CATEGORIES)) cats.push(presetCategoryFromId(id));
+    for (const c of readCustomCategories()) cats.push(categoryFromCustom(c));
+  } catch (e) { /* ignore */ }
+  const keys = new Set();
+  for (const cat of cats) {
+    if (cat.kind === 'gold') {
+      keys.add(bestKeyFor(cat, 'earned'));
+      keys.add(bestKeyFor(cat, 'balance'));
+    } else {
+      keys.add(bestKeyFor(cat));
+    }
+  }
+  for (const key of keys) {
+    const raw = parseStoredJson(api.storage.local.get(routesKeyFor(key)), null);
+    if (!raw || !Array.isArray(raw.routes) || !raw.routes.some(r => r && r.fromPb)) continue;
+    writeRoutesStore(raw, key);
+  }
+};
+
+const splitTriggerOn = split => {
+  if (!split || split.kind === 'goal') return true;
+  const id = String(split.id || '');
+  if (split.kind === 'artifact') return triggerEnabled('artifact', 'any', splitOn('splitArtifact'));
+  if (split.kind === 'upgrade') return triggerEnabled('upgrade', 'any', splitOn('splitUpgrade'));
+  if (split.kind === 'gold') {
+    const val = Number(id.replace(/^gold:/, ''));
+    return triggerEnabled('gold', Number.isFinite(val) ? val : id, true);
+  }
+  if (split.kind === 'rank') {
+    const val = Number(id.replace(/^rank:/, ''));
+    return triggerEnabled('rank', Number.isFinite(val) ? val : id, splitOn('splitRank'));
+  }
+  if (split.kind === 'tech') {
+    return triggerEnabled('tech', id.replace(/^tech:/, '') || split.label, splitOn('splitTech'));
+  }
+  return true;
+};
+
+const readComparisonSplits = () => {
+  const store = readRoutesStore();
+  const activeRoute = store.routes.find(r => r.id === store.activeRouteId);
+  const list = (activeRoute && Array.isArray(activeRoute.splits) && activeRoute.splits.length > 0)
+    ? activeRoute.splits
+    : readBestSplits();
+  return Array.isArray(list) ? list : [];
+};
+
 // --- DE: Zeitformat / EN: Time format ---------------------------------------
 // DE: Spielzeit-Uhr in ms; laeuft nur waehrend das Spiel laeuft und wandert mit
 // DE: ins Savegame. Das ist dieselbe Zahl, die auch ohne diesen Mod als playTime
@@ -934,10 +1429,10 @@ const getMapSeed = () => {
   return 0;
 };
 
-// DE: Welche der drei Uhren gross im Bild steht. Auf die Wertung hat das keinen
-// DE: Einfluss - alle drei werden immer gemessen und immer festgehalten.
-// EN: Which of the three clocks stands large on screen. This has no effect on
-// EN: the scoring - all three are always measured and always recorded.
+// DE: Welche der drei Uhren gross im Bild steht. Die Wertung ist die
+// DE: Spielzeit-Uhr (W); alle drei werden immer gemessen und festgehalten.
+// EN: Which of the three clocks stands large on screen. Scoring is the
+// EN: play-clock (W); all three are always measured and recorded.
 const clockMode = () => {
   const v = api.settings.get('clockMode');
   return v === 'sim' || v === 'play' ? v : 'real';
@@ -1045,7 +1540,7 @@ const isRunning = () => {
 // R  Echtzeit aus performance.now(), ohne Deckel, akkumuliert nur waehrend
 //    der Lauf tatsaechlich unterwegs ist (Spiel laeuft, nicht pausiert). Das
 //    ist die Zahl, die auch eine Stoppuhr neben dem Bildschirm zeigt, und sie
-//    bleibt die offizielle Wertung: nur sie laesst sich an einem Video
+//    bleibt die Video-Referenz: nur sie laesst sich an einem Video
 //    nachpruefen. R haengt nie an der Fabrik - sie ist eine reine
 //    Betriebssystem-Uhr. Was die Fabrik kostet, zeigt sich als Abstand
 //    zwischen R und T, nicht an R selbst.
@@ -1079,7 +1574,7 @@ const isRunning = () => {
 // R  Real time from performance.now(), uncapped, only accumulated while the
 //    run is actually under way (game running, not paused). This is the
 //    number a stopwatch next to the screen would also show, and it stays
-//    the official scoring: it's the only one that can be checked against a
+//    the video reference: it's the only one that can be checked against a
 //    video. R never depends on the factory - it is a pure operating-system
 //    clock. What the factory costs shows up as the gap between R and T, not
 //    in R itself.
@@ -1298,8 +1793,8 @@ const liveU = () => {
   return uTicks;
 };
 
-// DE: R - Echtzeit des Laufs in ms. Die offizielle Wertung.
-// EN: R - real time of the run in ms. The official scoring.
+// DE: R - Echtzeit des Laufs in ms. Wird weiter gemessen, Wertung ist W.
+// EN: R - real time of the run in ms. Still measured; scoring is W.
 const elapsed = () => {
   const run = readRun();
   if (typeof run.startedAt !== 'number') return 0;
@@ -1320,6 +1815,24 @@ const elapsedPlay = () => {
   if (typeof run.finishedAt === 'number') return Math.max(0, readClock('upsWFinal'));
   return wMs;
 };
+
+// DE: Offizielle Wertung: Spielzeit-Uhr (W). Alle drei Uhren werden weiter gemessen.
+// EN: Official scoring: play-clock (W). All three clocks are still measured.
+const scoredTime = () => {
+  const w = elapsedPlay();
+  if (w > 0) return w;
+  const stored = readClock('upsWFinal') || readClock('upsWElapsed');
+  return stored > 0 ? stored : 0;
+};
+
+const splitMs = split => {
+  if (!split) return NaN;
+  if (Number.isFinite(split.w)) return split.w;
+  if (Number.isFinite(split.t)) return split.t;
+  return NaN;
+};
+
+const viewedElapsed = () => elapsedPlay();
 
 // DE: Verzoegerung in Prozent: wie weit T von R abweicht. Negativ heisst "die
 // DE: Welt ist hinterher" (der uebliche Fall), ein kleiner positiver Ausschlag
@@ -1505,6 +2018,7 @@ const addSplit = (kind, label, id) => {
 
   const splits = readSplits();
   const t = elapsed();
+  const w = elapsedPlay();
   const sid = splitIdOf(kind, id) || `${kind}:${label}`;
 
   const bests = readGlobalBests();
@@ -1513,20 +2027,20 @@ const addSplit = (kind, label, id) => {
 
   const isSeq = kind === 'rank' || kind === 'goal' || kind === 'gold';
   if (isSeq) {
-    let prevSeqT = 0;
+    let prevSeqW = 0;
     for (let i = splits.length - 1; i >= 0; i--) {
       if (splits[i].kind === 'rank' || splits[i].kind === 'goal' || splits[i].kind === 'gold') {
-        prevSeqT = splits[i].t;
+        prevSeqW = splitMs(splits[i]) || 0;
         break;
       }
     }
-    const segment = t - prevSeqT;
+    const segment = w - prevSeqW;
     if (bests.seq[sid] === undefined || segment < bests.seq[sid]) {
       bests.seq[sid] = segment;
     }
   } else {
-    if (bests.abs[sid] === undefined || t < bests.abs[sid]) {
-      bests.abs[sid] = t;
+    if (bests.abs[sid] === undefined || w < bests.abs[sid]) {
+      bests.abs[sid] = w;
     }
   }
   writeGlobalBests(bests);
@@ -1563,11 +2077,19 @@ const splitOn = key => api.settings.get(key) === true;
 //
 //   {}                        -> everything follows the group setting
 //   { "tech:shaker": false }  -> this one trigger is switched off
-const TRIGGER_KEY = 'goldSpeedrun.triggers';
+const categoryTriggerId = () => {
+  try { return category().id; } catch (e) { return '100000'; }
+};
+
+const readOverrideMap = key => {
+  const v = api.storage.local.get(key);
+  return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+};
 
 const readOverrides = () => {
-  const v = api.storage.local.get(TRIGGER_KEY);
-  return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const per = readOverrideMap(TRIGGER_PREFIX + categoryTriggerId());
+  if (Object.keys(per).length > 0) return per;
+  return readOverrideMap(TRIGGER_KEY);
 };
 
 const writeOverrides = map => {
@@ -1577,7 +2099,7 @@ const writeOverrides = map => {
   // EN: settings keep taking effect.
   const clean = {};
   for (const [k, v] of Object.entries(map)) if (typeof v === 'boolean') clean[k] = v;
-  api.storage.local.set(TRIGGER_KEY, clean);
+  api.storage.local.set(TRIGGER_PREFIX + categoryTriggerId(), clean);
 };
 
 const triggerKey = (kind, id) => `${kind}:${id}`;
@@ -1717,7 +2239,7 @@ const upcomingSplits = (cat, done) => {
     out.push({ kind, label, id: id || `${kind}:${label}`, upcoming: true, t: NaN });
   };
 
-  for (const p of readBestSplits()) {
+  for (const p of readComparisonSplits()) {
     if (p && p.kind && p.label) push(p.kind, p.label, p.id);
   }
 
@@ -2022,6 +2544,18 @@ const startRun = reason => {
   if (activeScene() !== enums.Scene.Game) return false;
   if (!isArmed()) return false;
 
+  // DE: Schon geschaffte Spielstaende (Creative, 1M Gold, fertige Karte) duerfen
+  // DE: keinen Lauf starten - sonst endet er in Millisekunden und stoert die PB.
+  // EN: Saves that already beat the goal (creative, 1M gold, finished map)
+  // EN: must not start a run - otherwise it ends in milliseconds and disturbs the PB.
+  const cat = category();
+  const alreadyDone = progressOf(cat) >= cat.target
+    || (cat.kind === 'gold' && getGold() >= cat.target);
+  if (alreadyDone) {
+    log('Ziel bereits erreicht - Lauf wird nicht gestartet');
+    return false;
+  }
+
   const startedAt = now();
   startClocks();
   api.storage.set(NS, 'startedAt', startedAt);
@@ -2229,6 +2763,8 @@ let lastWrite = -1;
 // DE: Wird beim Start auf true gesetzt, beim Beenden auf false.
 // EN: Set to true at start, false at finish.
 let resultDismissed = true;
+let triggerPanelOpen = false;
+let openedF3FromDashboard = false;
 
 const scoredRealTime = () => {
   const live = elapsed();
@@ -2241,6 +2777,42 @@ const scoredRealTime = () => {
   return 0;
 };
 
+// DE: Ungueltigen Lauf verwerfen und auf den Neutralzustand (scharf / Waiting)
+// DE: zuruecksetzen. Kein finishedAt, keine Splits, kein Ergebnis-Dashboard.
+// EN: Discard an invalid run and reset to the neutral (armed / waiting) state.
+// EN: No finishedAt, no splits, no result dashboard.
+const discardRun = reason => {
+  api.storage.set(NS, 'startedAt', null);
+  api.storage.set(NS, 'finishedAt', null);
+  api.storage.set(NS, 'splits', []);
+  api.storage.set(NS, 'goldMarkIndex', 0);
+  api.storage.set(NS, 'official', false);
+  api.storage.set(NS, 'officialBroken', false);
+  startClocks();
+  resetHistory();
+  resetEarned();
+  setResultDismissed(true);
+  log(reason);
+};
+
+// DE: Beim Laden: gespeicherte Schein-Laeufe (unter 1:00 oder schon am Ziel
+// DE: laufend) verwerfen, damit sie nicht jedes Mal wieder angezeigt werden.
+// EN: On load: discard stored bogus runs (under 1:00, or already at the goal
+// EN: while still "running") so they do not reappear every reload.
+const sanitizeLoadedRun = () => {
+  const run = readRun();
+  if (typeof run.finishedAt === 'number' && scoredTime() < MIN_PB_MS) {
+    discardRun('Beim Laden erkannt: ungueltiger Lauf verworfen');
+    return;
+  }
+  if (typeof run.startedAt === 'number' && typeof run.finishedAt !== 'number') {
+    const cat = category();
+    if (cat.target > 0 && progressOf(cat) >= cat.target) {
+      discardRun('Beim Laden erkannt: ungueltiger Lauf verworfen');
+    }
+  }
+};
+
 const finishRun = cat => {
   // DE: Alle drei Uhren werden im selben Moment abgelesen, bevor der Lauf als
   // DE: beendet markiert wird - danach zaehlt advanceClocks() nicht mehr weiter.
@@ -2249,8 +2821,22 @@ const finishRun = cat => {
   const time = scoredRealTime();
   const simTime = elapsedSim();
   const playTime = elapsedPlay();
+  const scored = scoredTime();
   const slowdown = slowdownPercent();
   const deficit = tickDeficit();
+
+  // DE: Unter 1:00 und kein Cheat-/Regelbruch-Fall: nicht aufzeichnen, nicht anzeigen.
+  // EN: Under 1:00 and not a cheats/broken-rules case: do not record or display.
+  let cheated = false;
+  let broken = false;
+  try { cheated = cheatsUsed(); } catch (e) { /* ignore */ }
+  try { broken = runRulesBroken(); } catch (e) { /* ignore */ }
+  if (!(scored >= MIN_PB_MS) && !cheated && !broken) {
+    const fmt = timeFormat();
+    discardRun('Lauf zu kurz / bereits geschafft - nicht angezeigt');
+    api.ui.toast({ key: 'mods|goldSpeedrun|pbTooShort', params: { time: formatTime(scored, fmt) } });
+    return;
+  }
 
   // DE: Das Ziel selbst ist die letzte Zwischenzeit - so steht es auch in der Tabelle.
   // EN: The goal itself is the last split - that's how it appears in the table too.
@@ -2276,10 +2862,10 @@ const finishRun = cat => {
   flushHistoryToSave();
 
   const fmt = timeFormat();
-  api.ui.toast({ key: 'mods|goldSpeedrun|done', params: { time: formatTime(time, fmt) } });
+  api.ui.toast({ key: 'mods|goldSpeedrun|done', params: { time: formatTime(playTime, fmt) } });
 
   if (cheatsUsed()) {
-    log('Lauf beendet in', formatTime(time, 'millis'),
+    log('Lauf beendet in', formatTime(playTime, 'millis'),
       '- ACHTUNG: Cheats wurden in diesem Spielstand benutzt, keine Bestzeit gespeichert.');
   } else if (runRulesBroken()) {
     // DE: Wer mitten im Lauf am Regelwerk dreht, misst nicht mehr dasselbe wie
@@ -2288,22 +2874,21 @@ const finishRun = cat => {
     // EN: Anyone who changes the ruleset mid-run is no longer measuring the
     // EN: same thing as everyone else under this key. The time stays
     // EN: visible, it just doesn't get saved.
-    log('Lauf beendet in', formatTime(time, 'millis'),
+    log('Lauf beendet in', formatTime(playTime, 'millis'),
       '- ACHTUNG: Regelwerk waehrend des Laufs verstellt, keine Bestzeit gespeichert.');
   } else {
     const best = readBest();
-    if (time > 0 && (best === null || time < best)) {
-      writeBestTime(time);
+    if (scored >= MIN_PB_MS && (best === null || scored < best)) {
+      commitBestFor(category(), scored, splits, 'in_game', '');
+      api.ui.toast({ key: 'mods|goldSpeedrun|newBest', params: { time: formatTime(scored, fmt) } });
+    } else if (scored >= MIN_PB_MS && readBestSplits().length === 0 && best !== null && Math.abs(scored - best) < 50) {
       writeBestSplits(splits);
-      api.ui.toast({ key: 'mods|goldSpeedrun|newBest', params: { time: formatTime(time, fmt) } });
-    } else if (time > 0 && readBestSplits().length === 0 && best !== null && Math.abs(time - best) < 50) {
-      writeBestSplits(splits);
-    } else if (!(time > 0)) {
-      log('Lauf beendet, aber Echtzeit war 0 - Bestzeit nicht geschrieben.');
+    } else if (!(scored > 0)) {
+      log('Lauf beendet, aber Spielzeit-Uhr war 0 - Bestzeit nicht geschrieben.');
     }
   }
 
-  resultDismissed = false;
+  setResultDismissed(false);
 
   // DE: Fuer Nachweis und Stream-Overlay: Kategorie, Endzeit, Splits und die
   // DE: Mod-Liste des Spielstands in einem Block im Log.
@@ -2345,6 +2930,13 @@ const checkGoal = () => {
   if (cat.target <= 0) return;                    // DE: Ziel noch unbekannt / EN: goal not known yet
 
   const current = progressOf(cat);
+
+  // DE: Ziel schon in den ersten Momenten = bereits geschaffter Spielstand, kein Lauf.
+  // EN: Goal already met in the first moments = already-beaten save, not a run.
+  if (current >= cat.target && elapsedPlay() < LOAD_ARTIFACT_MS) {
+    discardRun('Ziel schon beim Start erreicht (Load-Artefakt)');
+    return;
+  }
 
   // DE: Gold-Marken unterwegs.
   // EN: Gold marks along the way.
@@ -2409,6 +3001,7 @@ api.events.on('frame:render', () => {
 
   // DE: Doppelter Boden fuer den Fall, dass eine Aenderung ohne onChange kommt.
   // EN: A safety net in case a change arrives without an onChange event.
+  syncActiveFromPresetSetting();
   if (syncOfficialSettings()) refreshSettingsUi();
 
   if (earnedTotal !== null) api.storage.set(NS, 'earned', earnedTotal);
@@ -2482,46 +3075,50 @@ const useTick = fmt => {
   }, [fmt]);
 };
 
-// DE: Eine Zeile der Split-Tabelle. Im HUD schmal mit Delta zur Bestzeit, im
-// DE: Ergebnisfenster mit Abschnittszeit und Goldstand.
-// EN: One row of the split table. Narrow in the HUD with the PB delta, and
-// EN: with segment time and gold total in the result screen.
-function SplitRow({ split, previous, fmt, wide, pb, bests, prevSeqT }) {
+// DE: Eine Zeile der Split-Tabelle. LiveSplit: Abschnittsdauer und Split-Delta
+// DE: gegen die Vergleichsroute (W). Im HUD zaehlt das aktuelle Split-Delta live.
+// EN: One row of the split table. LiveSplit: segment duration and split delta
+// EN: versus the comparison route (W). In the HUD the current split delta runs live.
+function SplitRow({ split, previous, fmt, wide, pb, bests, current }) {
   const upcoming = split.upcoming === true;
-  const live = Number.isFinite(split.t);
-  const prevT = previous && Number.isFinite(previous.t) ? previous.t : 0;
-  const segment = live ? split.t - prevT : 0;
-  const pbTime = pb && Number.isFinite(pb.t) ? pb.t : null;
-  
-  const isSeq = split.kind === 'rank' || split.kind === 'goal' || split.kind === 'gold';
+  const liveMs = splitMs(split);
+  const live = Number.isFinite(liveMs);
+  const prevMs = previous ? splitMs(previous) : 0;
+  const prevOk = Number.isFinite(prevMs) ? prevMs : 0;
+  const segment = live ? liveMs - prevOk : 0;
+  const routeMs = pb ? splitMs(pb) : NaN;
+  const routeOk = Number.isFinite(routeMs);
+
   let delta = null;
-  if (live && bests) {
-    if (isSeq) {
-      if (bests.seq && bests.seq[split.id] !== undefined) {
-        delta = (split.t - prevSeqT) - bests.seq[split.id];
-      }
-    } else {
-      if (bests.abs && bests.abs[split.id] !== undefined) {
-        delta = split.t - bests.abs[split.id];
-      }
-    }
-  } else if (live && pbTime !== null) {
-    delta = split.t - pbTime;
+  if (current && routeOk && isRunning()) {
+    delta = viewedElapsed() - routeMs;
+  } else if (live && routeOk) {
+    delta = liveMs - routeMs;
   }
 
+  const isSeq = split.kind === 'rank' || split.kind === 'goal' || split.kind === 'gold';
+  const goldSeg = !!(bests && live && (
+    (isSeq && bests.seq && bests.seq[split.id] !== undefined && (liveMs - prevOk) <= bests.seq[split.id] + 0.5)
+    || (!isSeq && bests.abs && bests.abs[split.id] !== undefined && liveMs <= bests.abs[split.id] + 0.5)
+  ));
+
   const cell = (key, value, style) => h('span', { key, style }, value);
+  const deltaText = delta !== null
+    ? (delta >= 0 ? '+' : '-') + formatShort(Math.abs(delta), fmt)
+    : '';
+  const deltaColor = delta === null ? COLORS.dim : delta <= 0 ? COLORS.green : COLORS.red;
 
   return h('div', {
     style: {
       display: wide ? 'grid' : 'flex',
-      gridTemplateColumns: wide ? '1fr 92px 140px 92px' : undefined,
+      gridTemplateColumns: wide ? '1fr 110px 110px 110px 92px' : undefined,
       gap: wide ? '12px' : '8px',
       alignItems: 'baseline',
       padding: wide ? '8px 6px' : '1px 0',
       borderBottom: wide ? '1px solid rgba(255,255,255,0.04)' : 'none',
       fontVariantNumeric: 'tabular-nums',
       fontSize: wide ? '15px' : undefined,
-      opacity: upcoming ? 0.55 : 1,
+      opacity: upcoming && !current ? 0.55 : 1,
     },
   }, [
     cell('label', split.label, {
@@ -2532,59 +3129,50 @@ function SplitRow({ split, previous, fmt, wide, pb, bests, prevSeqT }) {
       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
     }),
     wide
-      ? cell('seg', live && segment > 0 && isSeq ? '+' + formatShort(segment, fmt) : (isSeq ? '-' : ''), {
+      ? cell('seg', live && segment >= 0 ? formatShort(segment, fmt) : '—', {
           color: COLORS.dim, minWidth: '72px', textAlign: 'right', fontSize: '14px',
         })
       : null,
-    // DE: Absolute Zeit immer vollstaendig: Stunden, Minuten, Sekunden,
-    // DE: Millisekunden. Nur die Abschnittsdauer daneben wird gekuerzt, dort ist
-    // DE: ein fuehrendes "00:" nur Rauschen. Kommende Zeilen zeigen die Bestzeit
-    // DE: an dieser Stelle, falls eine vorliegt - sonst einen Gedankenstrich.
-    // EN: The absolute time is always shown in full: hours, minutes, seconds,
-    // EN: milliseconds. Only the segment duration next to it is shortened -
-    // EN: there, a leading "00:" is just noise. Upcoming rows show the PB
-    // EN: time in that slot if there is one - otherwise a dash.
     cell('time', live
-      ? formatTime(split.t, fmt)
-      : (pbTime !== null ? formatTime(pbTime, fmt) : '—'), {
+      ? formatTime(liveMs, fmt)
+      : (routeOk ? formatTime(routeMs, fmt) : '—'), {
       minWidth: wide ? undefined : '92px', textAlign: 'right',
       color: upcoming ? COLORS.dim : '#ffffff',
       fontWeight: wide ? 600 : undefined,
     }),
     wide
+      ? cell('delta', deltaText || '—', {
+          color: deltaColor, minWidth: '72px', textAlign: 'right', fontWeight: 700,
+        })
+      : null,
+    wide
       ? cell('gold', live ? formatGold(split.gold) : '', {
           color: COLORS.gold, minWidth: '76px', textAlign: 'right',
           fontWeight: 600,
         })
-      : cell('delta', delta !== null
-          ? (delta >= 0 ? '+' : '-') + formatShort(Math.abs(delta), fmt)
-          : (!upcoming && live && segment > 0 && isSeq ? '+' + formatShort(segment, fmt) : ''), {
-          color: delta === null ? COLORS.dim : delta <= 0 ? COLORS.green : COLORS.red,
+      : cell('delta', deltaText, {
+          color: goldSeg ? COLORS.gold : deltaColor,
           minWidth: '64px', textAlign: 'right',
+          fontWeight: current ? 700 : undefined,
         }),
   ]);
 }
 
 function SplitTable({ splits, fmt, wide, pbSplits }) {
-  const pbs = Array.isArray(pbSplits) ? pbSplits : [];
+  const pbs = Array.isArray(pbSplits) && pbSplits.length > 0 ? pbSplits : readComparisonSplits();
   const bests = readGlobalBests();
-  let prevSeqT = 0;
+  const currentIdx = !wide ? splits.findIndex(s => s && s.upcoming === true && findPbSplit(s, pbs) && Number.isFinite(splitMs(findPbSplit(s, pbs)))) : -1;
   return h('div', { style: { display: 'flex', flexDirection: 'column' } },
-    splits.map((s, i) => {
-      const isSeq = s.kind === 'rank' || s.kind === 'goal' || s.kind === 'gold';
-      const myPrevSeqT = prevSeqT;
-      if (isSeq && Number.isFinite(s.t)) prevSeqT = s.t;
-      return h(SplitRow, {
-        key: i,
-        split: { ...s, label: displaySplitLabel(s, splits) },
-        previous: i > 0 ? splits[i - 1] : null,
-        fmt,
-        wide,
-        pb: findPbSplit(s, pbs),
-        bests,
-        prevSeqT: myPrevSeqT,
-      });
-    }));
+    splits.map((s, i) => h(SplitRow, {
+      key: i,
+      split: { ...s, label: displaySplitLabel(s, splits) },
+      previous: i > 0 ? splits[i - 1] : null,
+      fmt,
+      wide,
+      pb: findPbSplit(s, pbs),
+      bests,
+      current: i === currentIdx,
+    })));
 }
 
 // --- DE: Verlauf: UPS ueber die Zeit / EN: History: UPS over time ----------
@@ -2781,7 +3369,9 @@ function UpsEnvelopeGraph({ columns, height }) {
         height: `${H}px`, display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: COLORS.dim, fontSize: '11px', textAlign: 'center', padding: '0 12px',
       },
-    }, t('mods|goldSpeedrun|graph|empty'));
+    }, t(api.settings.get('trackUpsHistory') === true
+      ? 'mods|goldSpeedrun|graph|emptyRun'
+      : 'mods|goldSpeedrun|graph|empty'));
   }
   const wPct = 100 / columns.length;
   const bars = columns.map((c, i) => {
@@ -2835,15 +3425,35 @@ const RulesBadge = ({ rules }) => {
   if (!rules) return null;
   return h('span', {
     style: {
-      marginLeft: '8px',
       padding: '2px 6px',
       borderRadius: '4px',
       fontSize: '10px',
+      whiteSpace: 'nowrap',
+      flexShrink: 0,
       background: rules.ok ? 'rgba(74, 222, 128, 0.2)' : rules.broken ? 'rgba(248, 113, 113, 0.2)' : 'rgba(255, 255, 255, 0.1)',
       color: rules.ok ? '#4ade80' : rules.broken ? '#f87171' : COLORS.dim,
     },
     title: rules.ok ? t('mods|goldSpeedrun|rules|ok') : rules.broken ? t('mods|goldSpeedrun|rules|brokenDesc') : t('mods|goldSpeedrun|rules|bad')
-  }, rules.ok ? `✓ ${t('mods|goldSpeedrun|rules|badge')}` : rules.broken ? t('mods|goldSpeedrun|rules|broken') : (rules.extraCount > 0 ? `❌ ${rules.extraCount} Mods` : t('mods|goldSpeedrun|rules|custom')));
+  }, rules.ok ? `✓ ${t('mods|goldSpeedrun|rules|badge')}` : rules.broken ? t('mods|goldSpeedrun|rules|broken') : t('mods|goldSpeedrun|rules|custom'));
+};
+
+const ModsBadge = ({ extraCount, extra }) => {
+  const clean = !(extraCount > 0);
+  const names = Array.isArray(extra) ? extra.join(', ') : '';
+  return h('span', {
+    style: {
+      padding: '2px 6px',
+      borderRadius: '4px',
+      fontSize: '10px',
+      whiteSpace: 'nowrap',
+      flexShrink: 0,
+      background: clean ? 'rgba(74, 222, 128, 0.2)' : 'rgba(240, 192, 64, 0.16)',
+      color: clean ? '#4ade80' : COLORS.gold,
+    },
+    title: names || t('mods|goldSpeedrun|mods|clean'),
+  }, clean
+    ? `✓ ${t('mods|goldSpeedrun|mods|clean')}`
+    : t('mods|goldSpeedrun|mods|count', { count: extraCount }));
 };
 
 function SpeedrunHud() {
@@ -2875,12 +3485,12 @@ function SpeedrunHud() {
   const ready = tickSourceReady();
   const advanced = api.settings.get('showAdvancedMetrics') === true;
   const sparkline = liveSparklineEnabled();
-  // DE: Die Bestzeit ist immer die Echtzeit - unabhaengig von der gross gezeigten Uhr.
-  // EN: The best time is always real time - regardless of which clock is shown large.
   if (done) maybeAdoptFinishedAsBest();
   const best = readBest();
   const tainted = cheatsUsed();
-  const rules = showRuleset() ? rulesetView() : null;
+  const rulesLive = rulesetView();
+  const rules = showRuleset() ? rulesLive : null;
+  const modsInfo = rulesetStatus();
 
   const allSplits = readSplits();
   const upcoming = done ? [] : upcomingSplits(cat, allSplits);
@@ -2888,7 +3498,7 @@ function SpeedrunHud() {
   const visible = windowed.rows;
   const firstVisible = windowed.hiddenPast;
   const showSplits = api.settings.get('showSplits') !== false && visible.length > 0;
-  const pbSplits = readBestSplits();
+  const pbSplits = readComparisonSplits();
 
   let progressText;
   if (cat.kind === 'artifacts') {
@@ -3000,7 +3610,7 @@ function SpeedrunHud() {
   ];
 
   const progressBlock = [
-    h('div', { key: 'goal', style: { marginTop: horizontal ? 0 : '4px', opacity: 0.85, display: 'flex', justifyContent: 'space-between' } }, [
+    h('div', { key: 'goal', style: { marginTop: horizontal ? 0 : '4px', opacity: 0.85, display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' } }, [
       h('span', {}, waiting
         ? t(startMode() === 'move'
             ? 'mods|goldSpeedrun|waitingMove'
@@ -3010,7 +3620,10 @@ function SpeedrunHud() {
                 ? 'mods|goldSpeedrun|waitingClick'
                 : 'mods|goldSpeedrun|waitingMouse')
         : progressText),
-      rules ? h(RulesBadge, { rules }) : null
+      h('span', { key: 'badges', style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' } }, [
+        h(ModsBadge, { key: 'mods', extraCount: modsInfo.extraCount, extra: modsInfo.items && modsInfo.items.find(i => i.id === 'mods') ? modsInfo.items.find(i => i.id === 'mods').extra : [] }),
+        rules ? h(RulesBadge, { key: 'rules', rules }) : null,
+      ])
     ]),
     h('div', {
       key: 'bar',
@@ -3066,8 +3679,8 @@ function SpeedrunHud() {
         display: 'flex', gap: '10px', justifyContent: 'space-between',
       },
     }, [
-      h('span', { key: 'mode' }, categoryLabel()),
-      best !== null && best > 0 ? h('span', { key: 'pb' }, `PB ${formatTime(best, fmt)}`) : null,
+      h('span', { key: 'mode', style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 } }, categoryLabel()),
+      best !== null && best > 0 ? h('span', { key: 'pb' }, `PB/Target ${formatTime(best, fmt)}`) : null,
     ]),
     isBottomRight
       ? h('div', {
@@ -3144,7 +3757,15 @@ const notifyResult = () => resultListeners.forEach(fn => {
   try { fn(); } catch (e) { /* DE: ignorieren / EN: ignore */ }
 });
 
-const setResultDismissed = v => { resultDismissed = !!v; notifyResult(); notifyPanel(); };
+const setResultDismissed = v => {
+  resultDismissed = !!v;
+  if (!resultDismissed) {
+    triggerPanelOpen = false;
+    openedF3FromDashboard = false;
+  }
+  notifyResult();
+  notifyPanel();
+};
 
 const csvEscape = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
 
@@ -3230,30 +3851,43 @@ const parseCsvLine = line => {
 
 const csvToSplits = text => {
   const out = [];
-  let hasId = false;
-  let seenHeader = false;
+  let header = null;
+  const idx = (names, fallback) => {
+    if (!header) return fallback;
+    for (const n of names) {
+      const i = header.indexOf(n);
+      if (i >= 0) return i;
+    }
+    return fallback;
+  };
   for (const raw of String(text || '').split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
     const cols = parseCsvLine(line);
-    if (!seenHeader && cols[0] === 'kind') {
-      seenHeader = true;
-      hasId = cols[1] === 'id';
+    if (!header && cols[0] === 'kind') {
+      header = cols.map(c => String(c).trim().toLowerCase());
       continue;
     }
-    const kind = cols[0];
-    const id = hasId ? cols[1] : '';
-    const label = hasId ? cols[2] : cols[1];
-    const t = parseFloat(hasId ? cols[3] : cols[2]);
-    if (!kind || !label || !Number.isFinite(t)) continue;
-    const sim = parseFloat(hasId ? cols[4] : cols[3]);
-    const w = parseFloat(hasId ? cols[5] : cols[4]);
-    const gold = parseFloat(hasId ? cols[6] : cols[5]);
+    const kindI = idx(['kind'], 0);
+    const idI = idx(['id'], -1);
+    const labelI = idx(['label'], idI >= 0 ? 2 : 1);
+    const tI = idx(['time_ms', 't'], idI >= 0 ? 3 : 2);
+    const simI = idx(['sim_ms', 'sim'], idI >= 0 ? 4 : 3);
+    const wI = idx(['play_ms', 'w'], idI >= 0 ? 5 : 4);
+    const goldI = idx(['gold'], idI >= 0 ? 6 : 5);
+    const kind = cols[kindI];
+    const id = idI >= 0 ? cols[idI] : '';
+    const label = cols[labelI];
+    const tv = parseFloat(cols[tI]);
+    if (!kind || !label || !Number.isFinite(tv)) continue;
+    const sim = parseFloat(cols[simI]);
+    const w = parseFloat(cols[wI]);
+    const gold = parseFloat(cols[goldI]);
     out.push({
       kind,
       id: id || `${kind}:${label}`,
       label,
-      t,
+      t: tv,
       sim: Number.isFinite(sim) ? sim : undefined,
       w: Number.isFinite(w) ? w : undefined,
       gold: Number.isFinite(gold) ? gold : undefined,
@@ -3280,6 +3914,782 @@ const downloadTextFile = (content, filename) => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
+const pickCsvFile = onText => {
+  if (typeof document === 'undefined') return;
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv';
+  input.onchange = e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => onText(String(ev.target.result || ''), file.name || '');
+    reader.readAsText(file);
+  };
+  input.click();
+};
+
+let dashboardTab = 'run';
+let selectedCatId = null;
+let catDraft = { name: '', kind: 'gold', target: '100000', goldMode: 'balance' };
+let routeAddDraft = { splitKey: '', time: '', picked: null };
+let editingTarget = null;
+let pbHistoryOpen = false;
+let pbEditSnapshotted = false;
+
+const buildRouteSplitChoices = cat => {
+  const groups = [];
+  const ranks = rankIds();
+  if (ranks.length) {
+    groups.push({
+      key: 'rank',
+      label: t('mods|goldSpeedrun|trg|rank'),
+      items: ranks.map(lvl => ({
+        value: `rank:${lvl}`,
+        kind: 'rank',
+        id: `rank:${lvl}`,
+        label: t('mods|goldSpeedrun|split|rank', { level: lvl }),
+      })),
+    });
+  }
+  const marks = currentGoldMarks(cat || category());
+  if (marks.length) {
+    groups.push({
+      key: 'gold',
+      label: t('mods|goldSpeedrun|trg|gold'),
+      items: marks.map(m => ({
+        value: `gold:${m.value}`,
+        kind: 'gold',
+        id: `gold:${m.value}`,
+        label: `${m.label}  ·  ${formatGold(m.value)}`,
+      })),
+    });
+  }
+  let artN = 0;
+  try { artN = cat && cat.kind === 'artifacts' && cat.target > 0 ? cat.target : artifactTotal(); } catch (e) { artN = 0; }
+  if (artN > 0) {
+    const items = [];
+    for (let n = 1; n <= artN; n++) {
+      items.push({
+        value: `artifact:${n}`,
+        kind: 'artifact',
+        id: `artifact:${n}`,
+        label: t('mods|goldSpeedrun|split|artifact', { index: n }),
+      });
+    }
+    groups.push({ key: 'art', label: t('mods|goldSpeedrun|trg|other'), items });
+  }
+  const techs = allTechIds()
+    .map(id => ({
+      value: `tech:${id}`,
+      kind: 'tech',
+      id: `tech:${id}`,
+      label: techName(id),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  if (techs.length) {
+    groups.push({ key: 'tech', label: t('mods|goldSpeedrun|trg|tech'), items: techs });
+  }
+  groups.push({
+    key: 'goal',
+    label: t('mods|goldSpeedrun|split|goal'),
+    items: [{ value: 'goal', kind: 'goal', id: 'goal', label: t('mods|goldSpeedrun|split|goal') }],
+  });
+  return groups;
+};
+
+const PRESET_LABEL_KEY = {
+  '100000': 'mods|goldSpeedrun|cfg|preset|100k',
+  '500000': 'mods|goldSpeedrun|cfg|preset|500k',
+  '1000000': 'mods|goldSpeedrun|cfg|preset|1m',
+  artifacts: 'mods|goldSpeedrun|cfg|preset|artifacts',
+  factory6: 'mods|goldSpeedrun|cfg|preset|factory6',
+  factory7: 'mods|goldSpeedrun|cfg|preset|factory7',
+  custom: 'mods|goldSpeedrun|cfg|preset|custom',
+};
+
+const managedCategories = () => {
+  const presets = Object.keys(CATEGORIES).map(id => ({
+    ...presetCategoryFromId(id),
+    name: t(PRESET_LABEL_KEY[id] || 'mods|goldSpeedrun|cfg|preset|custom'),
+    preset: true,
+  }));
+  const customs = readCustomCategories().map(c => ({ ...categoryFromCustom(c), preset: false }));
+  return presets.concat(customs);
+};
+
+const activateManagedCategory = id => {
+  setActiveCategoryId(id);
+  if (CATEGORIES[id]) {
+    lastSeenPreset = id;
+    writeSetting('goalPreset', id);
+    refreshSettingsUi();
+  }
+  notifyResult();
+  notifyPanel();
+};
+
+const parseTimeInput = s => {
+  const raw = String(s || '').trim();
+  if (!raw) return NaN;
+  if (/^\d+(\.\d+)?$/.test(raw)) return Number(raw);
+  const m = raw.match(/^(?:(\d+):)?(\d+):(\d+)(?:[.,](\d+))?$/);
+  if (!m) return NaN;
+  const hh = m[1] ? Number(m[1]) : 0;
+  const mm = Number(m[2]);
+  const ss = Number(m[3]);
+  let ms = 0;
+  if (m[4]) ms = Number(m[4].padEnd(3, '0').slice(0, 3));
+  return ((hh * 60 + mm) * 60 + ss) * 1000 + ms;
+};
+
+const splitTriggerValue = split => {
+  if (!split) return '';
+  if (split.id) return String(split.id);
+  if (split.kind && split.label) return `${split.kind}:${split.label}`;
+  return String(split.label || '');
+};
+
+const flattenChoices = groups => (groups || []).reduce((acc, g) => acc.concat(g.items || []), []);
+
+const matchSplitChoice = (split, groups) => {
+  const flat = flattenChoices(groups);
+  if (!split) return null;
+  const value = splitTriggerValue(split);
+  const byVal = flat.find(it => it.value === value || (split.id && it.id === split.id));
+  if (byVal) return byVal;
+  const want = normLabel(split.label);
+  return want ? (flat.find(it => normLabel(it.label) === want) || null) : null;
+};
+
+const choicesWithCurrent = (groups, split) => {
+  if (!split) return groups || [];
+  if (matchSplitChoice(split, groups)) return groups || [];
+  const value = splitTriggerValue(split);
+  if (!value) return groups || [];
+  return (groups || []).concat([{
+    key: 'custom',
+    label: t('mods|goldSpeedrun|route|customGroup'),
+    items: [{
+      value,
+      kind: split.kind || 'tech',
+      id: split.id || value,
+      label: t('mods|goldSpeedrun|route|customTrigger', { label: split.label || split.id || value }),
+    }],
+  }]);
+};
+
+const formatHistoryWhen = ts => {
+  if (!Number.isFinite(ts)) return '';
+  try {
+    const d = new Date(ts);
+    const p = n => (n < 10 ? '0' : '') + n;
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  } catch (e) {
+    return '';
+  }
+};
+
+const historySourceLabel = entry => {
+  const src = entry && entry.source;
+  if (src === 'in_game') return t('mods|goldSpeedrun|pb|sourceInGame');
+  if (src === 'route_promote') return t('mods|goldSpeedrun|pb|sourcePromote', { name: entry.sourceName || '' });
+  if (src === 'import_pb') return t('mods|goldSpeedrun|pb|sourceImport');
+  if (src === 'clear') return t('mods|goldSpeedrun|pb|sourceClear');
+  if (src === 'restore') return t('mods|goldSpeedrun|pb|sourceRestore');
+  if (src === 'edit') return t('mods|goldSpeedrun|pb|sourceEdit');
+  return src || '';
+};
+
+const routeNameFromFile = filename => {
+  const base = String(filename || '').replace(/^.*[\\/]/, '').replace(/\.csv$/i, '').trim();
+  return base || t('mods|goldSpeedrun|csv|importedName');
+};
+
+function TriggerCombobox({ value, kind, label, choices, onChange, placeholder }) {
+  const [query, setQuery] = react.useState('');
+  const [open, setOpen] = react.useState(false);
+  const [highlight, setHighlight] = react.useState(0);
+  const root = react.useRef ? react.useRef(null) : react.useState({ current: null })[0];
+
+  react.useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = ev => {
+      const node = root.current;
+      if (node && ev.target && typeof node.contains === 'function' && node.contains(ev.target)) return;
+      setOpen(false);
+      setQuery('');
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  const q = query.trim().toLowerCase();
+  const filtered = (choices || []).map(g => ({
+    ...g,
+    items: (g.items || []).filter(it => {
+      if (!q) return true;
+      return String(it.label || '').toLowerCase().includes(q)
+        || String(it.id || '').toLowerCase().includes(q)
+        || String(it.kind || '').toLowerCase().includes(q)
+        || String(it.value || '').toLowerCase().includes(q);
+    }),
+  })).filter(g => g.items.length > 0);
+  const flat = flattenChoices(filtered);
+  const hi = flat.length === 0 ? 0 : Math.min(highlight, flat.length - 1);
+
+  const pick = item => {
+    if (!item) return;
+    onChange(item);
+    setOpen(false);
+    setQuery('');
+    setHighlight(0);
+  };
+
+  const color = KIND_COLOR[kind] || COLORS.text;
+
+  return h('div', {
+    ref: el => { root.current = el; },
+    style: { position: 'relative', minWidth: 0 },
+  }, [
+    h('input', {
+      key: 'q',
+      value: open ? query : (label || ''),
+      placeholder: placeholder || '',
+      onFocus: () => { setOpen(true); setQuery(''); setHighlight(0); },
+      onChange: e => { setQuery(e.target.value); setOpen(true); setHighlight(0); },
+      onKeyDown: e => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setOpen(true);
+          setHighlight(n => Math.min((n || 0) + 1, Math.max(0, flat.length - 1)));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setHighlight(n => Math.max((n || 0) - 1, 0));
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (open && flat[hi]) pick(flat[hi]);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          setOpen(false);
+          setQuery('');
+        }
+      },
+      style: {
+        width: '100%',
+        boxSizing: 'border-box',
+        padding: '4px 6px',
+        borderRadius: '4px',
+        border: `1px solid ${open ? COLORS.gold : COLORS.border}`,
+        background: '#000',
+        color,
+        fontWeight: kind === 'goal' ? 800 : 500,
+      },
+    }),
+    open ? h('div', {
+      key: 'menu',
+      style: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: '100%',
+        marginTop: '2px',
+        maxHeight: '220px',
+        overflowY: 'auto',
+        background: '#0c1016',
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: '6px',
+        zIndex: 10050,
+        boxShadow: '0 10px 28px rgba(0,0,0,0.55)',
+      },
+    }, flat.length === 0
+      ? h('div', { key: 'empty', style: { padding: '8px 10px', color: COLORS.dim, fontSize: '12px' } },
+          t('mods|goldSpeedrun|route|noMatch'))
+      : filtered.map(g => h('div', { key: g.key }, [
+          h('div', {
+            key: 'h',
+            style: {
+              padding: '6px 10px 3px',
+              font: '800 10px/1 system-ui, sans-serif',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: COLORS.dim,
+            },
+          }, g.label),
+          ...g.items.map(it => {
+            const idx = flat.indexOf(it);
+            const active = idx === hi;
+            const selected = it.value === value;
+            return h('div', {
+              key: it.value,
+              onMouseDown: ev => { ev.preventDefault(); pick(it); },
+              onMouseEnter: () => setHighlight(idx),
+              style: {
+                padding: '5px 10px',
+                cursor: 'pointer',
+                background: active ? 'rgba(240,192,64,0.16)' : (selected ? 'rgba(255,255,255,0.04)' : 'transparent'),
+                color: KIND_COLOR[it.kind] || COLORS.text,
+                fontWeight: it.kind === 'goal' || selected ? 800 : 500,
+              },
+            }, it.label);
+          }),
+        ])))
+    : null,
+  ]);
+}
+
+const dashBtn = (key, label, onClick, danger) => h('button', {
+  key,
+  onClick,
+  style: {
+    cursor: 'pointer', padding: '5px 10px', borderRadius: '4px',
+    border: `1px solid ${danger ? COLORS.red : COLORS.border}`,
+    background: danger ? 'rgba(224,82,82,0.12)' : 'rgba(0,0,0,0.25)',
+    color: danger ? COLORS.red : COLORS.text,
+    font: '700 11px/1 system-ui, sans-serif',
+  },
+}, label);
+
+function SplitEditor({ getSplits, setSplits, choiceGroups, fmt }) {
+  const splits = getSplits() || [];
+  return h('div', { key: 'editor', style: { marginTop: '6px' } }, [
+    splits.length === 0
+      ? h('div', { key: 'empty', style: { color: COLORS.dim, padding: '8px 0' } }, t('mods|goldSpeedrun|route|empty'))
+      : splits.map((s, i) => {
+          const matched = matchSplitChoice(s, choiceGroups);
+          const shown = matched || s;
+          return h('div', {
+            key: (s.id || i) + '-' + i,
+            style: { display: 'grid', gridTemplateColumns: '1fr 150px 56px 56px 70px', gap: '8px', alignItems: 'center', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' },
+          }, [
+            h(TriggerCombobox, {
+              key: 'c',
+              value: matched ? matched.value : splitTriggerValue(s),
+              kind: shown.kind,
+              label: shown.label,
+              choices: choicesWithCurrent(choiceGroups, s),
+              placeholder: t('mods|goldSpeedrun|route|searchTrigger'),
+              onChange: picked => {
+                setSplits(splits.map((x, j) => j === i
+                  ? { ...x, kind: picked.kind, id: picked.id, label: picked.label }
+                  : x));
+              },
+            }),
+            h('input', {
+              key: 't',
+              defaultValue: Number.isFinite(splitMs(s)) ? formatTime(splitMs(s), fmt) : '',
+              onBlur: e => {
+                const ms = parseTimeInput(e.target.value);
+                if (!Number.isFinite(ms)) return;
+                setSplits(splits.map((x, j) => j === i
+                  ? { ...x, w: ms, t: Number.isFinite(x.t) ? x.t : ms }
+                  : x));
+              },
+              style: { padding: '4px 6px', borderRadius: '4px', border: `1px solid ${COLORS.border}`, background: '#000', color: COLORS.text, fontVariantNumeric: 'tabular-nums' },
+            }),
+            dashBtn('up' + i, t('mods|goldSpeedrun|route|up'), () => {
+              if (i === 0) return;
+              const next = splits.slice();
+              const tmp = next[i - 1]; next[i - 1] = next[i]; next[i] = tmp;
+              setSplits(next);
+            }),
+            dashBtn('dn' + i, t('mods|goldSpeedrun|route|down'), () => {
+              if (i >= splits.length - 1) return;
+              const next = splits.slice();
+              const tmp = next[i + 1]; next[i + 1] = next[i]; next[i] = tmp;
+              setSplits(next);
+            }),
+            dashBtn('rm' + i, t('mods|goldSpeedrun|route|remove'), () => {
+              setSplits(splits.filter((_, j) => j !== i));
+            }, true),
+          ]);
+        }),
+    h('div', {
+      key: 'add',
+      style: { display: 'grid', gridTemplateColumns: '1fr 150px 70px', gap: '8px', alignItems: 'center', padding: '10px 0 2px' },
+    }, [
+      h(TriggerCombobox, {
+        key: 'nl',
+        value: routeAddDraft.splitKey,
+        kind: routeAddDraft.picked && routeAddDraft.picked.kind,
+        label: routeAddDraft.picked && routeAddDraft.picked.label,
+        choices: choiceGroups,
+        placeholder: t('mods|goldSpeedrun|route|addLabel'),
+        onChange: picked => {
+          routeAddDraft = { ...routeAddDraft, splitKey: picked.value, picked };
+          notifyResult();
+        },
+      }),
+      h('input', {
+        key: 'nt',
+        value: routeAddDraft.time,
+        placeholder: t('mods|goldSpeedrun|route|addTime'),
+        onChange: e => { routeAddDraft = { ...routeAddDraft, time: e.target.value }; notifyResult(); },
+        style: { padding: '6px 8px', borderRadius: '4px', border: `1px solid ${COLORS.border}`, background: '#000', color: COLORS.text, fontVariantNumeric: 'tabular-nums' },
+      }),
+      dashBtn('add', t('mods|goldSpeedrun|route|add'), () => {
+        const ms = parseTimeInput(routeAddDraft.time);
+        const picked = routeAddDraft.picked;
+        if (!picked || !Number.isFinite(ms)) {
+          api.ui.toast({ key: 'mods|goldSpeedrun|route|invalidTime' });
+          return;
+        }
+        setSplits(splits.concat([{ kind: picked.kind, id: picked.id, label: picked.label, w: ms, t: ms }]));
+        routeAddDraft = { splitKey: '', time: '', picked: null };
+      }),
+    ]),
+  ]);
+}
+
+function CategoriesPanel({ fmt }) {
+  migrateKeyStability();
+  const list = managedCategories();
+  const activeId = getActiveCategoryId() || category().id;
+  const selected = list.find(c => c.id === (selectedCatId || activeId)) || list[0];
+  const selectedKey = selected ? bestKeyFor(selected) : bestKey();
+  const selectedBest = selected ? readBestAt(selectedKey) : readBest();
+  const selectedPbSplits = selected ? readBestSplitsAt(selectedKey) : readBestSplits();
+  const routes = readRoutesStore(selectedKey);
+  const customRoutes = routes.routes;
+  const history = selected ? readPbHistory(selected) : [];
+  const choiceGroups = buildRouteSplitChoices(selected);
+
+  const field = (key, label, value, onChange, extra) => h('label', {
+    key,
+    style: { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: COLORS.dim, minWidth: '120px' },
+  }, [
+    h('span', { key: 'l' }, label),
+    h('input', {
+      key: 'i',
+      value,
+      onChange,
+      style: {
+        padding: '6px 8px', borderRadius: '4px', border: `1px solid ${COLORS.border}`,
+        background: '#000', color: COLORS.text, font: '500 13px/1.2 system-ui, sans-serif',
+      },
+      ...extra,
+    }),
+  ]);
+
+  const saveRoutes = next => {
+    writeRoutesStore(next, selectedKey);
+    notifyResult();
+  };
+
+  const setPbSplits = nextSplits => {
+    if (!selected) return;
+    if (!pbEditSnapshotted) {
+      backupCurrentPb(selected, 'edit', '');
+      pbEditSnapshotted = true;
+    }
+    const key = selectedKey;
+    if (nextSplits.length > 0) writeBestSplitsAt(key, nextSplits);
+    else {
+      try { api.storage.local.set(key + '.splits', null); } catch (e) { /* ignore */ }
+      if (key === bestKey()) api.storage.set(NS, 'pbSplits', null);
+    }
+    const last = nextSplits[nextSplits.length - 1];
+    const ms = splitMs(last);
+    if (ms >= MIN_PB_MS) writeBestTimeAt(key, ms);
+    notifyResult();
+  };
+
+  const setCustomSplits = (routeId, nextSplits) => {
+    saveRoutes({
+      ...routes,
+      routes: customRoutes.map(r => r.id === routeId ? { ...r, splits: nextSplits } : r),
+    });
+  };
+
+  const pbRun = {
+    id: PB_RUN_ID,
+    name: t('mods|goldSpeedrun|run|pb'),
+    isPb: true,
+    splits: selectedPbSplits,
+    finalMs: selectedBest,
+  };
+
+  const runs = [pbRun].concat(customRoutes.map(r => ({
+    id: r.id,
+    name: r.name,
+    isPb: false,
+    splits: r.splits || [],
+    finalMs: splitMs((r.splits || [])[(r.splits || []).length - 1]),
+  })));
+
+  const comparedId = routes.activeRouteId || PB_RUN_ID;
+
+  return h('div', {
+    style: { display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr)', gap: '18px', padding: '16px 24px 8px', minHeight: 0, flex: 1, overflow: 'hidden' },
+  }, [
+    h('div', {
+      key: 'list',
+      style: { overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', gap: '6px' },
+    }, [
+      ...list.map(c => h('div', {
+        key: c.id,
+        onClick: () => { selectedCatId = c.id; pbHistoryOpen = false; notifyResult(); },
+        style: {
+          padding: '8px 10px', borderRadius: '6px', cursor: 'pointer',
+          border: `1px solid ${c.id === selected.id ? COLORS.gold : 'rgba(255,255,255,0.06)'}`,
+          background: c.id === activeId ? 'rgba(74, 158, 255, 0.12)' : 'rgba(0,0,0,0.2)',
+        },
+      }, [
+        h('div', { key: 'n', style: { fontWeight: 700, color: COLORS.text } }, c.name),
+        h('div', { key: 'm', style: { fontSize: '11px', color: COLORS.dim, marginTop: '2px' } }, [
+          c.preset ? t('mods|goldSpeedrun|cat|preset') : t('mods|goldSpeedrun|cat|custom'),
+          ' · ',
+          readBestAt(bestKeyFor(c)) !== null
+            ? formatTime(readBestAt(bestKeyFor(c)), fmt)
+            : t('mods|goldSpeedrun|cat|noPb'),
+        ].join('')),
+      ])),
+      h('div', {
+        key: 'new',
+        style: { marginTop: '10px', padding: '10px', border: `1px solid ${COLORS.border}`, borderRadius: '8px' },
+      }, [
+        h('div', { key: 't', style: { font: '800 12px/1 system-ui, sans-serif', color: COLORS.gold, marginBottom: '8px' } },
+          t('mods|goldSpeedrun|cat|new')),
+        field('name', t('mods|goldSpeedrun|cat|name'), catDraft.name, e => { catDraft = { ...catDraft, name: e.target.value }; notifyResult(); }),
+        h('label', { key: 'kind', style: { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: COLORS.dim, marginTop: '6px' } }, [
+          h('span', { key: 'l' }, t('mods|goldSpeedrun|cat|kind')),
+          h('select', {
+            key: 's',
+            value: catDraft.kind,
+            onChange: e => { catDraft = { ...catDraft, kind: e.target.value }; notifyResult(); },
+            style: { padding: '6px 8px', borderRadius: '4px', background: '#000', color: COLORS.text, border: `1px solid ${COLORS.border}` },
+          }, [
+            h('option', { key: 'g', value: 'gold' }, t('mods|goldSpeedrun|cat|kind|gold')),
+            h('option', { key: 'a', value: 'artifacts' }, t('mods|goldSpeedrun|cat|kind|artifacts')),
+            h('option', { key: 'f', value: 'factory' }, t('mods|goldSpeedrun|cat|kind|factory')),
+          ]),
+        ]),
+        field('target', t('mods|goldSpeedrun|cat|target'), catDraft.target, e => { catDraft = { ...catDraft, target: e.target.value }; notifyResult(); }),
+        catDraft.kind === 'gold'
+          ? h('label', { key: 'gm', style: { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: COLORS.dim, marginTop: '6px' } }, [
+              h('span', { key: 'l' }, t('mods|goldSpeedrun|cat|goldMode')),
+              h('select', {
+                key: 's',
+                value: catDraft.goldMode,
+                onChange: e => { catDraft = { ...catDraft, goldMode: e.target.value }; notifyResult(); },
+                style: { padding: '6px 8px', borderRadius: '4px', background: '#000', color: COLORS.text, border: `1px solid ${COLORS.border}` },
+              }, [
+                h('option', { key: 'e', value: 'earned' }, t('mods|goldSpeedrun|cfg|mode|earned')),
+                h('option', { key: 'b', value: 'balance' }, t('mods|goldSpeedrun|cfg|mode|balance')),
+              ]),
+            ])
+          : null,
+        h('div', { key: 'go', style: { marginTop: '8px' } }, dashBtn('create', t('mods|goldSpeedrun|cat|create'), () => {
+          const name = (catDraft.name || '').trim();
+          if (!name) return;
+          const target = Number(catDraft.target);
+          const custom = {
+            id: newCustomId(),
+            name,
+            kind: catDraft.kind,
+            target: Number.isFinite(target) && target > 0 ? target : (catDraft.kind === 'factory' ? 6 : 100000),
+            goldMode: catDraft.goldMode === 'balance' ? 'balance' : 'earned',
+          };
+          writeCustomCategories(readCustomCategories().concat([custom]));
+          selectedCatId = custom.id;
+          activateManagedCategory(custom.id);
+          catDraft = { name: '', kind: 'gold', target: '100000', goldMode: 'balance' };
+        })),
+      ]),
+    ]),
+    h('div', {
+      key: 'detail',
+      style: { overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', gap: '12px' },
+    }, selected ? [
+      h('div', { key: 'head', style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } }, [
+        h('div', { key: 'n', style: { flex: 1, font: '800 18px/1 system-ui, sans-serif', color: COLORS.gold } }, selected.name),
+        selected.id === activeId
+          ? h('span', { key: 'act', style: { color: COLORS.green, fontWeight: 700 } }, t('mods|goldSpeedrun|cat|active'))
+          : dashBtn('activate', t('mods|goldSpeedrun|cat|activate'), () => activateManagedCategory(selected.id)),
+        !selected.preset ? dashBtn('ren', t('mods|goldSpeedrun|cat|rename'), () => {
+          const next = (typeof window !== 'undefined' && window.prompt) ? window.prompt(t('mods|goldSpeedrun|cat|name'), selected.name) : null;
+          if (!next || !next.trim()) return;
+          writeCustomCategories(readCustomCategories().map(c => c.id === selected.id ? { ...c, name: next.trim() } : c));
+          notifyResult();
+        }) : null,
+        !selected.preset ? dashBtn('del', t('mods|goldSpeedrun|cat|delete'), () => {
+          writeCustomCategories(readCustomCategories().filter(c => c.id !== selected.id));
+          if (getActiveCategoryId() === selected.id) activateManagedCategory('100000');
+          selectedCatId = '100000';
+          notifyResult();
+        }, true) : null,
+        dashBtn('f3', t('mods|goldSpeedrun|cat|openTriggers'), () => {
+          activateManagedCategory(selected.id);
+          setTriggerPanelOpen(true);
+        }),
+      ]),
+      h('div', { key: 'runs', style: { background: 'rgba(0,0,0,0.25)', borderRadius: '8px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' } }, [
+        h('div', { key: 'rh', style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } }, [
+          h('div', { key: 't', style: { flex: 1, font: '800 13px/1 system-ui, sans-serif', color: COLORS.gold, letterSpacing: '0.04em' } },
+            t('mods|goldSpeedrun|run|title')),
+          dashBtn('newr', t('mods|goldSpeedrun|run|new'), () => {
+            const route = { id: newRouteId(), name: t('mods|goldSpeedrun|run|new'), splits: [] };
+            editingTarget = route.id;
+            routeAddDraft = { splitKey: '', time: '', picked: null };
+            saveRoutes({ ...routes, routes: customRoutes.concat([route]) });
+          }),
+          dashBtn('impr', t('mods|goldSpeedrun|route|import'), () => {
+            pickCsvFile((text, filename) => {
+              const imported = csvToSplits(text);
+              if (imported.length === 0) {
+                api.ui.toast({ key: 'mods|goldSpeedrun|csv|importEmpty' });
+                return;
+              }
+              const route = { id: newRouteId(), name: routeNameFromFile(filename), splits: imported };
+              editingTarget = route.id;
+              routeAddDraft = { splitKey: '', time: '', picked: null };
+              saveRoutes({ ...routes, routes: customRoutes.concat([route]) });
+              api.ui.toast({ key: 'mods|goldSpeedrun|csv|imported', params: { count: imported.length, name: route.name } });
+            });
+          }),
+        ]),
+        ...runs.map(run => {
+          const customIndex = run.isPb ? -1 : customRoutes.findIndex(r => r.id === run.id);
+          const isEditing = editingTarget === run.id;
+          const timeLabel = Number.isFinite(run.finalMs) ? formatTime(run.finalMs, fmt) : t('mods|goldSpeedrun|cat|noPb');
+          const summary = [run.name, timeLabel, t('mods|goldSpeedrun|route|splitsCount', { count: (run.splits || []).length })].join(' · ');
+          return h('div', {
+            key: run.id,
+            style: {
+              padding: '8px 0',
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            },
+          }, [
+            h('label', {
+              key: 'row',
+              style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flexWrap: 'wrap' },
+            }, [
+              h('input', {
+                key: 'rad',
+                type: 'radio',
+                checked: comparedId === run.id,
+                onChange: () => saveRoutes({ ...routes, activeRouteId: run.isPb ? null : run.id }),
+                title: t('mods|goldSpeedrun|run|compareThis'),
+              }),
+              h('span', { key: 'n', style: { flex: 1, fontWeight: 700, minWidth: '120px' } }, [
+                summary,
+                run.isPb
+                  ? h('span', {
+                      key: 'badge',
+                      style: {
+                        marginLeft: '8px',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        font: '700 10px/1.2 system-ui, sans-serif',
+                        whiteSpace: 'nowrap',
+                        background: 'rgba(240,192,64,0.16)',
+                        color: COLORS.gold,
+                      },
+                    }, t('mods|goldSpeedrun|run|badgePb'))
+                  : null,
+              ]),
+            ]),
+            h('div', { key: 'acts', style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, [
+              dashBtn('edit' + run.id, isEditing ? t('mods|goldSpeedrun|route|doneEdit') : t('mods|goldSpeedrun|run|edit'), () => {
+                editingTarget = isEditing ? null : run.id;
+                routeAddDraft = { splitKey: '', time: '', picked: null };
+                if (run.isPb && !isEditing) pbEditSnapshotted = false;
+                notifyResult();
+              }),
+              !run.isPb ? dashBtn('ren' + run.id, t('mods|goldSpeedrun|route|rename'), () => {
+                const next = (typeof window !== 'undefined' && window.prompt) ? window.prompt(t('mods|goldSpeedrun|route|rename'), run.name) : null;
+                if (!next || !next.trim()) return;
+                saveRoutes({ ...routes, routes: customRoutes.map(x => x.id === run.id ? { ...x, name: next.trim() } : x) });
+              }) : null,
+              dashBtn('dup' + run.id, t('mods|goldSpeedrun|route|duplicate'), () => {
+                const copy = { id: newRouteId(), name: run.name + ' copy', splits: (run.splits || []).map(s => ({ ...s })) };
+                saveRoutes({ ...routes, routes: customRoutes.concat([copy]) });
+              }),
+              dashBtn('exp' + run.id, t('mods|goldSpeedrun|route|export'), () => {
+                downloadTextFile(splitsToCsv(run.splits || []), 'sandustry-run-' + (run.name || run.id) + '.csv');
+              }),
+              !run.isPb ? dashBtn('setpb' + run.id, t('mods|goldSpeedrun|run|markPb'), () => {
+                const last = (run.splits || [])[(run.splits || []).length - 1];
+                const ms = splitMs(last);
+                if (!(ms >= MIN_PB_MS)) {
+                  api.ui.toast({ key: 'mods|goldSpeedrun|route|setPbFail' });
+                  return;
+                }
+                commitBestFor(selected, ms, run.splits || [], 'route_promote', run.name);
+                notifyResult();
+                api.ui.toast({ key: 'mods|goldSpeedrun|route|setPbDone', params: { time: formatTime(ms, fmt) } });
+              }) : null,
+              run.isPb ? dashBtn('hist' + run.id, t('mods|goldSpeedrun|run|history', { count: history.length }), () => {
+                pbHistoryOpen = !pbHistoryOpen;
+                notifyResult();
+              }) : null,
+              !run.isPb && customIndex > 0 ? dashBtn('upr' + run.id, t('mods|goldSpeedrun|route|up'), () => {
+                const next = customRoutes.slice();
+                const tmp = next[customIndex - 1]; next[customIndex - 1] = next[customIndex]; next[customIndex] = tmp;
+                saveRoutes({ ...routes, routes: next });
+              }) : null,
+              !run.isPb && customIndex >= 0 && customIndex < customRoutes.length - 1 ? dashBtn('dnr' + run.id, t('mods|goldSpeedrun|route|down'), () => {
+                const next = customRoutes.slice();
+                const tmp = next[customIndex + 1]; next[customIndex + 1] = next[customIndex]; next[customIndex] = tmp;
+                saveRoutes({ ...routes, routes: next });
+              }) : null,
+              dashBtn('del' + run.id, t('mods|goldSpeedrun|route|delete'), () => {
+                if (run.isPb) {
+                  const ok = typeof window === 'undefined' || !window.confirm || window.confirm(t('mods|goldSpeedrun|run|deletePbConfirm'));
+                  if (!ok) return;
+                  clearBest(selected);
+                  if (editingTarget === PB_RUN_ID) editingTarget = null;
+                  notifyResult();
+                  return;
+                }
+                const nextRoutes = customRoutes.filter(x => x.id !== run.id);
+                if (editingTarget === run.id) editingTarget = null;
+                saveRoutes({
+                  activeRouteId: routes.activeRouteId === run.id ? null : routes.activeRouteId,
+                  routes: nextRoutes,
+                });
+              }, true),
+            ]),
+            run.isPb && pbHistoryOpen ? h('div', {
+              key: 'histlist',
+              style: { borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px' },
+            }, history.length === 0
+              ? h('div', { key: 'empty', style: { color: COLORS.dim, fontSize: '12px' } }, t('mods|goldSpeedrun|pb|historyEmpty'))
+              : history.map((entry, i) => h('div', {
+                  key: 'h' + i,
+                  style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 0', flexWrap: 'wrap' },
+                }, [
+                  h('span', { key: 't', style: { fontWeight: 700, fontVariantNumeric: 'tabular-nums', minWidth: '110px' } },
+                    Number.isFinite(entry.time) ? formatTime(entry.time, fmt) : '—'),
+                  h('span', { key: 'd', style: { color: COLORS.dim, fontSize: '11px', flex: 1 } },
+                    [formatHistoryWhen(entry.timestamp), historySourceLabel(entry)].filter(Boolean).join(' · ')),
+                  dashBtn('rst' + i, t('mods|goldSpeedrun|pb|restore'), () => {
+                    const restored = restorePbFromHistory(selected, i);
+                    pbHistoryOpen = false;
+                    notifyResult();
+                    if (restored && Number.isFinite(restored.time)) {
+                      api.ui.toast({ key: 'mods|goldSpeedrun|pb|restored', params: { time: formatTime(restored.time, fmt) } });
+                    }
+                  }),
+                ])))
+            : null,
+            isEditing ? h(SplitEditor, {
+              key: 'ed',
+              getSplits: () => run.isPb ? readBestSplitsAt(selectedKey) : ((customRoutes.find(r => r.id === run.id) || {}).splits || []),
+              setSplits: next => run.isPb ? setPbSplits(next) : setCustomSplits(run.id, next),
+              choiceGroups,
+              fmt,
+            }) : null,
+          ]);
+        }),
+      ]),
+    ] : null),
+  ]);
+}
+
 function ResultScreen() {
   try {
     const [, bump] = react.useState(0);
@@ -3305,8 +4715,10 @@ function ResultScreen() {
     const splits = readSplits();
     const best = readBest();
     const tainted = cheatsUsed();
-    const delta = best !== null ? total - best : null;
-    const rules = showRuleset() ? rulesetView() : null;
+    const delta = best !== null ? totalPlay - best : null;
+    const rulesLive = rulesetView();
+    const rules = showRuleset() ? rulesLive : null;
+    const modsInfo = rulesetStatus();
 
     const isBroken = rules && rules.broken;
     const isWait = typeof run.startedAt !== 'number';
@@ -3334,6 +4746,8 @@ function ResultScreen() {
           font: `${isLive || tone ? '800' : '600'} 12px/1 system-ui, sans-serif`,
           color: palette.fg,
           border: `1px solid ${palette.bd}`,
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
         }
       }, text);
     };
@@ -3344,7 +4758,7 @@ function ResultScreen() {
         background: 'rgba(0, 0, 0, 0.25)',
         border: '1px solid rgba(255, 255, 255, 0.04)',
         borderRadius: '10px',
-        padding: '16px 20px 18px',
+        padding: '10px 16px 12px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -3353,7 +4767,7 @@ function ResultScreen() {
       h('div', {
         key: 'lbl',
         style: {
-          font: '800 13px/1 system-ui, sans-serif',
+          font: '800 12px/1 system-ui, sans-serif',
           color: COLORS.gold,
           letterSpacing: '0.04em',
           textTransform: 'uppercase',
@@ -3362,8 +4776,8 @@ function ResultScreen() {
       h('div', {
         key: 'val',
         style: {
-          marginTop: '10px',
-          font: '800 42px/1 system-ui, sans-serif',
+          marginTop: '6px',
+          font: '800 32px/1 system-ui, sans-serif',
           fontVariantNumeric: 'tabular-nums',
           letterSpacing: '-0.02em',
           color: valColor || '#ffffff',
@@ -3373,8 +4787,8 @@ function ResultScreen() {
       h('div', {
         key: 'sub',
         style: {
-          marginTop: '8px',
-          font: '700 13px/1.2 system-ui, sans-serif',
+          marginTop: '6px',
+          font: '700 12px/1.2 system-ui, sans-serif',
           fontVariantNumeric: 'tabular-nums',
           color: subColor || COLORS.dim,
         }
@@ -3388,12 +4802,12 @@ function ResultScreen() {
         justifyContent: 'space-between',
         alignItems: 'baseline',
         gap: '12px',
-        padding: '8px 0',
+        padding: '4px 0',
         borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
       }
     }, [
-      h('span', { key: 'k', style: { color: COLORS.dim, font: '600 14px/1.2 system-ui, sans-serif' } }, label),
-      h('span', { key: 'v', style: { font: '700 16px/1.2 system-ui, sans-serif', fontVariantNumeric: 'tabular-nums', color: COLORS.text } }, value),
+      h('span', { key: 'k', style: { color: COLORS.dim, font: '600 13px/1.2 system-ui, sans-serif' } }, label),
+      h('span', { key: 'v', style: { font: '700 14px/1.2 system-ui, sans-serif', fontVariantNumeric: 'tabular-nums', color: COLORS.text } }, value),
     ]);
 
     const actionBtn = (key, hotkey, label, onClick) => h('button', {
@@ -3424,17 +4838,17 @@ function ResultScreen() {
       style: {
         display: 'grid',
         gridTemplateColumns: '1.15fr 1fr 0.9fr',
-        gap: '14px',
-        padding: '16px 24px 8px',
+        gap: '10px',
+        padding: '10px 24px 6px',
         flexShrink: 0,
       }
     }, [
       heroCard(
         'total',
         t('mods|goldSpeedrun|result|total'),
-        isWait ? dashTime(fmt) : formatTime(total, fmt),
+        isWait ? dashTime(fmt) : formatTime(totalPlay, fmt),
         isDone ? '#ffd56a' : '#ffffff',
-        isDone ? 'real time · official' : 'real time',
+        isDone ? 'in-game time (W) · official' : 'in-game time (W)',
         COLORS.dim
       ),
       heroCard(
@@ -3442,7 +4856,7 @@ function ResultScreen() {
         t('mods|goldSpeedrun|result|best'),
         best === null ? t('mods|goldSpeedrun|result|noBest') : formatTime(best, fmt),
         '#ffffff',
-        best !== null ? `${deltaText} vs PB` : '—',
+        best !== null ? `${deltaText} vs PB/Target` : '—',
         deltaColor
       ),
       heroCard(
@@ -3461,8 +4875,10 @@ function ResultScreen() {
         background: 'rgba(0, 0, 0, 0.25)',
         border: '1px solid rgba(255, 255, 255, 0.04)',
         borderRadius: '10px',
-        padding: '16px 18px 14px',
+        padding: '12px 16px 10px',
         minHeight: 0,
+        overflow: 'hidden',
+        flex: 1,
         display: 'flex',
         flexDirection: 'column',
       }
@@ -3470,15 +4886,16 @@ function ResultScreen() {
       h('h2', {
         key: 'title',
         style: {
-          margin: '0 0 14px',
+          margin: '0 0 8px',
           font: '800 14px/1 system-ui, sans-serif',
           color: COLORS.gold,
           letterSpacing: '0.04em',
           textTransform: 'uppercase',
         }
       }, t('mods|goldSpeedrun|result|expand')),
-      h('div', { key: 'metrics-list', style: { display: 'flex', flexDirection: 'column' } }, [
+      h('div', { key: 'metrics-list', style: { display: 'flex', flexDirection: 'column', flexShrink: 1, minHeight: 0 } }, [
         statRow(t('mods|goldSpeedrun|result|sim'), ready ? formatTime(totalSim, fmt) : '—'),
+        statRow(t('mods|goldSpeedrun|clock|realShort').toUpperCase() + ' · ' + t('mods|goldSpeedrun|cfg|clockMode|real'), formatTime(total, fmt)),
         statRow(t('mods|goldSpeedrun|result|play'), formatTime(totalPlay, fmt)),
         statRow(t('mods|goldSpeedrun|metric|ticks'), ready ? api.i18n.formatNumber(Math.round(totalSim / TICK_MS)) : '—'),
         statRow(t('mods|goldSpeedrun|metric|avgUps'), ready && total > 0 ? ((totalSim / TICK_MS) / (total / 1000)).toFixed(1) : '—'),
@@ -3488,7 +4905,7 @@ function ResultScreen() {
       ]),
       h('div', {
         key: 'graph-wrap',
-        style: { marginTop: 'auto', paddingTop: '12px' }
+        style: { marginTop: 'auto', paddingTop: '12px', flexShrink: 0 }
       }, [
         h('div', {
           key: 'gcap',
@@ -3525,21 +4942,30 @@ function ResultScreen() {
         flexDirection: 'column',
       }
     }, [
-      h('h2', {
-        key: 'title',
-        style: {
-          margin: '0 0 14px',
-          font: '800 14px/1 system-ui, sans-serif',
-          color: COLORS.gold,
-          letterSpacing: '0.04em',
-          textTransform: 'uppercase',
-        }
-      }, `SPLITS (${splits.length})`),
+      h('div', {
+        key: 'title-row',
+        style: { display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 14px' },
+      }, [
+        h('h2', {
+          key: 'title',
+          style: {
+            margin: 0,
+            flex: 1,
+            font: '800 14px/1 system-ui, sans-serif',
+            color: COLORS.gold,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+          }
+        }, `SPLITS (${splits.length})`),
+        actionBtn('btn-export-run', 'CSV', t('mods|goldSpeedrun|csv|exportRun'), () => {
+          downloadTextFile(splitsToCsv(splits), 'sandustry-speedrun-splits.csv');
+        }),
+      ]),
       h('div', {
         key: 'split-head',
         style: {
           display: 'grid',
-          gridTemplateColumns: '1fr 92px 140px 92px',
+          gridTemplateColumns: '1fr 110px 110px 110px 92px',
           gap: '12px',
           alignItems: 'baseline',
           padding: '0 8px 10px',
@@ -3553,7 +4979,8 @@ function ResultScreen() {
         h('span', { key: 'a' }, t('mods|goldSpeedrun|result|colSplit')),
         h('span', { key: 'b', style: { textAlign: 'right' } }, t('mods|goldSpeedrun|result|colSegment')),
         h('span', { key: 'c', style: { textAlign: 'right' } }, t('mods|goldSpeedrun|result|colTime')),
-        h('span', { key: 'd', style: { textAlign: 'right' } }, t('mods|goldSpeedrun|result|colGold')),
+        h('span', { key: 'd', style: { textAlign: 'right' } }, t('mods|goldSpeedrun|result|colDelta')),
+        h('span', { key: 'e', style: { textAlign: 'right' } }, t('mods|goldSpeedrun|result|colGold')),
       ]),
       h('div', {
         key: 'split-list',
@@ -3565,7 +4992,7 @@ function ResultScreen() {
           marginTop: '4px',
         }
       }, splits.length > 0
-        ? h(SplitTable, { splits, fmt, wide: true })
+        ? h(SplitTable, { splits, fmt, wide: true, pbSplits: readComparisonSplits() })
         : h('div', { style: { color: COLORS.dim, padding: '20px 0', textAlign: 'center' } },
             t('mods|goldSpeedrun|result|noSplits')))
     ]);
@@ -3589,36 +5016,14 @@ function ResultScreen() {
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '12px',
-        padding: '16px 24px 20px',
+        padding: '12px 24px 16px',
         flexShrink: 0,
       }
     }, [
       h('div', { key: 'actions', style: { display: 'flex', gap: '10px' } }, [
-        actionBtn('btn-export', 'CSV', 'Export targets', () => {
-          downloadTextFile(splitsToCsv(splits), 'sandustry-speedrun-splits.csv');
-        }),
-        actionBtn('btn-import', 'CSV', 'Import targets', () => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = '.csv';
-          input.onchange = e => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ev => {
-              const imported = csvToSplits(ev.target.result);
-              if (imported.length === 0) return;
-              api.storage.ensure(NS);
-              api.storage.set(NS, 'splits', imported);
-              notifyResult();
-            };
-            reader.readAsText(file);
-          };
-          input.click();
-        }),
         actionBtn('btn-summary', null, 'Copy summary', () => {
           const cat = categoryLabel();
-          const time = formatTime(total, 'millis');
+          const time = formatTime(totalPlay, 'millis');
           const seed = getMapSeed();
           const pauses = readClock('pauseCount');
           const reloads = readClock('reloadCount');
@@ -3634,7 +5039,7 @@ function ResultScreen() {
           splits.forEach(s => {
             let lbl = displaySplitLabel(s, splits);
             if (s.kind === 'goal') lbl = 'GOAL';
-            lines.push(`  ${padLabel(lbl)}${formatTime(s.t, 'millis')}`);
+            lines.push(`  ${padLabel(lbl)}${formatTime(Number.isFinite(s.w) ? s.w : s.t, 'millis')}`);
           });
           navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
         }),
@@ -3679,7 +5084,7 @@ function ResultScreen() {
         style: {
           position: 'relative',
           width: 'min(1120px, 94vw)',
-          height: 'min(720px, 90vh)',
+          height: 'min(760px, 92vh)',
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '12px',
@@ -3703,28 +5108,62 @@ function ResultScreen() {
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
             background: 'rgba(0, 0, 0, 0.25)',
             flexShrink: 0,
+            flexWrap: 'wrap',
           }
         }, [
           h('h1', {
             key: 'title',
             style: {
               margin: 0,
-              flex: 1,
+              flex: '0 1 auto',
               font: '800 22px/1 system-ui, sans-serif',
               color: COLORS.gold,
               letterSpacing: '0.02em',
+              whiteSpace: 'nowrap',
             }
           }, 'Speedrun Dashboard'),
+          h('div', {
+            key: 'tabs',
+            style: { display: 'flex', gap: '6px' },
+          }, [
+            ['run', t('mods|goldSpeedrun|dash|run')],
+            ['categories', t('mods|goldSpeedrun|dash|categories')],
+          ].map(([id, label]) => h('button', {
+            key: id,
+            onClick: () => { dashboardTab = id; notifyResult(); },
+            style: {
+              cursor: 'pointer', padding: '6px 10px', borderRadius: '6px',
+              border: `1px solid ${dashboardTab === id ? COLORS.gold : COLORS.border}`,
+              background: dashboardTab === id ? 'rgba(240,192,64,0.16)' : 'transparent',
+              color: dashboardTab === id ? COLORS.gold : COLORS.dim,
+              font: '700 12px/1 system-ui, sans-serif',
+            },
+          }, label))),
           h('span', {
             key: 'cat',
-            style: { font: '700 14px/1 system-ui, sans-serif', color: COLORS.blue }
+            style: {
+              font: '700 14px/1 system-ui, sans-serif',
+              color: COLORS.blue,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '280px',
+            }
           }, categoryLabel()),
           h('div', {
             key: 'chips',
-            style: { display: 'flex', gap: '8px' }
+            style: { display: 'flex', gap: '8px', flexWrap: 'wrap' }
           }, [
             chip('st', stStr, true),
             chip('sd', `Seed: ${getMapSeed()}`, false),
+            chip(
+              'mods',
+              modsInfo.extraCount > 0
+                ? t('mods|goldSpeedrun|mods|count', { count: modsInfo.extraCount })
+                : t('mods|goldSpeedrun|mods|clean'),
+              false,
+              modsInfo.extraCount > 0 ? null : 'green'
+            ),
             rules ? chip(
               'rules',
               rules.ok
@@ -3739,8 +5178,9 @@ function ResultScreen() {
             chip('rl', `Reloads: ${readClock('reloadCount')}`, false),
           ])
         ]),
-        heroBlock,
-        bodyGrid,
+        dashboardTab === 'categories'
+          ? h(CategoriesPanel, { key: 'cats', fmt })
+          : h('div', { key: 'run', style: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: '4px' } }, [heroBlock, bodyGrid]),
         footer,
       ])
     ]);
@@ -3767,7 +5207,6 @@ function ResultScreenSafe() {
 // EN: A switch for every research, every factory rank and every gold mark.
 // EN: This lets everyone put their own run together, without cluttering the
 // EN: mod settings with dozens of fields.
-let triggerPanelOpen = false;
 let techFilter = '';
 
 const panelListeners = new Set();
@@ -3775,7 +5214,18 @@ const notifyPanel = () => panelListeners.forEach(fn => {
   try { fn(); } catch (e) { /* DE: ignorieren / EN: ignore */ }
 });
 
-const setTriggerPanelOpen = v => { triggerPanelOpen = !!v; notifyPanel(); };
+const setTriggerPanelOpen = v => {
+  const next = !!v;
+  if (next && !triggerPanelOpen) openedF3FromDashboard = !resultDismissed;
+  triggerPanelOpen = next;
+  if (triggerPanelOpen) resultDismissed = true;
+  if (!triggerPanelOpen && openedF3FromDashboard) {
+    openedF3FromDashboard = false;
+    resultDismissed = false;
+  }
+  notifyResult();
+  notifyPanel();
+};
 
 function Switch({ on, onClick, label }) {
   return h('button', {
@@ -3897,19 +5347,38 @@ function TriggerPanel() {
 
   return h('div', {
     style: {
-      position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-      width: '520px', maxWidth: '94vw', height: '78vh',
-      display: 'flex', flexDirection: 'column',
-      padding: '16px 18px',
-      borderRadius: '8px',
-      border: `1px solid ${COLORS.border}`,
-      background: COLORS.panel,
-      boxShadow: '0 18px 50px rgba(0,0,0,0.55)',
-      color: COLORS.text,
-      font: '500 13px/1.4 system-ui, sans-serif',
-      zIndex: 55,
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      background: 'rgba(0, 0, 0, 0.45)',
+      pointerEvents: 'auto',
+      zIndex: 10030,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    onClick: e => {
+      if (e.target === e.currentTarget) setTriggerPanelOpen(false);
     },
   }, [
+    h('div', {
+      key: 'panel',
+      style: {
+        position: 'relative',
+        width: '520px', maxWidth: '94vw', height: '78vh',
+        display: 'flex', flexDirection: 'column',
+        padding: '16px 18px',
+        borderRadius: '8px',
+        border: `1px solid ${COLORS.border}`,
+        background: COLORS.panel,
+        boxShadow: '0 18px 50px rgba(0,0,0,0.55)',
+        color: COLORS.text,
+        font: '500 13px/1.4 system-ui, sans-serif',
+      },
+      onClick: e => e.stopPropagation(),
+    }, [
     h('div', {
       key: 'head',
       style: { display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '10px' },
@@ -4050,6 +5519,7 @@ function TriggerPanel() {
           font: '600 12px/1 system-ui, sans-serif',
         },
       }, t('mods|goldSpeedrun|result|close')),
+    ]),
     ]),
   ]);
 }
@@ -4459,6 +5929,7 @@ setInterval(tutorialWatchTick, 500);
 try {
   api.settings.onChange(() => {
     if (!modEnabled()) return;
+    syncActiveFromPresetSetting();
     if (syncOfficialSettings()) refreshSettingsUi();
   });
 } catch (e) { log('Einstellungen nicht beobachtbar:', e); }
@@ -4482,6 +5953,7 @@ api.events.on('game:ready', () => {
   resumeClocks();
   loadHistoryFromSave();
   maybeAdoptFinishedAsBest();
+  sanitizeLoadedRun();
 
   if (!modEnabled()) return;
   if (bootTimer !== null) {
@@ -4512,11 +5984,15 @@ api.events.on('game:ready', () => {
     });
   } catch (e) { log('Startzustand nicht lesbar:', e); }
 
-  // DE: Vor allem anderen: steht das offizielle Regelwerk, gelten seine Werte.
-  // DE: Das muss vor dem Tutorial-Waechter passieren, der liest den Schalter.
-  // EN: Before anything else: if the official ruleset is set, its values
-  // EN: apply. This has to happen before the tutorial guard, which reads that switch.
+  // DE: Vor allem anderen: die 2.9-Umstellung auf Hard Mode zuruecknehmen, dann
+  // DE: - falls das offizielle Regelwerk steht - dessen Werte anwenden.
+  // EN: Before anything else: undo the 2.9 Hard Mode switch, then - if the
+  // EN: official ruleset is set - apply its values.
+  if (undoGoldModeHardMigrate()) refreshSettingsUi();
+  migrateKeyStability();
+  purgeFromPbRoutes();
   syncOfficialSettings();
+  syncActiveFromPresetSetting();
 
   // DE: Sofort versuchen, nicht erst beim naechsten Waechter-Takt.
   // EN: Try immediately, rather than waiting for the next guard tick.

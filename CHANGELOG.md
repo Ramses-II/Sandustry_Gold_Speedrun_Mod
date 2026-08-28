@@ -1,5 +1,100 @@
 # Changelog
 
+## 3.0.0 — play-clock scoring, categories, unified Runs
+
+Community release of everything built after 2.8.1. Scoring, comparison, and
+the dashboard are a new contract: play-clock (W) is the official metric,
+each category has its own PB and triggers, and Personal Best is just another
+run in the same list.
+
+### Changed
+
+* **Play-clock (W) is the official / community metric.** Personal bests and
+  split comparisons are stored and judged in W. Real time (R) and
+  simulation time (T) are still measured and still written to the CSV, the
+  log, and the dashboard stats. The headline clock default is W. Old
+  R-valued bests are not migrated; the first legitimate W finish will
+  replace them (W is always ≤ R).
+* **Clipboard summary** uses W for the final time and each split line.
+* **HUD and dashboard deltas follow LiveSplit.** Completed rows show the
+  split delta versus the comparison run's split time (whole-run context).
+  The current HUD row counts a live running delta up through and past that
+  time. The dashboard lists both **segment duration** (`t[i] − t[i−1]`) and
+  **Δ vs PB**, so the duration column can no longer be read as a delta.
+* **One Runs list.** Personal Best and imported/custom targets live in the
+  same list. Every run has the same toolbar: compare (radio), Edit splits,
+  Duplicate, Export, Delete. Custom runs also get Rename, Mark as PB, and
+  Up/Down. The separate PB card and comparison-target section are gone.
+* **PB splits are editable.** Edit on Personal Best opens the same
+  searchable trigger combobox, time fields, reorder, add, and remove as
+  any other run. The PB time follows the last split. The previous PB is
+  snapshotted to Previous PBs first.
+* **Comparison is the radio on the run.** Choosing Personal Best uses the
+  official PB; choosing another run races that run. Importing a CSV
+  never writes the PB.
+* **Split rows use a searchable trigger combobox.** Type a substring
+  (`ilt` finds Filter, `ran` finds Factory rank). Imported rows can be
+  rebound to a real trigger in one click. The add-split form uses the same
+  picker.
+* **PB storage keys no longer include the tutorial-skip flag.** Toggling
+  skip-tutorial or Official ruleset cannot hide a PB. Existing `...notut`
+  keys are copied onto the stable key once.
+* **Gold ruleset default stays Normal (`earned`).** An earlier attempt to
+  switch installs to Hard Mode hid existing PBs (they live under a key that
+  includes the gold ruleset). That one-time switch is undone: if you were
+  moved to Hard Mode only by the update, you go back to Normal and the old
+  PB key is visible again. Official ruleset still forces Hard Mode when you
+  pick it.
+* **Run tab fits without scrolling the left column.** Hero cards and metric
+  rows are denser so the UPS envelope graph stays visible by default.
+
+### Added
+
+* **Category manager** (F10 → Categories): presets plus local custom
+  categories (name, goal, gold ruleset). Each category has its own PB key
+  and its own trigger set (F3). The previous global trigger map is the
+  fallback so existing selections still apply.
+* **Runs** per category: named, ordered comparison split lists with
+  editable W times. The selected run drives HUD upcoming order and all
+  deltas.
+* **1:00 PB floor.** A finish under 60 seconds of play-clock is shown and
+  logged, but never stored as a best. Existing stored bests below that
+  threshold are ignored and cleared when read. Use *Clear PB* on the
+  Categories tab to drop any leftover.
+* **PB History (last 5).** Clearing a PB, importing one, marking a run as
+  PB, or beating a run snapshots the previous PB. Restore it from the
+  Categories tab in one click.
+* **Two badges.** *No additional mods* is always on the HUD and dashboard
+  (green at zero, amber with a count otherwise — never a red X). The
+  official-ruleset badge is unchanged and still optional.
+
+### Fixed
+
+* Loading an already-beaten or non-speedrun save no longer records or
+  displays a finished run. A finish under the 1:00 floor, or a goal that
+  is already met in the first two seconds, is discarded and the run
+  resets to the waiting state. Stored bogus runs from earlier versions
+  are cleared on load. Personal bests are not touched.
+* A comparison run's authored splits stay visible even if that trigger is
+  off in F3. The live comparison is the union of the run and F3, with
+  the run winning.
+* Synthetic `fromPb` routes are ignored, no longer written, and removed
+  from storage so they cannot be confused with a real comparison run.
+* **Dashboard and F3 no longer overlap.** Opening the split-triggers panel
+  closes the dashboard, and opening the dashboard closes F3. F3 still opens
+  on its own (no dashboard required). Clicking outside F3 closes it.
+  Opening F3 from the dashboard and closing F3 returns to the dashboard.
+* **Import and export are contextual.** The Run tab exports the finished
+  run. Each comparison run has its own Export; Import CSV creates a new
+  run and never silently overwrites the current one or the PB.
+* HUD badges and dashboard chips no longer wrap mid-word.
+* Dashboard body cards scroll when the header grows, so the UPS graph
+  no longer clips the footer. Empty UPS text distinguishes “setting off”
+  from “setting on, no run yet”.
+* CSV import maps columns by header name, so `play_ms` stays the official
+  column even if a sheet reorders fields. The export schema is unchanged
+  (`kind,label,time_ms,sim_ms,play_ms,gold`).
+
 ## 2.8.1 — resume, compact HUD, stable graph
 
 ### Added

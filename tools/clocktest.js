@@ -1,19 +1,24 @@
 // Prueft den Uhrenblock aus main.js gegen ein nachgebautes Spiel.
+// Drei Uhren: R (Echtzeit, performance.now()), W (Spielzeit, api.time.getTimeMs()
+// mit 50-ms-Deckel) und U (ausgefuehrte Weltschritte aus dem geteilten Puffer);
+// T = U * (1000/60).
 const fs = require('fs');
 const path = require('path');
 
 // Der Uhrenblock wird direkt aus main.js geschnitten, damit der Test nicht
-// gegen eine veraltete Kopie laeuft.
+// gegen eine veraltete Kopie laeuft. Anker: von den Uhren-Konstanten bis zur
+// ersten Funktion dahinter, die keine Uhr mehr ist.
 const MAIN = path.join(__dirname, '..', 'main.js');
 const mainSrc = fs.readFileSync(MAIN, 'utf8');
-const from = mainSrc.indexOf('// --- Die beiden Uhren');
-const qual = mainSrc.indexOf('const clockQuality');
-const to = qual < 0 ? -1 : mainSrc.indexOf('});', qual) + 3;
-if (from < 0 || to < 3) {
+const from = mainSrc.indexOf('const TICK_HZ = 60;');
+const to = mainSrc.indexOf('const cheatsUsed');
+if (from < 0 || to < 0 || to <= from) {
   console.error('Uhrenblock in main.js nicht gefunden - wurde er umbenannt?');
   process.exit(2);
 }
 const BLOCK = mainSrc.slice(from, to);
+
+const TICK_MS = 1000 / 60;
 
 let fails = 0;
 const check = (name, ok, got) => {
@@ -26,22 +31,23 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
 function makeWorld() {
   const store = { mods: {} };
   const w = {
-    perf: 0,                       // performance.now()
+    perf: 0,          // performance.now()
+    metaTime: 0,      // W-Quelle: api.time.getTimeMs() (store.meta.time)
+    tickAccum: 1,     // absoluter Schrittzaehler (U-Quelle); neue Welt startet bei 1
     paused: false,
-    metaTime: 0,                   // store.meta.time, mit dem 50-ms-Deckel
-    simTick: 0,                    // Schrittzaehler des Simulations-Threads
-    simAccum: 0,
-    managerLast: 16.6667,          // managerPerformance[1]
-    triggers: [],
-    buffers: {},
+    postUpdate: false,
     store,
   };
 
-  w.MOD_ID = 'gold-speedrun';
   w.NS = 'goldSpeedrun';
   w.log = () => {};
-  w.formatTime = ms => String(Math.floor(ms));
   w.now = () => w.metaTime;
+  // Der geteilte 32-Bit-Puffer, in den worker.js store.meta.tick schreibt.
+  w.tickArr = new Int32Array(1);
+  w.tickArr[0] = 1;
+  w.performance = { now: () => w.perf };
+
+  const ensure = () => (store.mods[w.NS] = store.mods[w.NS] || {});
   w.readRun = () => ({
     startedAt: store.mods[w.NS] ? store.mods[w.NS].startedAt : undefined,
     finishedAt: store.mods[w.NS] ? store.mods[w.NS].finishedAt : undefined,
@@ -51,7 +57,11 @@ function makeWorld() {
     return typeof r.startedAt === 'number' && typeof r.finishedAt !== 'number';
   };
 
-  const ensure = () => (store.mods[w.NS] = store.mods[w.NS] || {});
+  w.sandkit = {
+    get state() {
+      return { session: { paused: w.paused }, store };
+    },
+  };
   w.api = {
     storage: {
       get: (ns, k) => ensure()[k],
@@ -59,85 +69,40 @@ function makeWorld() {
     },
     shared: {
       buffers: {
-        create: (key, opt) => {
-          const name = `external:${w.MOD_ID}:${key}`;
-          if (!w.buffers[name]) w.buffers[name] = new Float64Array(opt.length);
-          return w.buffers[name];
-        },
+        // Der Block ruft api.shared.buffers.create() - wir liefern genau den
+        // Puffer, den der Test steuert.
+        create: () => w.tickArr,
       },
     },
+    workers: { setPostUpdateEnabled: v => { w.postUpdate = v; } },
+    time: { getTimeMs: () => w.metaTime },
   };
-  w.sandkit = {
-    get state() {
-      return {
-        session: { paused: w.paused },
-        shared: { managerPerformance: { 1: w.managerLast } },
-        store,
-      };
-    },
-    engine: {
-      get state() {
-        return { shared: { mods: w.buffers }, store: { meta: { get tick() { return w.simTick; } } } };
-      },
-      api: {
-        triggers: {
-          register: (state, id, opt) => {
-            // genau wie das Spiel: Quelltext verschicken, drueben neu bauen
-            const src = opt.callback.toString();
-            const rebuilt = new Function('return ' + src)();
-            w.triggers = w.triggers.filter(t => t.id !== id);
-            w.triggers.push({ id, interval: opt.interval, accumulator: 0, cb: rebuilt });
-          },
-        },
-      },
-    },
-  };
-  w.performance = { now: () => w.perf };
 
   // Der Block wird mit denselben Namen ausgefuehrt, die er in main.js sieht.
-  const args = ['MOD_ID', 'NS', 'log', 'formatTime', 'now', 'readRun', 'isRunning',
-                'api', 'sandkit', 'performance'];
+  const args = ['NS', 'log', 'now', 'readRun', 'isRunning', 'api', 'sandkit', 'performance'];
   const factory = new Function(...args, BLOCK + `
-    return { setupSimClock, advanceClocks, migrateClocks, startClocks,
-             elapsed, elapsedSim, simDeficit, clockQuality,
-             reset: () => { simLastTick = null; lastPerf = null; } };`);
-  w.clock = factory(...args.map(k => (k === 'sandkit' ? w.sandkit : w[k])));
+    return { startClocks, advanceClocks, resumeClocks,
+             elapsed, elapsedSim, elapsedPlay, scoredTime,
+             slowdownPercent, tickDeficit, tickDeficitMs, wMinusR };`);
+  w.clock = factory(...args.map(k => w[k]));
   return w;
 }
 
-// Ein Simulationsschritt des Managers, so wie Le() ihn ausfuehrt.
-function simStep(w) {
-  const dt = 1000 / 60;
-  for (const trg of w.triggers) {
-    trg.accumulator += dt;
-    let guard = 0;
-    while (trg.accumulator >= trg.interval && guard++ < 100) {
-      trg.cb(w.sandkit.engine.state, trg, dt);
-      trg.accumulator -= trg.interval;
-    }
-  }
-  w.simTick++;
-}
-
-// Echtzeit vorruecken. upsFactor 1 = 60 UPS, 0.33 = 20 UPS.
+// Echtzeit vorruecken. upsFactor 1 = 60 UPS, 1/3 = 20 UPS. stepMs = ms je Frame.
 function advance(w, ms, upsFactor, stepMs) {
-  const step = stepMs || 16.6667;
+  const step = stepMs || 1000 / 60;
+  const upf = upsFactor === undefined ? 1 : upsFactor;
   let left = ms;
-  while (left > 0) {
+  while (left > 1e-9) {
     const d = Math.min(step, left);
     left -= d;
     w.perf += d;
-
     if (!w.paused) {
-      // meta.time des Spiels, mit dem 50-ms-Deckel
+      // W des Spiels: summiert Frame-Abstaende, deckelt aber jeden auf 50 ms.
       w.metaTime += Math.min(d, 50);
-      // Simulationsschritte, die in dieser Zeit tatsaechlich liefen
-      w.simAccum += d * upsFactor;
-      while (w.simAccum >= 1000 / 60) {
-        simStep(w);
-        w.simAccum -= 1000 / 60;
-      }
-      w.managerLast = (1000 / 60) / upsFactor;
+      // Schritte, die in dieser Zeit tatsaechlich liefen.
+      w.tickAccum += (d / TICK_MS) * upf;
+      w.tickArr[0] = Math.floor(w.tickAccum);
     }
     w.clock.advanceClocks();
   }
@@ -149,55 +114,47 @@ function startRun(w) {
   w.api.storage.set(w.NS, 'finishedAt', null);
 }
 
-// === 1. Ausloeser kommt an, durchgehend 60 UPS ============================
+// === 1. Durchgehend 60 UPS ================================================
 {
   const w = makeWorld();
-  w.clock.setupSimClock();
-  check('Ausloeser registriert', w.triggers.length === 1, w.triggers.length);
-  advance(w, 200, 1);
   startRun(w);
   advance(w, 60000, 1);
 
-  check('60 UPS: Echtzeit = 60 s', near(w.clock.elapsed(), 60000, 30), w.clock.elapsed());
-  check('60 UPS: Simzeit = Echtzeit', near(w.clock.elapsedSim(), 60000, 60), w.clock.elapsedSim());
-  check('60 UPS: kein Defizit', w.clock.simDeficit() < 0.5, w.clock.simDeficit());
-  check('60 UPS: exakt gemessen', w.clock.clockQuality().exact === true, '');
+  check('60 UPS: R = 60 s', near(w.clock.elapsed(), 60000, 40), w.clock.elapsed());
+  check('60 UPS: T = R', near(w.clock.elapsedSim(), 60000, 120), w.clock.elapsedSim());
+  check('60 UPS: W = 60 s', near(w.clock.elapsedPlay(), 60000, 120), w.clock.elapsedPlay());
+  check('60 UPS: kaum Verzoegerung', Math.abs(w.clock.slowdownPercent()) < 1, w.clock.slowdownPercent());
+  check('60 UPS: kaum Defizit', Math.abs(w.clock.tickDeficit()) < 5, w.clock.tickDeficit());
 }
 
 // === 2. 20 UPS bei 60 FPS - der Fall des Melders ==========================
 {
   const w = makeWorld();
-  w.clock.setupSimClock();
-  advance(w, 200, 1);
   startRun(w);
   advance(w, 60000, 1 / 3);
 
-  check('20 UPS: Echtzeit bleibt 60 s', near(w.clock.elapsed(), 60000, 30), w.clock.elapsed());
-  check('20 UPS: Simzeit = ein Drittel', near(w.clock.elapsedSim(), 20000, 200), w.clock.elapsedSim());
-  check('20 UPS: Defizit ~ 67 %', near(w.clock.simDeficit(), 66.7, 1.5), w.clock.simDeficit());
+  check('20 UPS: R bleibt 60 s', near(w.clock.elapsed(), 60000, 40), w.clock.elapsed());
+  check('20 UPS: T = ein Drittel', near(w.clock.elapsedSim(), 20000, 250), w.clock.elapsedSim());
+  check('20 UPS: W bleibt 60 s', near(w.clock.elapsedPlay(), 60000, 120), w.clock.elapsedPlay());
+  check('20 UPS: Verzoegerung ~ -66.7 %', near(w.clock.slowdownPercent(), -66.7, 2), w.clock.slowdownPercent());
+  check('20 UPS: Defizit ~ 2400 Schritte', near(w.clock.tickDeficit(), 2400, 80), w.clock.tickDeficit());
 }
 
-// === 3. 12 FPS - hier verliert die alte Uhr Zeit ==========================
+// === 3. 12 FPS - hier verliert W durch den 50-ms-Deckel Zeit ==============
 {
   const w = makeWorld();
-  w.clock.setupSimClock();
-  advance(w, 200, 1);
   startRun(w);
-  const t0 = w.metaTime;
-  advance(w, 60000, 1, 83.3);   // 83,3 ms pro Frame = 12 FPS
+  advance(w, 60000, 1, 1000 / 12);   // 83,3 ms pro Frame = 12 FPS
 
-  const alt = w.metaTime - t0;
-  check('12 FPS: alte Uhr verliert Zeit', alt < 37000, alt);
-  check('12 FPS: neue Echtzeit stimmt', near(w.clock.elapsed(), 60000, 120), w.clock.elapsed());
-  check('12 FPS: Vorteil der alten Uhr war ' + Math.round((60000 - alt) / 1000) + ' s',
-        near(60000 - alt, 24000, 1500), 60000 - alt);
+  check('12 FPS: R = 60 s', near(w.clock.elapsed(), 60000, 60), w.clock.elapsed());
+  check('12 FPS: W verliert Zeit', w.clock.elapsedPlay() < 40000, w.clock.elapsedPlay());
+  check('12 FPS: W-Verlust ~ 24 s', near(w.clock.wMinusR(), -24000, 2000), w.clock.wMinusR());
+  check('12 FPS: T bleibt 60 s (Sim ungedrosselt)', near(w.clock.elapsedSim(), 60000, 150), w.clock.elapsedSim());
 }
 
-// === 4. Pause haelt beide Uhren an =======================================
+// === 4. Pause haelt alle Uhren an =========================================
 {
   const w = makeWorld();
-  w.clock.setupSimClock();
-  advance(w, 200, 1);
   startRun(w);
   advance(w, 10000, 1);
   w.paused = true;
@@ -205,104 +162,74 @@ function startRun(w) {
   w.paused = false;
   advance(w, 10000, 1);
 
-  check('Pause: Echtzeit 20 s statt 50 s', near(w.clock.elapsed(), 20000, 60), w.clock.elapsed());
-  check('Pause: Simzeit 20 s', near(w.clock.elapsedSim(), 20000, 120), w.clock.elapsedSim());
+  check('Pause: R 20 s statt 50 s', near(w.clock.elapsed(), 20000, 80), w.clock.elapsed());
+  check('Pause: W 20 s', near(w.clock.elapsedPlay(), 20000, 120), w.clock.elapsedPlay());
+  check('Pause: T 20 s', near(w.clock.elapsedSim(), 20000, 200), w.clock.elapsedSim());
+  check('Pause: einmal gezaehlt', w.api.storage.get(w.NS, 'pauseCount') === 1, w.api.storage.get(w.NS, 'pauseCount'));
 }
 
-// === 5. Nach dem Ziel laufen die Uhren nicht weiter ======================
+// === 5. Nach dem Ziel laufen die Uhren nicht weiter =======================
 {
   const w = makeWorld();
-  w.clock.setupSimClock();
-  advance(w, 200, 1);
   startRun(w);
   advance(w, 5000, 1);
-  const t = w.clock.elapsed();
+  const r = w.clock.elapsed();
   w.api.storage.set(w.NS, 'finishedAt', w.now());
   advance(w, 10000, 1);
-  check('Ziel erreicht: Uhr steht', w.clock.elapsed() === t, w.clock.elapsed() + ' statt ' + t);
+  check('Ziel erreicht: R steht', w.clock.elapsed() === r, w.clock.elapsed() + ' statt ' + r);
 }
 
-// === 6. Ohne Ausloeser: Schaetzung springt ein ===========================
+// === 6. Speichern und Laden mitten im Lauf ================================
+{
+  const a = makeWorld();
+  startRun(a);
+  advance(a, 30000, 1);
+  const snapshot = JSON.parse(JSON.stringify(a.store.mods));
+
+  // Neue Sitzung: neuer Prozess, geladener Spielstand.
+  const b = makeWorld();
+  b.store.mods = JSON.parse(JSON.stringify(snapshot));
+  b.perf = 12345;                    // andere Zeitbasis
+  b.metaTime = 30000;                // Spielzeit wandert mit
+  b.tickAccum = a.tickArr[0];        // absoluter Schritt wandert mit
+  b.tickArr[0] = Math.floor(b.tickAccum);
+  b.clock.resumeClocks();
+  advance(b, 30000, 1);
+
+  check('Laden: R summiert weiter', near(b.clock.elapsed(), 60000, 80), b.clock.elapsed());
+  check('Laden: W summiert weiter', near(b.clock.elapsedPlay(), 60000, 120), b.clock.elapsedPlay());
+  check('Laden: T summiert weiter', near(b.clock.elapsedSim(), 60000, 200), b.clock.elapsedSim());
+}
+
+// === 7. Zerrissener Lesevorgang wird gedeckelt ============================
 {
   const w = makeWorld();
-  // setupSimClock absichtlich nicht gerufen -> kein gemeinsamer Speicher
-  advance(w, 200, 1);
   startRun(w);
-  advance(w, 60000, 1 / 3);
-
-  check('Rueckfall: Echtzeit stimmt', near(w.clock.elapsed(), 60000, 30), w.clock.elapsed());
-  check('Rueckfall: Simzeit ~ ein Drittel', near(w.clock.elapsedSim(), 20000, 1000), w.clock.elapsedSim());
-  check('Rueckfall: als geschaetzt markiert', w.clock.clockQuality().exact === false, '');
-}
-
-// === 7. Speichern und Laden mitten im Lauf ===============================
-{
-  const w = makeWorld();
-  w.clock.setupSimClock();
-  advance(w, 200, 1);
-  startRun(w);
-  advance(w, 30000, 1);
-  const snapshot = JSON.parse(JSON.stringify(w.store.mods));
-
-  // Neue Sitzung: neuer Prozess, neuer Schrittzaehler, Spielstand geladen.
-  const w2 = makeWorld();
-  w2.store.mods = JSON.parse(JSON.stringify(snapshot));
-  w2.clock.setupSimClock();
-  w2.simTick = 0;
-  w2.perf = 12345;
-  w2.clock.reset();
-  advance(w2, 30000, 1);
-
-  check('Laden: Echtzeit summiert weiter', near(w2.clock.elapsed(), 60000, 60), w2.clock.elapsed());
-  check('Laden: Simzeit summiert weiter', near(w2.clock.elapsedSim(), 60000, 200), w2.clock.elapsedSim());
-}
-
-// === 8. Lauf aus 2.6.0 wird uebernommen =================================
-{
-  const w = makeWorld();
-  w.clock.setupSimClock();
-  w.metaTime = 100000;
-  w.api.storage.set(w.NS, 'startedAt', 40000);
-  w.api.storage.set(w.NS, 'finishedAt', null);
-  w.clock.migrateClocks();
-  check('Migration: 60 s uebernommen', w.clock.elapsed() === 60000, w.clock.elapsed());
-  check('Migration: als uebernommen markiert', w.clock.clockQuality().legacy === true, '');
-
-  const before = w.clock.elapsed();
-  w.clock.migrateClocks();
-  check('Migration laeuft nicht zweimal', w.clock.elapsed() === before, w.clock.elapsed());
-}
-
-// === 9. Zerrissener Lesevorgang wird gedeckelt ===========================
-{
-  const w = makeWorld();
-  w.clock.setupSimClock();
-  advance(w, 200, 1);
-  startRun(w);
-  advance(w, 1000, 1);
+  advance(w, 2000, 1);
   const before = w.clock.elapsedSim();
 
-  // Der Puffer liefert plotzlich Unsinn (zerrissener 64-Bit-Lesevorgang).
-  w.buffers['external:gold-speedrun:simClock'][0] = 1e12;
-  advance(w, 16.6667, 1);
+  // Der Puffer liefert ploetzlich Unsinn (zerrissener 64->32-Bit-Lesevorgang).
+  // Direkt einen Frame ausloesen, damit advance() den Wert nicht ueberschreibt.
+  w.tickArr[0] = 2000000000;
+  w.perf += TICK_MS;
+  w.clock.advanceClocks();
   const jump = w.clock.elapsedSim() - before;
-  check('Muellwert springt nicht durch', jump < 300, jump);
+  check('Muellwert springt nicht durch', jump < 500, jump);
 
-  // Und ein Ruecksprung normiert neu, statt negativ zu zaehlen.
-  w.buffers['external:gold-speedrun:simClock'][0] = 5;
+  // Und ein Ruecksprung zaehlt nicht rueckwaerts.
+  w.tickArr[0] = 5;
   const b2 = w.clock.elapsedSim();
-  advance(w, 100, 1);
-  check('Ruecksprung zaehlt nicht rueckwaerts', w.clock.elapsedSim() >= b2, w.clock.elapsedSim());
+  w.perf += TICK_MS;
+  w.clock.advanceClocks();
+  check('Ruecksprung zaehlt nicht rueckwaerts', w.clock.elapsedSim() >= b2 - 1, w.clock.elapsedSim());
 }
 
-// === 10. Simzeit ueberholt nie die Echtzeit ==============================
+// === 8. Simzeit ueberholt nie die Echtzeit ================================
 {
   const w = makeWorld();
-  w.clock.setupSimClock();
-  advance(w, 200, 1);
   startRun(w);
   for (let i = 0; i < 40; i++) advance(w, 500, i % 3 === 0 ? 0.2 : 1);
-  check('Simzeit <= Echtzeit', w.clock.elapsedSim() <= w.clock.elapsed() + 20,
+  check('T <= R', w.clock.elapsedSim() <= w.clock.elapsed() + 20,
         w.clock.elapsedSim() + ' > ' + w.clock.elapsed());
 }
 

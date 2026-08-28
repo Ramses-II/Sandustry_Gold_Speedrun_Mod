@@ -22,13 +22,15 @@ Zahl in den Einstellungen von Hand setzen.
 
 ## Zeitnahme
 
-Gemessen werden **zwei** Zeiten. Beide laufen nur, waehrend das Spiel laeuft,
-beide stehen im Spielstand, und beide werden immer festgehalten - die
-Einstellung *Welche Uhr im Bild steht* entscheidet nur ueber die Anzeige.
+Gemessen werden **drei** Zeiten. Alle laufen nur, waehrend das Spiel laeuft,
+stehen im Spielstand, und werden immer festgehalten - die Einstellung
+*Grosse Uhr* entscheidet nur ueber die Anzeige.
 
-**Echtzeit** ist die offizielle Wertung. Sie kommt aus `performance.now()` und
-ist die Zahl, die auch eine Stoppuhr neben dem Bildschirm zeigt - die einzige,
-die sich an einem Video nachpruefen laesst. Pausieren haelt sie an, ein Absturz
+**Spielzeit-Uhr (W)** ist die offizielle Community-Wertung. Sie ist die eigene
+Uhr des Spielstands (`store.meta.time` / playTime).
+
+**Echtzeit (R)** kommt aus `performance.now()` und ist die Zahl, die auch eine
+Stoppuhr neben dem Bildschirm zeigt. Pausieren haelt sie an, ein Absturz
 kostet keine Zeit; das Fenster in den Hintergrund zu schieben haelt sie nicht
 an.
 
@@ -41,8 +43,9 @@ gelaufen ist: bei 60 UPS ist sie mit der Echtzeit identisch, bei 20 UPS ein
 Drittel davon. Unter der Uhr steht ab 1 % das Defizit, also wieviel Prozent der
 Echtzeit die Welt stillstand.
 
-Bestzeiten werden fuer die beiden Zeiten getrennt gefuehrt. Die Anzeige gibt es
-in Sekunden, Hundertstel oder Millisekunden.
+Bestzeiten werden in der Spielzeit-Uhr (W) gespeichert. Alle drei Uhren bleiben
+in der Tabelle und im CSV. Die Anzeige gibt es in Sekunden, Hundertstel oder
+Millisekunden. Ein Lauf unter einer Minute wird nicht als Bestzeit abgelegt.
 
 > Bis 2.6.0 kam die Uhr aus `api.time.getTimeMs()`. Das ist trotz des Namens
 > keine In-Game-Zeit, sondern Echtzeit mit einem Deckel von 50 ms pro Frame -
@@ -112,10 +115,21 @@ rueckwirkend.
 
 ## Ergebnisfenster
 
-Am Ende erscheint die vollstaendige Tabelle: Endzeit, Vergleich mit der
-Bestzeit, und pro Zeile Ausloeser, Abschnittszeit, Gesamtzeit und Goldstand.
-`F10` blendet es wieder ein - auch fuer einen Lauf, der aus einem geladenen
-Spielstand stammt.
+Am Ende erscheint die vollstaendige Tabelle: Endzeit (W), Vergleich mit der
+Bestzeit, und pro Zeile Ausloeser, Abschnittsdauer, Split-Zeit, Delta zur PB
+und Goldstand. `F10` blendet das Dashboard wieder ein - auch fuer einen Lauf,
+der aus einem geladenen Spielstand stammt. Unter *Kategorien* lassen sich
+eigene Kategorien anlegen, Bestzeiten loeschen und Routen (Vergleichszeiten
+und Reihenfolge) bearbeiten. Die Split-Ausloeser (F3) gelten pro Kategorie.
+
+## Abzeichen
+
+Zwei getrennte Kennzeichen:
+
+* **Keine weiteren Mods** - immer sichtbar. Gruen, wenn ausser diesem Mod und
+  der Mod-Verwaltung nichts laeuft; sonst die Anzahl der anderen Mods.
+* **Offizielles Regelwerk** - unveraendert, hinter der Einstellung
+  *Regelwerk-Abzeichen zeigen*.
 
 ## Intro und Tutorial ueberspringen
 
