@@ -1,5 +1,44 @@
 # Changelog
 
+## 3.1.0 — streamer mode, interval-aware split deltas
+
+Viewer-facing HUD and a LiveSplit-style comparison that no longer locks onto
+a skipped optional split (artifact, research, upgrade).
+
+### Added
+
+* **Streamer mode** (mod settings, off by default). Enlarges the
+  stream-facing pieces — official play-clock (W), LiveSplit-style
+  ahead/behind, splits, and slowdown % — and bundles everything else
+  (seed, pauses, R/T, deficit, badges, sparkline, PB, Dashboard) into a
+  compact secondary block. Horizontal stays a short wide bar for
+  top-centre; vertical stacks for a side corner.
+* **Separate whole-pixel font sizes.** Streamer text size
+  (`S / M / L / XL / XXL / XXXL`) and secondary text size (`S / M / L`)
+  are discrete integer-pixel steps. No in-between sizes, no CSS scale, so
+  a 2K capture stays sharp.
+* **Total ahead/behind on the streamer HUD**, LiveSplit delta-with-fallback
+  against the comparison run (W): frozen last-completed delta while still
+  ahead of the next mandatory mark; switches to the live growing value
+  once that PB time is passed. Green ≤ 0, red > 0. After the run it is
+  final time minus PB.
+
+### Changed
+
+* **Mandatory vs optional splits.** Factory ranks, gold marks, and the goal
+  are strictly ordered and carry the primary live delta. Research,
+  artifacts, and upgrades stay visible in the current mandatory interval
+  even if their order changes, and drop only when the next mandatory mark
+  fires. The HUD live-delta target is the next mandatory split with a
+  comparison time, not the first leftover optional.
+
+### Fixed
+
+* Skipping an artifact (or any other optional split) no longer pins the
+  running delta to that one row for the rest of the interval. The next
+  gold or rank split becomes the comparison; the skipped optional still
+  shows its own (going-red) delta until that mandatory mark is reached.
+
 ## 3.0.0 — play-clock scoring, categories, unified Runs
 
 Community release of everything built after 2.8.1. Scoring, comparison, and

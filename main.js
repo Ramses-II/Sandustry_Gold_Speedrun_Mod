@@ -225,6 +225,22 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|cfg|hudLayout|desc': 'Horizontal puts splits, clocks and the UPS graph side by side to save height. Vertical is the old single-column stack.',
   'mods|goldSpeedrun|cfg|hudLayout|horizontal': 'Horizontal (compact)',
   'mods|goldSpeedrun|cfg|hudLayout|vertical': 'Vertical',
+  'mods|goldSpeedrun|cfg|streamerMode': 'Streamer mode',
+  'mods|goldSpeedrun|cfg|streamerMode|desc': 'Enlarges splits, the official play-clock and the LiveSplit-style ahead/behind indicator for viewers. Everything else stays small and bundled. Works with both timer layouts.',
+  'mods|goldSpeedrun|cfg|streamerFontScale': 'Streamer text size',
+  'mods|goldSpeedrun|cfg|streamerFontScale|desc': 'Size of the stream-facing parts: splits, official time, ahead/behind and slowdown. Whole-pixel steps only, so the overlay stays sharp on stream.',
+  'mods|goldSpeedrun|cfg|streamerFontScale|S': 'S',
+  'mods|goldSpeedrun|cfg|streamerFontScale|M': 'M',
+  'mods|goldSpeedrun|cfg|streamerFontScale|L': 'L',
+  'mods|goldSpeedrun|cfg|streamerFontScale|XL': 'XL',
+  'mods|goldSpeedrun|cfg|streamerFontScale|XXL': 'XXL',
+  'mods|goldSpeedrun|cfg|streamerFontScale|XXXL': 'XXXL',
+  'mods|goldSpeedrun|cfg|secondaryFontScale': 'Secondary text size',
+  'mods|goldSpeedrun|cfg|secondaryFontScale|desc': 'Size of the remaining HUD stats (clocks, seed, deficit, badges). Separate from the stream-facing size.',
+  'mods|goldSpeedrun|cfg|secondaryFontScale|S': 'S',
+  'mods|goldSpeedrun|cfg|secondaryFontScale|M': 'M',
+  'mods|goldSpeedrun|cfg|secondaryFontScale|L': 'L',
+  'mods|goldSpeedrun|hud|totalAhead': 'vs comparison',
   'mods|goldSpeedrun|cfg|corner': 'Timer position',
   'mods|goldSpeedrun|cfg|corner|topCenter': 'Top centre',
   'mods|goldSpeedrun|cfg|corner|topLeft': 'Top left',
@@ -491,6 +507,22 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|cfg|hudLayout|desc': 'Waagerecht stellt Splits, Uhren und die UPS-Grafik nebeneinander, damit der Kasten weniger hoch wird. Senkrecht ist der alte Stapel.',
   'mods|goldSpeedrun|cfg|hudLayout|horizontal': 'Waagerecht (kompakt)',
   'mods|goldSpeedrun|cfg|hudLayout|vertical': 'Senkrecht',
+  'mods|goldSpeedrun|cfg|streamerMode': 'Streamer-Modus',
+  'mods|goldSpeedrun|cfg|streamerMode|desc': 'Vergrößert Splits, die offizielle Spielzeit-Uhr und den LiveSplit-Vorsprung für Zuschauer. Alles andere bleibt klein und gebündelt. Funktioniert mit beiden Timer-Anordnungen.',
+  'mods|goldSpeedrun|cfg|streamerFontScale': 'Streamer-Schriftgröße',
+  'mods|goldSpeedrun|cfg|streamerFontScale|desc': 'Größe der stream-relevanten Teile: Splits, offizielle Zeit, Vorsprung/Rückstand und Verzögerung. Nur ganze Pixelstufen, damit die Einblendung scharf bleibt.',
+  'mods|goldSpeedrun|cfg|streamerFontScale|S': 'S',
+  'mods|goldSpeedrun|cfg|streamerFontScale|M': 'M',
+  'mods|goldSpeedrun|cfg|streamerFontScale|L': 'L',
+  'mods|goldSpeedrun|cfg|streamerFontScale|XL': 'XL',
+  'mods|goldSpeedrun|cfg|streamerFontScale|XXL': 'XXL',
+  'mods|goldSpeedrun|cfg|streamerFontScale|XXXL': 'XXXL',
+  'mods|goldSpeedrun|cfg|secondaryFontScale': 'Schriftgröße der übrigen Werte',
+  'mods|goldSpeedrun|cfg|secondaryFontScale|desc': 'Größe der übrigen HUD-Werte (Uhren, Seed, Schritt-Rückstand, Abzeichen). Getrennt von der Stream-Schriftgröße.',
+  'mods|goldSpeedrun|cfg|secondaryFontScale|S': 'S',
+  'mods|goldSpeedrun|cfg|secondaryFontScale|M': 'M',
+  'mods|goldSpeedrun|cfg|secondaryFontScale|L': 'L',
+  'mods|goldSpeedrun|hud|totalAhead': 'gegen Vergleich',
   'mods|goldSpeedrun|cfg|corner': 'Position des Timers',
   'mods|goldSpeedrun|cfg|corner|topCenter': 'Oben mittig',
   'mods|goldSpeedrun|cfg|corner|topLeft': 'Oben links',
@@ -1293,6 +1325,31 @@ const findPbSplit = (split, pbSplits) => {
   return pbSplits.find(p => p && p.kind === split.kind && normLabel(p.label) === want) || null;
 };
 
+// DE: Pflicht-Splits (Rang, Gold-Marke, Ziel) sind streng geordnet und tragen
+// DE: das LiveSplit-Gesamt-Delta. Der Rest (Forschung, Artefakt, Aufwertung)
+// DE: bleibt zwischen zwei Pflicht-Marken sichtbar, auch wenn die Reihenfolge
+// DE: wechselt, und faellt erst raus, wenn die naechste Pflicht-Marke faellt.
+// EN: Mandatory splits (rank, gold mark, goal) are strictly ordered and carry
+// EN: the LiveSplit-style total delta. The rest (research, artifact, upgrade)
+// EN: stay visible between two mandatory marks even if their order changes,
+// EN: and drop only when the next mandatory mark fires.
+const MANDATORY_KINDS = new Set(['rank', 'gold', 'goal']);
+
+const isMandatory = split => !!(split && MANDATORY_KINDS.has(split.kind));
+
+const lastReachedMandatoryPbIndex = (done, pbSplits) => {
+  if (!Array.isArray(done) || !Array.isArray(pbSplits) || pbSplits.length === 0) return -1;
+  let last = -1;
+  for (const s of done) {
+    if (!isMandatory(s)) continue;
+    const pb = findPbSplit(s, pbSplits);
+    if (!pb) continue;
+    const idx = pbSplits.indexOf(pb);
+    if (idx > last) last = idx;
+  }
+  return last;
+};
+
 const newRouteId = () => 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36);
 
 const routesKeyFor = key => (key || bestKey()) + '.routes.v1';
@@ -1439,6 +1496,23 @@ const clockMode = () => {
 };
 
 const hudLayout = () => api.settings.get('hudLayout') === 'vertical' ? 'vertical' : 'horizontal';
+
+const streamerModeOn = () => api.settings.get('streamerMode') === true;
+
+const STREAMER_SCALES = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+const SECONDARY_SCALES = ['S', 'M', 'L'];
+
+const streamerScaleIndex = () => {
+  const v = String(api.settings.get('streamerFontScale') || 'M').toUpperCase();
+  const i = STREAMER_SCALES.indexOf(v);
+  return i >= 0 ? i : 1;
+};
+
+const secondaryScaleIndex = () => {
+  const v = String(api.settings.get('secondaryFontScale') || 'S').toUpperCase();
+  const i = SECONDARY_SCALES.indexOf(v);
+  return i >= 0 ? i : 0;
+};
 
 const timeFormat = () => {
   const v = api.settings.get('timeFormat');
@@ -2217,13 +2291,19 @@ const currentGoldMarks = cat => {
 };
 
 // DE: Geplante Zwischenzeiten, die noch nicht gefallen sind - wie in LiveSplit
-// DE: die Zeilen unter der aktuellen. Gold-Marken, Raenge und Artefakte haben
-// DE: eine feste Reihenfolge. Forschungen und Aufwertungen nur, wenn eine
-// DE: Bestzeit sie schon einmal in einer Route festgehalten hat.
+// DE: die Zeilen unter der aktuellen. Gold-Marken, Raenge und das Ziel sind
+// DE: Pflicht und streng geordnet. Optionale Splits (Forschung, Artefakt,
+// DE: Aufwertung) bleiben im aktuellen Pflicht-Intervall sichtbar, auch wenn
+// DE: ihre Reihenfolge wechselt, und fallen erst raus, sobald die naechste
+// DE: Pflicht-Marke erreicht ist. Forschungen und Aufwertungen erscheinen
+// DE: nur, wenn eine Vergleichsroute sie schon einmal festgehalten hat.
 // EN: Planned splits that have not fired yet - like the rows below the
-// EN: current one in LiveSplit. Gold marks, ranks and artifacts have a fixed
-// EN: order. Research and upgrades only appear if a personal best already
-// EN: recorded them as a route.
+// EN: current one in LiveSplit. Gold marks, ranks and the goal are mandatory
+// EN: and strictly ordered. Optional splits (research, artifact, upgrade)
+// EN: stay visible in the current mandatory interval even if their order
+// EN: changes, and drop only once the next mandatory mark is reached.
+// EN: Research and upgrades only appear if a comparison route already
+// EN: recorded them.
 const upcomingSplits = (cat, done) => {
   const seen = new Set();
   for (const s of done) {
@@ -2239,8 +2319,21 @@ const upcomingSplits = (cat, done) => {
     out.push({ kind, label, id: id || `${kind}:${label}`, upcoming: true, t: NaN });
   };
 
-  for (const p of readComparisonSplits()) {
-    if (p && p.kind && p.label) push(p.kind, p.label, p.id);
+  const route = readComparisonSplits();
+  const lastMand = lastReachedMandatoryPbIndex(done, route);
+  for (let i = 0; i < route.length; i++) {
+    const p = route[i];
+    if (!p || !p.kind || !p.label) continue;
+    if (!isMandatory(p) && i < lastMand) {
+      // DE: Optionale Reste eines abgeschlossenen Intervalls nicht erneut
+      // DE: einspielen (z. B. Artefakt-Schleife weiter unten).
+      // EN: Do not re-inject leftover optionals from a completed interval
+      // EN: (e.g. the artifact loop further down).
+      if (p.id) seen.add(p.id);
+      seen.add(`${p.kind}\0${p.label}`);
+      continue;
+    }
+    push(p.kind, p.label, p.id);
   }
 
   const marks = currentGoldMarks(cat);
@@ -2289,6 +2382,53 @@ const hudSplitWindow = (done, upcoming) => {
   const hiddenPast = done.length - past.length;
   const room = Math.max(1, limit - past.length);
   return { rows: past.concat(upcoming.slice(0, room)), hiddenPast };
+};
+
+// DE: LiveSplit-Gesamt-Delta (W): eingefrorenes Delta des letzten erreichten
+// DE: Vergleichs-Splits, solange die Uhr noch vor der naechsten Pflicht-Marke
+// DE: liegt; wechselt auf den live wachsenden Wert, sobald diese PB-Zeit
+// DE: ueberschritten ist (Delta-with-fallback). Am Ende: Endzeit minus PB.
+// EN: LiveSplit-style total delta (W): frozen last-completed comparison
+// EN: delta while still ahead of the next mandatory mark; switches to the
+// EN: live growing value once that PB time is passed (delta-with-fallback).
+// EN: When finished: final time minus PB.
+const totalAheadDelta = (done, upcoming, pbSplits) => {
+  const run = readRun();
+  if (typeof run.startedAt !== 'number') return null;
+  if (typeof run.finishedAt === 'number') {
+    const best = readBest();
+    if (best === null || best <= 0) return null;
+    return scoredTime() - best;
+  }
+  const pbs = Array.isArray(pbSplits) ? pbSplits : [];
+  let lastDelta = null;
+  for (let i = done.length - 1; i >= 0; i--) {
+    const pb = findPbSplit(done[i], pbs);
+    const routeMs = pb ? splitMs(pb) : NaN;
+    const liveMs = splitMs(done[i]);
+    if (Number.isFinite(routeMs) && Number.isFinite(liveMs)) {
+      lastDelta = liveMs - routeMs;
+      break;
+    }
+  }
+  let anchorMs = NaN;
+  for (const s of upcoming) {
+    if (!isMandatory(s)) continue;
+    const pb = findPbSplit(s, pbs);
+    const routeMs = pb ? splitMs(pb) : NaN;
+    if (Number.isFinite(routeMs)) {
+      anchorMs = routeMs;
+      break;
+    }
+  }
+  const elapsed = viewedElapsed();
+  const liveVsAnchor = Number.isFinite(anchorMs) ? elapsed - anchorMs : null;
+  if (lastDelta !== null && (liveVsAnchor === null || elapsed <= anchorMs)) return lastDelta;
+  if (lastDelta === null) {
+    if (liveVsAnchor !== null && liveVsAnchor > 0) return liveVsAnchor;
+    return null;
+  }
+  return liveVsAnchor;
 };
 
 // --- DE: Start durch die erste Aktion / EN: Start on the first action -------
@@ -3043,6 +3183,37 @@ const KIND_COLOR = {
   goal: '#f0c040',
 };
 
+// DE: Ganze Pixel pro Groessenstufe - keine Zwischenwerte, kein CSS-scale,
+// DE: damit der Stream-Overlay nicht verwischt.
+// EN: Whole pixels per size step - no in-between values, no CSS scale,
+// EN: so the stream overlay stays sharp.
+const STREAMER_PX = {
+  bigTime:  [28, 36, 46, 58, 72, 88],
+  split:    [14, 18, 22, 27, 33, 40],
+  delta:    [14, 18, 22, 27, 33, 40],
+  slowdown: [14, 17, 21, 25, 30, 36],
+};
+
+const SECONDARY_PX = {
+  meta:    [11, 13, 15],
+  deficit: [11, 13, 15],
+  badge:   [10, 12, 14],
+  footer:  [11, 13, 15],
+};
+
+const spx = role => {
+  const row = STREAMER_PX[role];
+  return row ? row[streamerScaleIndex()] : 18;
+};
+
+const npx = role => {
+  const row = SECONDARY_PX[role];
+  return row ? row[secondaryScaleIndex()] : 11;
+};
+
+const sfont = (role, weight, lh) => `${weight || 500} ${spx(role)}px/${lh || 1.2} system-ui, sans-serif`;
+const nfont = (role, weight, lh) => `${weight || 500} ${npx(role)}px/${lh || 1.25} system-ui, sans-serif`;
+
 // --- DE: HUD / EN: HUD -------------------------------------------------------
 // DE: Oben rechts sitzt die Missionsziel-/Fabrikrang-Leiste des Spiels, oben links
 // DE: der Goldzaehler. Standard ist deshalb oben mittig - dort ist Platz.
@@ -3079,7 +3250,7 @@ const useTick = fmt => {
 // DE: gegen die Vergleichsroute (W). Im HUD zaehlt das aktuelle Split-Delta live.
 // EN: One row of the split table. LiveSplit: segment duration and split delta
 // EN: versus the comparison route (W). In the HUD the current split delta runs live.
-function SplitRow({ split, previous, fmt, wide, pb, bests, current }) {
+function SplitRow({ split, previous, fmt, wide, pb, bests, current, liveDelta, scalePx }) {
   const upcoming = split.upcoming === true;
   const liveMs = splitMs(split);
   const live = Number.isFinite(liveMs);
@@ -3088,9 +3259,10 @@ function SplitRow({ split, previous, fmt, wide, pb, bests, current }) {
   const segment = live ? liveMs - prevOk : 0;
   const routeMs = pb ? splitMs(pb) : NaN;
   const routeOk = Number.isFinite(routeMs);
+  const px = Number.isFinite(scalePx) ? Math.round(scalePx) : 0;
 
   let delta = null;
-  if (current && routeOk && isRunning()) {
+  if (liveDelta && routeOk && isRunning()) {
     delta = viewedElapsed() - routeMs;
   } else if (live && routeOk) {
     delta = liveMs - routeMs;
@@ -3107,25 +3279,27 @@ function SplitRow({ split, previous, fmt, wide, pb, bests, current }) {
     ? (delta >= 0 ? '+' : '-') + formatShort(Math.abs(delta), fmt)
     : '';
   const deltaColor = delta === null ? COLORS.dim : delta <= 0 ? COLORS.green : COLORS.red;
+  const timeMin = wide ? undefined : (px ? (px * 7) + 'px' : '92px');
+  const deltaMin = wide ? '72px' : (px ? (px * 5) + 'px' : '64px');
 
   return h('div', {
     style: {
       display: wide ? 'grid' : 'flex',
       gridTemplateColumns: wide ? '1fr 110px 110px 110px 92px' : undefined,
-      gap: wide ? '12px' : '8px',
+      gap: wide ? '12px' : (px ? Math.max(8, Math.round(px * 0.4)) + 'px' : '8px'),
       alignItems: 'baseline',
-      padding: wide ? '8px 6px' : '1px 0',
+      padding: wide ? '8px 6px' : (px ? '2px 0' : '1px 0'),
       borderBottom: wide ? '1px solid rgba(255,255,255,0.04)' : 'none',
       fontVariantNumeric: 'tabular-nums',
-      fontSize: wide ? '15px' : undefined,
-      opacity: upcoming && !current ? 0.55 : 1,
+      fontSize: px ? px + 'px' : (wide ? '15px' : undefined),
+      opacity: upcoming && !liveDelta && !current ? 0.55 : 1,
     },
   }, [
     cell('label', split.label, {
       flex: wide ? undefined : 1,
       minWidth: 0,
       color: upcoming ? COLORS.dim : (KIND_COLOR[split.kind] || COLORS.text),
-      fontWeight: split.kind === 'goal' && !upcoming ? 800 : (wide ? 600 : 500),
+      fontWeight: current ? 700 : (split.kind === 'goal' && !upcoming ? 800 : (wide ? 600 : 500)),
       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
     }),
     wide
@@ -3136,9 +3310,9 @@ function SplitRow({ split, previous, fmt, wide, pb, bests, current }) {
     cell('time', live
       ? formatTime(liveMs, fmt)
       : (routeOk ? formatTime(routeMs, fmt) : '—'), {
-      minWidth: wide ? undefined : '92px', textAlign: 'right',
+      minWidth: timeMin, textAlign: 'right',
       color: upcoming ? COLORS.dim : '#ffffff',
-      fontWeight: wide ? 600 : undefined,
+      fontWeight: wide || current ? 600 : undefined,
     }),
     wide
       ? cell('delta', deltaText || '—', {
@@ -3152,27 +3326,44 @@ function SplitRow({ split, previous, fmt, wide, pb, bests, current }) {
         })
       : cell('delta', deltaText, {
           color: goldSeg ? COLORS.gold : deltaColor,
-          minWidth: '64px', textAlign: 'right',
+          minWidth: deltaMin, textAlign: 'right',
           fontWeight: current ? 700 : undefined,
         }),
   ]);
 }
 
-function SplitTable({ splits, fmt, wide, pbSplits }) {
+function SplitTable({ splits, fmt, wide, pbSplits, scalePx }) {
   const pbs = Array.isArray(pbSplits) && pbSplits.length > 0 ? pbSplits : readComparisonSplits();
   const bests = readGlobalBests();
-  const currentIdx = !wide ? splits.findIndex(s => s && s.upcoming === true && findPbSplit(s, pbs) && Number.isFinite(splitMs(findPbSplit(s, pbs)))) : -1;
-  return h('div', { style: { display: 'flex', flexDirection: 'column' } },
-    splits.map((s, i) => h(SplitRow, {
-      key: i,
-      split: { ...s, label: displaySplitLabel(s, splits) },
-      previous: i > 0 ? splits[i - 1] : null,
-      fmt,
-      wide,
-      pb: findPbSplit(s, pbs),
-      bests,
-      current: i === currentIdx,
-    })));
+  let anchorIdx = -1;
+  if (!wide) {
+    anchorIdx = splits.findIndex(s => s && s.upcoming === true && isMandatory(s)
+      && findPbSplit(s, pbs) && Number.isFinite(splitMs(findPbSplit(s, pbs))));
+    if (anchorIdx < 0) {
+      anchorIdx = splits.findIndex(s => s && s.upcoming === true
+        && findPbSplit(s, pbs) && Number.isFinite(splitMs(findPbSplit(s, pbs))));
+    }
+  }
+  const px = Number.isFinite(scalePx) ? Math.round(scalePx) : 0;
+  return h('div', { style: { display: 'flex', flexDirection: 'column', fontSize: px ? px + 'px' : undefined } },
+    splits.map((s, i) => {
+      const upcoming = !!(s && s.upcoming === true);
+      const pb = findPbSplit(s, pbs);
+      const hasRoute = !!(pb && Number.isFinite(splitMs(pb)));
+      const liveDelta = !wide && upcoming && hasRoute && (anchorIdx < 0 || i <= anchorIdx);
+      return h(SplitRow, {
+        key: i,
+        split: { ...s, label: displaySplitLabel(s, splits) },
+        previous: i > 0 ? splits[i - 1] : null,
+        fmt,
+        wide,
+        pb,
+        bests,
+        current: i === anchorIdx,
+        liveDelta,
+        scalePx: px || undefined,
+      });
+    }));
 }
 
 // --- DE: Verlauf: UPS ueber die Zeit / EN: History: UPS over time ----------
@@ -3409,11 +3600,11 @@ function UpsEnvelopeGraph({ columns, height }) {
 // DE: rechts, beides klein und gedaempft.
 // EN: Small metric row for the advanced block: label on the left, value on
 // EN: the right, both small and muted.
-function MetricLine({ label, value, color }) {
+function MetricLine({ label, value, color, fontSize }) {
   return h('div', {
     style: {
       display: 'flex', justifyContent: 'space-between', gap: '10px',
-      fontSize: '11px', color: COLORS.dim,
+      fontSize: fontSize || '11px', color: COLORS.dim,
     },
   }, [
     h('span', { key: 'l' }, label),
@@ -3421,13 +3612,13 @@ function MetricLine({ label, value, color }) {
   ]);
 }
 
-const RulesBadge = ({ rules }) => {
+const RulesBadge = ({ rules, fontSize }) => {
   if (!rules) return null;
   return h('span', {
     style: {
       padding: '2px 6px',
       borderRadius: '4px',
-      fontSize: '10px',
+      fontSize: fontSize || '10px',
       whiteSpace: 'nowrap',
       flexShrink: 0,
       background: rules.ok ? 'rgba(74, 222, 128, 0.2)' : rules.broken ? 'rgba(248, 113, 113, 0.2)' : 'rgba(255, 255, 255, 0.1)',
@@ -3437,14 +3628,14 @@ const RulesBadge = ({ rules }) => {
   }, rules.ok ? `✓ ${t('mods|goldSpeedrun|rules|badge')}` : rules.broken ? t('mods|goldSpeedrun|rules|broken') : t('mods|goldSpeedrun|rules|custom'));
 };
 
-const ModsBadge = ({ extraCount, extra }) => {
+const ModsBadge = ({ extraCount, extra, fontSize }) => {
   const clean = !(extraCount > 0);
   const names = Array.isArray(extra) ? extra.join(', ') : '';
   return h('span', {
     style: {
       padding: '2px 6px',
       borderRadius: '4px',
-      fontSize: '10px',
+      fontSize: fontSize || '10px',
       whiteSpace: 'nowrap',
       flexShrink: 0,
       background: clean ? 'rgba(74, 222, 128, 0.2)' : 'rgba(240, 192, 64, 0.16)',
@@ -3538,6 +3729,236 @@ function SpeedrunHud() {
   const seedStr = getMapSeed();
   const pauseCount = readClock('pauseCount');
   const reloadCount = readClock('reloadCount');
+
+  if (streamerModeOn()) {
+    const splitPx = spx('split');
+    const metaPx = npx('meta');
+    const badgePx = npx('badge') + 'px';
+    const footPx = npx('footer') + 'px';
+    const defPx = npx('deficit') + 'px';
+    const ahead = waiting ? null : totalAheadDelta(allSplits, upcoming, pbSplits);
+    const aheadText = ahead === null
+      ? '—'
+      : (ahead >= 0 ? '+' : '-') + formatShort(Math.abs(ahead), fmt);
+    const aheadColor = ahead === null ? COLORS.dim : ahead <= 0 ? COLORS.green : COLORS.red;
+    const slowVal = waiting || !ready ? '—' : `${fmtSigned(slowdown, 2)}%`;
+    const slowColor = waiting || !ready ? COLORS.dim : slowdown <= -5 ? COLORS.red : slowdown <= -1 ? COLORS.gold : COLORS.green;
+    const playText = waiting ? dashTime(fmt) : formatTime(playTime, fmt);
+    const modsExtra = modsInfo.items && modsInfo.items.find(i => i.id === 'mods')
+      ? modsInfo.items.find(i => i.id === 'mods').extra
+      : [];
+
+    const keyBlock = [
+      h('div', {
+        key: 'big',
+        style: {
+          font: sfont('bigTime', 700, 1.05),
+          color: done ? COLORS.gold : waiting ? COLORS.dim : COLORS.text,
+          fontVariantNumeric: 'tabular-nums',
+          whiteSpace: 'nowrap',
+        },
+      }, playText),
+      h('div', {
+        key: 'ahead',
+        style: {
+          marginTop: '2px',
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: '8px',
+          font: sfont('delta', 700, 1.1),
+          color: aheadColor,
+          fontVariantNumeric: 'tabular-nums',
+          whiteSpace: 'nowrap',
+        },
+      }, [
+        h('span', { key: 'lbl', style: { font: nfont('meta', 600, 1.2), color: COLORS.dim } }, t('mods|goldSpeedrun|hud|totalAhead')),
+        h('span', { key: 'val' }, aheadText),
+      ]),
+      h('div', {
+        key: 'slow',
+        style: {
+          marginTop: '4px',
+          font: sfont('slowdown', 600, 1.2),
+          color: slowColor,
+          fontVariantNumeric: 'tabular-nums',
+          whiteSpace: 'nowrap',
+        },
+      }, `${t('mods|goldSpeedrun|metric|slowdown')} ${slowVal}`),
+    ];
+
+    const splitBlock = showSplits
+      ? h('div', {
+          key: 'splits',
+          style: { minWidth: (splitPx * 16) + 'px' },
+        }, [
+          firstVisible > 0
+            ? h('div', {
+                key: 'more',
+                style: {
+                  color: COLORS.dim, opacity: 0.7, paddingBottom: '2px',
+                  fontSize: metaPx + 'px',
+                },
+              }, `+${firstVisible} …`)
+            : null,
+          h(SplitTable, { key: 'tbl', splits: visible, fmt, wide: false, pbSplits, scalePx: splitPx }),
+        ])
+      : null;
+
+    const graphBlock = sparkline && !waiting
+      ? h('div', { key: 'spark', style: { marginTop: '4px', minWidth: '120px' } },
+          h(UpsEnvelopeGraph, { columns: sparklineColumns(), height: 26 }))
+      : null;
+
+    const btnStyle = {
+      background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.dim}`, color: COLORS.text,
+      padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', pointerEvents: 'auto',
+      fontSize: footPx, marginTop: '6px', width: '100%',
+    };
+
+    const miscBlock = [
+      h('div', {
+        key: 'header',
+        style: {
+          font: nfont('meta', 500, 1.3),
+          color: COLORS.dim,
+          fontVariantNumeric: 'tabular-nums',
+          display: 'flex',
+          gap: '8px',
+          flexWrap: 'wrap',
+        },
+      }, [
+        h('span', { key: 'state', style: { color: rules && rules.broken ? COLORS.red : done ? COLORS.gold : COLORS.text, fontWeight: 'bold' } }, stateStr),
+        h('span', { key: 'seed' }, `Seed: ${seedStr}`),
+        h('span', { key: 'pauses' }, `Pauses: ${pauseCount}`),
+        h('span', { key: 'reloads' }, `Reloads: ${reloadCount}`),
+      ]),
+      !waiting
+        ? h('div', {
+            key: 'others',
+            style: {
+              marginTop: '2px', display: 'flex', gap: '10px',
+              font: nfont('meta', 600, 1.2), color: COLORS.dim,
+              fontVariantNumeric: 'tabular-nums',
+            },
+          }, ['real', 'sim'].map(k => h('span', { key: k }, otherClock(k))))
+        : null,
+      h('div', {
+        key: 'goal',
+        style: { marginTop: '4px', opacity: 0.85, font: nfont('meta', 500, 1.3) },
+      }, waiting
+        ? t(startMode() === 'move'
+            ? 'mods|goldSpeedrun|waitingMove'
+            : startMode() === 'any'
+              ? 'mods|goldSpeedrun|waiting'
+              : startMode() === 'click'
+                ? 'mods|goldSpeedrun|waitingClick'
+                : 'mods|goldSpeedrun|waitingMouse')
+        : progressText),
+      h('div', {
+        key: 'bar',
+        style: {
+          marginTop: '4px', height: '4px', borderRadius: '2px',
+          background: 'rgba(255,255,255,0.14)', overflow: 'hidden',
+        },
+      }, h('div', {
+        style: { width: `${pct}%`, height: '100%', background: done ? COLORS.gold : COLORS.blue },
+      })),
+      h('div', {
+        key: 'badges',
+        style: { marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' },
+      }, [
+        h(ModsBadge, { key: 'mods', fontSize: badgePx, extraCount: modsInfo.extraCount, extra: modsExtra }),
+        rules ? h(RulesBadge, { key: 'rules', rules, fontSize: badgePx }) : null,
+      ]),
+      h('div', {
+        key: 'always',
+        style: { marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '1px' },
+      }, [
+        h(MetricLine, {
+          key: 'deficit',
+          fontSize: defPx,
+          label: t('mods|goldSpeedrun|metric|deficit'),
+          value: waiting || !ready
+            ? '—'
+            : `${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s)`,
+          color: waiting || !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green,
+        }),
+      ]),
+      advanced && !waiting
+        ? h('div', {
+            key: 'advanced',
+            style: {
+              marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', flexDirection: 'column', gap: '1px',
+            },
+          }, [
+            h(MetricLine, { key: 'u', fontSize: defPx, label: t('mods|goldSpeedrun|metric|ticks'), value: ready ? api.i18n.formatNumber(liveU()) : '—' }),
+            h(MetricLine, { key: 'avg', fontSize: defPx, label: t('mods|goldSpeedrun|metric|avgUps'), value: ready ? avgUps().toFixed(1) : '—' }),
+            h(MetricLine, { key: 'ideal', fontSize: defPx, label: t('mods|goldSpeedrun|metric|idealTicks'), value: api.i18n.formatNumber(Math.round(idealTicks())) }),
+            h(MetricLine, { key: 'mult', fontSize: defPx, label: t('mods|goldSpeedrun|metric|thinkMult'), value: ready ? `${thinkingMultiplier().toFixed(2)}×` : '—' }),
+            h(MetricLine, { key: 'wr', fontSize: defPx, label: t('mods|goldSpeedrun|metric|wrProbe'), value: `${fmtSigned(wMinusR(), 0)} ms` }),
+          ])
+        : null,
+      graphBlock,
+      h('div', {
+        key: 'foot',
+        style: {
+          marginTop: '4px', fontSize: footPx, opacity: 0.6,
+          display: 'flex', gap: '10px', justifyContent: 'space-between',
+        },
+      }, [
+        h('span', { key: 'mode', style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 } }, categoryLabel()),
+        best !== null && best > 0 ? h('span', { key: 'pb' }, `PB/Target ${formatTime(best, fmt)}`) : null,
+      ]),
+      isBottomRight
+        ? h('div', {
+            key: 'f10hint',
+            style: { marginTop: '6px', fontSize: footPx, opacity: 0.6, textAlign: 'center', pointerEvents: 'none' },
+          }, t('mods|goldSpeedrun|hud|openDashboard'))
+        : h('button', { key: 'f10btn', onClick: () => setResultDismissed(false), style: btnStyle }, 'Dashboard (F10)'),
+      tainted
+        ? h('div', {
+            key: 'tainted',
+            style: { marginTop: '4px', fontSize: footPx, color: COLORS.red, fontWeight: 700 },
+          }, t('mods|goldSpeedrun|tainted'))
+        : null,
+    ];
+
+    const box = {
+      position: 'absolute',
+      ...corner,
+      width: 'fit-content',
+      maxWidth: '96vw',
+      minWidth: horizontal ? undefined : Math.max(220, spx('bigTime') * 7) + 'px',
+      padding: horizontal ? '8px 10px' : '10px 12px',
+      borderRadius: '6px',
+      border: `1px solid ${tainted ? COLORS.red : done ? COLORS.gold : waiting ? COLORS.border : '#5a6472'}`,
+      opacity: waiting ? 0.75 : 1,
+      background: COLORS.box,
+      color: COLORS.text,
+      font: nfont('meta', 500, 1.3),
+      pointerEvents: 'none',
+      display: 'flex',
+      flexDirection: horizontal ? 'row' : 'column',
+      alignItems: horizontal ? 'flex-start' : 'stretch',
+      gap: horizontal ? '16px' : '8px',
+      zIndex: 10010,
+    };
+
+    if (horizontal) {
+      return h('div', { style: box }, [
+        col('key', keyBlock, { minWidth: (spx('bigTime') * 7) + 'px' }),
+        col('splits', [splitBlock], { minWidth: showSplits ? (splitPx * 16) + 'px' : undefined }),
+        col('misc', miscBlock, { minWidth: (metaPx * 14) + 'px', maxWidth: (metaPx * 24) + 'px' }),
+      ]);
+    }
+
+    return h('div', { style: box }, [
+      ...keyBlock,
+      splitBlock,
+      ...miscBlock,
+    ]);
+  }
 
   const clockBlock = [
     h('div', {
