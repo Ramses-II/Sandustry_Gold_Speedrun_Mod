@@ -1,5 +1,7 @@
 # Gold Speedrun Challenge
 
+Aktuelle Version: **3.10.0**. Vollstaendige Aenderungshistorie: [CHANGELOG.md](CHANGELOG.md).
+
 Speedrun-Timer fuer Sandustry. Die Uhr startet mit der ersten Aktion und stoppt,
 sobald das Ziel der gewaehlten Kategorie erreicht ist.
 
@@ -12,9 +14,10 @@ sobald das Ziel der gewaehlten Kategorie erreicht ist.
 | Fabrikrang 6 / 7 | Rang erreicht |
 | Eigenes Gold | frei einstellbare Zahl |
 
-Bei den Gold-Kategorien gibt es zwei Regelwerke: **Normal** zaehlt alles
-eingenommene Gold (Ausgeben kostet keinen Fortschritt), **Hard Mode** geht nach
-dem Kontostand (Forschen wirft zurueck).
+Bei den Gold-Kategorien gibt es zwei Regelwerke: **Hard Mode** (Standard,
+vorgeschrieben) geht nach dem Kontostand (Forschen wirft zurueck).
+**Total Earned** zaehlt alles eingenommene Gold (Ausgeben kostet keinen
+Fortschritt) und ist **ungueltig fuer Speedruns**.
 
 Das Artefakt-Ziel liest der Mod aus der geladenen Karte - Prefab-Artefakte plus
 die im Gelaende versteckten Sensor-Artefakte. Findet er nichts, laesst sich die
@@ -29,10 +32,10 @@ stehen im Spielstand, und werden immer festgehalten - die Einstellung
 **Spielzeit-Uhr (W)** ist die offizielle Community-Wertung. Sie ist die eigene
 Uhr des Spielstands (`store.meta.time` / playTime).
 
-**Echtzeit (R)** kommt aus `performance.now()` und ist die Zahl, die auch eine
-Stoppuhr neben dem Bildschirm zeigt. Pausieren haelt sie an, ein Absturz
-kostet keine Zeit; das Fenster in den Hintergrund zu schieben haelt sie nicht
-an.
+**Pausenbewusste Echtzeit (R)** kommt aus `performance.now()` und zaehlt reale
+Millisekunden nur, solange das Spiel laeuft. Pausieren haelt sie an, ein
+Absturz kostet keine Zeit; das Fenster in den Hintergrund zu schieben haelt
+sie nicht an.
 
 **Simulationszeit** ist die Zahl fuer den Vergleich ueber verschiedene Rechner
 hinweg. Die Welt laeuft mit einem festen Schritt von 1/60 s. Schafft der Rechner
@@ -56,23 +59,14 @@ Millisekunden. Ein Lauf unter einer Minute wird nicht als Bestzeit abgelegt.
 
 ## Was den Timer startet
 
-Standard ist **nur Mausdruck**: die Uhr startet in dem Moment, in dem du
-graebst, greifst, baust oder forschst. Herumlaufen ist frei, und was ohne
-deinen Klick weiterlaeuft - eine Grabdrohne, ein Foerderband - startet sie
-ebenfalls nicht.
+Die Uhr startet mit der **ersten echten Spielhandlung**: Bewegung, Graben,
+Greifen, Bauen, Forschen, und auch Fortschritt ohne eigenen Klick (Drohnen,
+Foerderbaender, Aufsammeln). Der Intro-Bildschirm bleibt der einzige Riegel:
+solange der Landeanflug im Bild ist, startet nichts. Eine Story-Textbox
+blockiert den Start nicht mehr - Wegklicken einer Box startet ihn weiterhin
+nicht, weil das keine Spielhandlung ist.
 
-Solange eine Story-Textbox, ein Dialog oder der Intro-Bildschirm im Bild steht,
-startet gar nichts - Wegklicken zaehlt nicht als Spielhandlung.
-
-Drei weitere Regelwerke stehen zur Wahl:
-
-| Regelwerk | startet zusaetzlich bei |
-| --- | --- |
-| Mausdruck oder jeder Fortschritt | Drohnen, Foerderbaender, Aufsammeln |
-| Jede Aktion, auch Bewegung | Bewegung (strengste Variante) |
-| Nur Bewegung | ausschliesslich Bewegung (Verhalten aus Version 1.x) |
-
-`F8` setzt den Timer zurueck. Wurden im Spielstand jemals Cheats benutzt,
+Wurden im Spielstand jemals Cheats benutzt,
 zeigt das HUD das an und die Zeit wird nicht als Bestzeit gespeichert.
 
 ## Splits
@@ -118,7 +112,9 @@ rueckwirkend.
 Am Ende erscheint die vollstaendige Tabelle: Endzeit (W), Vergleich mit der
 Bestzeit, und pro Zeile Ausloeser, Abschnittsdauer, Split-Zeit, Delta zur PB
 und Goldstand. `F10` blendet das Dashboard wieder ein - auch fuer einen Lauf,
-der aus einem geladenen Spielstand stammt. Unter *Kategorien* lassen sich
+der aus einem geladenen Spielstand stammt. *Copy summary* kopiert den Lauf als
+Text, **PNG** speichert eine Bildkarte des Laufs (und legt sie in die
+Zwischenablage, wenn das Spiel das erlaubt). Unter *Kategorien* lassen sich
 eigene Kategorien anlegen, Bestzeiten loeschen und Routen (Vergleichszeiten
 und Reihenfolge) bearbeiten. Die Split-Ausloeser (F3) gelten pro Kategorie.
 
@@ -128,30 +124,29 @@ Zwei getrennte Kennzeichen:
 
 * **Keine weiteren Mods** - immer sichtbar. Gruen, wenn ausser diesem Mod und
   der Mod-Verwaltung nichts laeuft; sonst die Anzahl der anderen Mods.
-* **Offizielles Regelwerk** - unveraendert, hinter der Einstellung
-  *Regelwerk-Abzeichen zeigen*.
+* **Offizielles Regelwerk** - gruen, wenn Hard Mode, keine Skips und keine
+  anderen Mods. Ungueltige Einstellungen zeigen immer ein rotes
+  **UNGÜLTIGER LAUF**, auch wenn das Abzeichen abgeschaltet ist.
 
 ## Intro und Tutorial ueberspringen
 
-Zwei getrennte Sachen, weil sie im Spiel an verschiedenen Stellen haengen:
+Drei getrennte Schalter, Standard jeweils **aus**. Jeder davon ist in den
+Mod-Einstellungen mit **UNGÜLTIG FÜR SPEEDRUNS** beschriftet:
 
-*Intro und Landeanflug ueberspringen* (Standard **an**) springt bei einem neuen
-Spiel direkt in die Welt - dasselbe wie der Knopf *Skip Intro*. Das Intro ist
-eine eigene Szene, die erst nach dem Weltaufbau anlaeuft, deshalb fasst der Mod
-kurz nach, bis sie steht.
+*Intro und Landeanflug ueberspringen* springt bei einem neuen Spiel direkt in
+die Welt - dasselbe wie der Knopf *Skip Intro*.
 
-*Story-Textboxen wegblenden* (Standard **an**) schliesst die Story-Einblendungen,
-sobald sie auftauchen - dasselbe wie Wegklicken, die Story zaehlt sie also
-weiter als gesehen. Sie kommen unter anderem verzoegert nach dem Tutorial-Skip.
+*Story-Textboxen wegblenden* schliesst die Story-Einblendungen, sobald sie
+auftauchen - dasselbe wie Wegklicken, die Story zaehlt sie also weiter als
+gesehen.
 
-*Tutorial automatisch ueberspringen* (Standard **aus**) beendet das Tutorial
-beim Laden eines Spielstands, genau wie der Knopf im Spiel. Es greift nur,
-solange der Timer noch wartet, nie mitten im Lauf. Ist es an, steht "Ohne
-Tutorial" in der Kategorie, damit Zeiten vergleichbar bleiben.
+*Tutorial automatisch ueberspringen* beendet das Tutorial beim Laden eines
+Spielstands, genau wie der Knopf im Spiel. Es greift nur, solange der Timer
+noch wartet, nie mitten im Lauf. Ist es an, steht "Ohne Tutorial" in der
+Kategorie, damit Zeiten vergleichbar bleiben.
 
-Beides ruehrt die Uhr nicht an: waehrend des Ueberspringens ist der Start
-gesperrt, damit weder der Aufschlag der Landekapsel noch die
-Tutorial-Freischaltung den Timer anwerfen.
+Waehrend des Ueberspringens ist der Start gesperrt, damit weder der Aufschlag
+der Landekapsel noch die Tutorial-Freischaltung den Timer anwerfen.
 
 ## Offizielles Regelwerk
 
@@ -161,62 +156,194 @@ prueft sie selbst und zeigt das an:
 | Vorgabe | noetiger Wert |
 | --- | --- |
 | aktive Mods | nur *Gold Speedrun Challenge* |
-| Was den Timer startet | *Jede Aktion, auch Bewegung* |
 | Gold-Regelwerk | *Hard Mode* |
 | Tutorial automatisch ueberspringen | *aus* |
 | Intro und Landeanflug ueberspringen | *aus* |
 | Story-Textboxen wegblenden | *aus* |
 
-Die ersten vier stehen so in den Kategorieregeln. Die letzten beiden kommen
-dazu, damit der Spielanfang ablaeuft wie ohne Mod - ein Lauf, der mit einer
-uebersprungenen Sequenz beginnt, ist mit den anderen nicht vergleichbar.
+Die Aufnahme muss im oder vor dem Welt-erstellen-Menue beginnen. Der Timer
+startet immer bei der ersten Aktion inklusive Bewegung.
 
-Stimmt alles vier, steht ein gruenes **✓ OFFIZIELLES REGELWERK** unter der Uhr
-und im Ergebnisfenster - fuer dich und fuer jeden Zuschauer sichtbar. Weicht
-etwas ab, steht dort nur *Eigene Regeln*, und das Ergebnisfenster listet
-auf, welche Einstellung es ist und welcher Wert noetig waere.
+Stimmt alles, steht ein gruenes **✓ OFFIZIELLES REGELWERK** unter der Uhr
+und im Ergebnisfenster. Weicht etwas ab, steht dort rot **UNGÜLTIGER LAUF**
+und das HUD sowie das Ergebnisfenster listen auf, welche Einstellung es ist
+und welcher Wert noetig waere.
 
 Die Mod-Verwaltung zaehlt dabei nicht als Mod: sie greift nicht ins Spiel ein
 und ist das Werkzeug, mit dem die anderen Mods abgeschaltet werden. Gezaehlt
 wird, was das Spiel tatsaechlich geladen hat und in der Verwaltung auf **AN**
 steht.
 
-Wer es nicht sehen will, schaltet *Regelwerk-Abzeichen zeigen* in den
-Mod-Einstellungen aus.
-
-### Automatisch einstellen
-
-Das Gold-Regelwerk hat neben *Normal* und *Hard Mode* eine dritte Wahl:
-**Offizielles Regelwerk (Hard Mode)**. Sie setzt den ganzen Lauf, nicht nur das
-Gold. Vier Optionen springen auf ihre Vorgabe: *Was den Timer startet* auf
-*Jede Aktion, auch Bewegung*, und *Tutorial automatisch ueberspringen*, *Intro
-und Landeanflug ueberspringen* sowie *Story-Textboxen wegblenden* auf aus.
-Nicht nur intern - sie stehen danach sichtbar so im Menue.
-
-Verstellen laesst sich daran nichts: wer eine davon trotzdem anfasst, sieht
-sie sofort wieder zurueckspringen. Von Hand nachstellen muss man also nichts,
-und wegstellen kann man es auch nicht. Abzuschalten bleibt nur, was nicht in
-den Mod gehoert: fremde Mods.
-
-Weil die Story-Textboxen jetzt stehen bleiben, sperren sie den Timer, solange
-sie im Bild sind: der Klick, der eine Box wegmacht, ist keine Spielhandlung
-und startet den Lauf nicht.
-
-Die vorherigen Werte gehen dabei nicht verloren - beim Zurueckschalten auf
-*Normal* oder *Hard Mode* stehen sie wieder da, wo sie vorher standen.
+Wer das gruene Abzeichen nicht sehen will, schaltet *Regelwerk-Abzeichen
+zeigen* in den Mod-Einstellungen aus. Das rote **UNGÜLTIGER LAUF**-Banner
+bleibt trotzdem sichtbar.
 
 ### Nichts mehr verstellen
 
 Mit dem Start haelt der Lauf fest, ob er offiziell begonnen hat, und schreibt
 das in den Spielstand. Ab dann wird jeden Frame nachgeprueft: wird waehrend des
-Laufs am Gold-Regelwerk, am Startmodus, am Tutorial-Skip oder an den aktiven
-Mods gedreht, faellt das Kennzeichen sofort und **kommt nicht zurueck** - auch
-nicht, wenn die Einstellung reumuetig zurueckgedreht wird.
+Laufs am Gold-Regelwerk, an den Skips oder an den aktiven Mods gedreht, faellt
+das Kennzeichen sofort und **kommt nicht zurueck** - auch nicht, wenn die
+Einstellung reumuetig zurueckgedreht wird.
 
 Statt des gruenen Abzeichens steht dann rot **REGELWERK VERSTELLT** unter der
 Uhr und im Ergebnisfenster, und die Zeit wird nicht als Bestzeit gespeichert -
 dieselbe Behandlung wie bei einem Spielstand, in dem gecheatet wurde. Die Uhr
 laeuft normal weiter und die Zeit bleibt sichtbar; sie zaehlt nur nicht.
 
-`F8` setzt den Timer zurueck und raeumt das Kennzeichen mit auf - der naechste
-Lauf faengt sauber an.
+## Simulationsdiagnose (F7)
+
+F7 oeffnet das Vollbild-Graph. UPS bleibt die linke Achse; kurze Aufholphasen
+ueber 60 erweitern die Achse dynamisch. Kollisionen
+und Bewegungen sind standardmaessig **Wurfpartikel** (`ElementType.Particle`):
+Werfer, fliegende Pixel. Das ist der billige Zaehler und die Vergleichsgroesse
+fuer HUD und Ergebnisbildschirm.
+
+**Live Dynamic Population** ist `sim.liveElementCount`: aktuell belegte
+dynamische Elementslots, inklusive ruhendem Sand, Fluessigkeiten und Gasen.
+Es ist weder die Zahl der Beweger noch ein jemals-abgebauter Zaehler.
+
+Jam-Metriken (gleitendes 5-s-Fenster aus Summen, nicht aus Mittelwerten von
+Prozenten):
+
+| Metrik | Formel | Bedeutung |
+| --- | --- | --- |
+| Jam Share | `sum(blocks) / sum(blocks + moves)` | Anteil blockierter Versuche |
+| Flight Activity | `sum(blocks + moves) / sum(ticks)` | Bewegungsvolumen pro Simulationsschritt |
+| Jam Load | `sum(blocks) / sum(ticks)` | Blockierversuche pro Simulationsschritt |
+
+Jam Load ist der direkte Arbeitsindikator. Jam Share allein kann 100 % bei
+zwei Partikeln sein. Flight Activity allein ignoriert, wie oft sie stecken.
+Keine der drei Groessen ist gemessene CPU-Zeit — `simMs` und UPS zeigen, ob
+die Last wirklich weh tut.
+
+**Verlorene Zeit (s).** F7 zeichnet ein vorzeichenbehaftetes Defizit
+`D = (spanMs / 1000 × 60) − Ticks` ueber das sichtbare Fenster, ohne Rate
+und ohne Clamp. Positiv: Simulation hinter der Echtzeit. Negativ: die
+Simulation lief vor 60 UPS. **D_perm** ist das laufende Minimum von D ueber
+die naechsten 2 s, damit Hitch-und-Aufhol-Wobble nicht als bleibender Verlust
+zaehlt. Schattierte Baender markieren Intervalle, in denen D_perm stieg.
+Ein Band oder den Graphen hovern setzt die Engpasskarte auf diesen
+Weltzeitpunkt. Die Karten-Kopfzeile sagt, ob dieser Zeitpunkt rechen- oder
+sync-begrenzt war — bei Sync/Warten sind Abschnittfarben nicht die Ursache.
+
+**Engpasskarte (ms).** F7 zeigt eine zoombare Karte der Engpass-Zeiten pro
+40x40-Abschnitt. Jeden Tick meldet jeder Simulations-Worker seinen
+langsamsten Abschnitt und dessen Millisekunden:
+- **Kumulativ:** Summiert die gesamte Engpasszeit aller Worker pro
+  Abschnitt über die Weltzeit auf (stark belastete Fabriken leuchten rot/gelb).
+  Die Summen folgen der Spielzeit-Uhr, nicht der Speedrun-Uhr, und werden mit
+  dem Spielstand gespeichert und nach dem Laden wiederhergestellt.
+- **Exp. Abkühlung:** Zeigt kürzliche Engpass-Aktivität mit exponentieller Halbwertszeit.
+  Der Fabrik-Umriss bleibt über einen anpassbaren Boden (3%, 6%, 12%) dezent sichtbar.
+- **Lin. Abkühlung:** Lineares Abklingfenster für die letzten 30 bis 120 Sekunden.
+- **Max. Tick:** Der stärkste einzelne Spike (High-Water-Mark) seit Laufstart.
+- **Dieser Tick:** Der aktuelle Hotspot der Worker in diesem Tick.
+
+**Zeitachse & Scrubbing:** Das Bewegen des Schiebereglers oder das Überfahren
+des UPS-Graphen mit der Maus rekonstruiert die kumulierte Engpasskarte bis genau
+zu diesem Weltzeitpunkt. Ein Klick auf "Live" springt sofort zurück in die
+Echtzeit-Ansicht. Nach Laufende, Speichern und Laden setzt die Achse an der
+Spielzeit-Uhr der Welt an, nicht an der Zielzeit des Laufs.
+
+**Zoom & Verschieben:** Mausrad zoomt stufenlos zentriert am Mauszeiger (bis zu 16x);
+Ziehen mit gedrückter Maustaste verschiebt die Ansicht; Doppelklick oder der
+Reset-Button setzt auf 1:1 zurück. Hover zeigt Abschnittskoordinaten und
+Millisekunden. Die Karte sitzt links neben dem UPS-Graphen.
+
+Der Benchmark 3.3.0 hat den Zaehler-Overhead unter dem eigenen Rauschen der
+Engine gemessen (unter etwa 0.15 ms/Tick bei der Testszene). Ballistische
+Zaehler bleiben der Standard; Gesamtmaterie bleibt Diagnose-Option.
+
+**All-matter capture** (Einstellung und F7-Schalter, standardmaessig aus)
+haengt Wildcard-Handler an jedes `element:blocked` / `element:moved`. Das ist
+Diagnose, kein Speedrun-Mass: es kann die UPS senken. Aus schaltet die Handler
+wirklich ab. Solange Capture aus ist, speichern die All-Matter-Kanäle `null`
+statt 0, damit Graphen an den Luecken reissen.
+
+Die Metrik-Kostenmatrix isoliert Wurfpartikel-Blocks, Wurfpartikel-Bewegungen,
+Gesamtmaterie-Blocks, Gesamtmaterie-Bewegungen, aktive Chunks,
+Live-Population und Sim-Zeit. Dazu kommen drei Pakete: Wurfpartikel,
+Gesamtmaterie und alle Diagnosen. Jeder Test laeuft dreimal als 15 s reine
+UPS-Basislinie und 15 s aktive Messung. Der kopierbare Bericht enthaelt
+1-s-Werte fuer UPS, reale Millisekunden pro Tick und alle aktiven Kanaele.
+Die Matrix dauert ungefaehr 15 Minuten, darf nicht waehrend eines Zeitlaufs
+gestartet werden und bricht bei Pause ab. Ergebnisse sind szenenabhaengig.
+HUD- und Ergebniswerte bleiben ballistisch.
+
+---
+
+F7 opens the fullscreen graph. UPS stays on the left axis; short catch-up
+phases above 60 expand that axis dynamically. Collisions
+and moves default to **ballistic particles** (`ElementType.Particle`): throwers
+and flying pixels. That is the cheap counter and the comparable figure on the
+HUD and result screen.
+
+**Live Dynamic Population** is `sim.liveElementCount`: currently allocated
+dynamic element slots, including resting sand, liquids, and gases. It is not
+the number of movers and not an ever-mined total.
+
+Jam metrics (trailing 5 s window from sums, not averages of percentages):
+
+| Metric | Formula | Meaning |
+| --- | --- | --- |
+| Jam Share | `sum(blocks) / sum(blocks + moves)` | Share of blocked attempts |
+| Flight Activity | `sum(blocks + moves) / sum(ticks)` | Movement volume per simulation update |
+| Jam Load | `sum(blocks) / sum(ticks)` | Blocked attempts per simulation update |
+
+Jam Load is the direct work proxy. Jam Share alone can read 100% with two
+particles. Flight Activity alone ignores how often they jam. None of the three
+is measured CPU time — use `simMs` and UPS to judge whether the load hurts.
+
+**Lost time (s).** F7 plots a signed deficit `D = (spanMs / 1000 × 60) − ticks`
+over the visible window, with no rate estimate and no clamp. Positive:
+simulation behind real time. Negative: the simulation ran ahead of 60 UPS.
+**D_perm** is the running floor of D over the next 2 s, so hitch-and-catch-up
+wobble is not counted as kept loss. Shaded bands mark intervals where D_perm
+rose. Hovering a band or the graph still scrubs the bottleneck map to that
+world time. The map header says whether that moment was compute-bound or
+sync/wait-bound — when it is wait-bound, chunk colours are not the cause.
+
+**Bottleneck map (ms).** F7 shows an interactive, zoomable bottleneck map
+per 40x40 chunk. Each tick, every simulation worker reports its slowest chunk
+and that time in milliseconds:
+- **Cumulative:** Sums the total bottleneck milliseconds spent across
+  world time for each chunk (heavy factory areas glow amber/red). Totals
+  follow the play-clock, not the speedrun timer, and are saved with the
+  world then restored after a reload.
+- **Exp Decay:** Shows recent bottleneck activity with exponential half-life cooling.
+  Factory outlines remain subtly visible via a configurable floor (3%, 6%, 12%).
+- **Linear Decay:** Linear ramp cooling over the last 30 to 120 seconds.
+- **Peak tick:** High-water single-tick spike seen since the run started.
+- **This tick:** Instantaneous hotspot currently being processed.
+
+**Timeline scrubbing:** Moving the slider or hovering over the UPS graph
+reconstructs the cumulative bottleneck map up to that exact world time.
+Clicking "Live" returns immediately to real-time display. After the goal, a
+save, and a reload, the axis continues from the world's play-clock, not from
+the run's finish time.
+
+**Zoom & Pan:** Mouse wheel zooms smoothly centered on the cursor (up to 16x);
+click-and-drag pans the map; double-click or Reset button returns to 1:1.
+Hovering a cell shows chunk coordinates and milliseconds. The map is positioned
+on the left, side-by-side with the UPS graph.
+
+The 3.3.0 benchmark found counter overhead below the engine's own noise
+(under about 0.15 ms/tick in the test scene). Ballistic counters stay the
+default; all-matter stays a diagnostic option.
+
+**All-matter capture** (setting and F7 toggle, off by default) installs
+wildcard handlers on every `element:blocked` / `element:moved`. Diagnostic
+only, not a speedrun metric; it can reduce UPS. Off removes the handlers.
+While capture is off, all-matter fields store `null` rather than 0 so chart
+lines break across disabled intervals.
+
+The metric cost matrix isolates ballistic blocks, ballistic moves, all-matter
+blocks, all-matter moves, awake chunks, live population, and the simulation
+time read. It also tests ballistic, all-matter, and complete-diagnostics
+bundles. Every package runs three consecutive 15 s tick-only baselines and
+15 s active phases. The copyable report includes 1 s UPS, wall milliseconds
+per tick, paired progression deltas, and every active channel. The matrix
+takes about 15 minutes, cannot start during a timed run, and cancels if the
+game is paused. Results remain scene-dependent. HUD and result values remain
+ballistic.

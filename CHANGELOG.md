@@ -1,5 +1,200 @@
 # Changelog
 
+## 3.10.0 — unrecovered slowdown line on F7
+
+### Added
+
+* F7 now plots a signed **lost-time** curve: `D = (spanMs / 1000 × 60) − ticks`
+  accumulated over the visible window, with no rate estimate and no clamp.
+  Positive is simulation behind real time; negative is a net over-run above
+  60 UPS. **D_perm** is the running floor of D over the next 2 s, so hitch
+  and catch-up wobble is not counted as kept loss.
+* Translucent bands mark intervals where D_perm rose. Hovering a band still
+  scrubs the bottleneck map to that world time (existing chart-hover linkage).
+* Header badges show time spent in those phases and the unrecovered tick /
+  second total for the current range.
+* The bottleneck map header labels the scrubbed time as compute-bound or
+  sync/wait-bound, so a wait-bound hitch is not read as a hot chunk.
+
+### Changed
+
+* No automatic “slowdown-only” heatmap aggregate. Spatial context stays
+  manual via hover/scrub, with the cause label as the only map-side addition.
+* The R clock is labelled **pause aware real time** (HUD short `p-real` /
+  `p-echt`) so it is not read as wall-clock time. Pausing the game still
+  pauses R; wall start/end/span remain the true wall-clock values.
+
+## 3.9.0 — world-timer heatmap recovery across save/reload
+
+### Fixed
+
+* Cumulative chunk bottleneck times and the F7 timeline no longer rewind to
+  the speedrun finish time after you keep playing, save, and reload. The
+  diagnostic axis follows world play-time (`api.time.getTimeMs()` /
+  `store.meta.time`) before the run, during it, and after the goal.
+* Reloading a save no longer wipes the bottleneck map. A sparse heatmap
+  snapshot (cumulative sums and peaks) is written into the save about once
+  per second and restored into the worker on `game:ready`.
+* UPS/heatmap history buckets are always persisted with the save so timeline
+  scrubbing and decay modes survive a reload, independent of the optional
+  result-screen UPS history setting.
+
+## 3.8.0 — start-detection fix and speedrun validity enforcement
+
+### Fixed
+
+* Story boxes and dialogs no longer silently block the timer start. A real
+  in-field action (dig, grab, build, research, movement) starts the run even
+  while a story pop-up is open. Dismissing a box still does not start it.
+  The intro/landing screen remains the only UI that can hold the start.
+* Starting a run no longer waits for the simulation-worker metric handshake,
+  which could delay the first start under a starved cold boot.
+* Every remaining rejected start now logs the reason to the console.
+
+### Changed
+
+* The timer always starts on any action including movement. The start-mode
+  option is gone.
+* Gold ruleset is now **Hard Mode** (default, valid) vs **Total Earned**
+  (practice, invalid). The old "Official ruleset" dropdown value is gone;
+  validity is a computed badge.
+* Intro, story and tutorial skips default **off** and are labelled
+  **INVALID FOR SPEEDRUNS** in the options menu.
+* Existing installs are force-migrated once to Hard Mode with all skips off.
+  A toast explains the reset. Practice settings can be turned back on
+  afterwards and then show a red INVALID RUN banner.
+* Invalid settings show a red **INVALID RUN** banner on the HUD and the
+  result screen, naming each offending option.
+
+## 3.7.0 — decay & cooling heatmap modes with factory outline floor
+
+### Added
+
+* **Decay & Cooling heatmap modes with outline floor**: added exponential decay
+  (`Exp Decay`) and linear decay (`Linear Decay`) alongside the existing cumulative
+  view (`Cumulative`).
+* **Factory outline retention (non-zero floor)**: cooling chunks retain a faint
+  slate-blue baseline outline representing the factory structure, preventing the
+  world shape from vanishing into blackness while active hotspots glow amber and yellow.
+* **Outline floor selector**: toggle between `0% (flat)`, `3%`, `6% (default)`, and `12%`
+  to adjust how strongly inactive factory chunks remain visible.
+* **Cooling speed selector**: adjustable half-life for exponential decay (`15s`, `30s`, `60s`)
+  and window duration for linear decay (`30s`, `60s`, `120s`).
+* **Enhanced cell hover**: hovering in decay modes shows both recent heat ms and
+  total lifetime bottleneck ms for that chunk.
+* **F10 dashboard PNG share card**: the Run tab footer exports an opaque
+  PNG of the current run (times, chips, statistics, UPS graph, full split
+  table) for Discord and other social posts. The file is downloaded with a
+  Windows-safe name; the image is also copied to the clipboard when the
+  environment allows it.
+
+## 3.6.0 — accumulated bottleneck cost map, timeline scrubbing & zoom
+
+### Added
+
+* **Cumulative bottleneck time map (ms)**: chunks accumulate total milliseconds
+  spent as worker bottlenecks, rather than just high-water peak. Modes:
+  Cumulative (full run), Window (last 60s / 180s), Peak tick, and This tick.
+* **Timeline scrubbing**: hovering the UPS graph or moving the timeline scrubber
+  reconstructs and displays the cumulative bottleneck map up to that exact
+  point in time. Clicking `Live` snaps back to real-time.
+* **Map Zoom & Pan**: mouse wheel zooms in/out centered on the cursor (up to 16x);
+  mouse drag pans around the world; double-click or Reset button resets to 1:1 fit.
+* **Wide side-by-side layout**: map is placed prominently on the left with the
+  UPS graph on the right, maximizing screen space and readability.
+* Shared buffer upgraded to `goldSpeedrunHeatmapV3` with 16-int header and 3x
+  grid channels (live, cumulative sum, and peak). 1 Hz history records sparse
+  per-chunk bottleneck deltas for timeline reconstruction.
+
+## 3.5.0 — bottleneck time map
+
+### Added
+
+* F7 map is now peak bottleneck time in milliseconds per 40x40 chunk:
+  each worker's slowest unit that tick, kept as a max per cell. Hover a
+  cell for chunk coordinates and ms. This tick vs peak (run) toggle.
+* The map is larger (up to 42vh) at native chunk resolution (capped at 128).
+
+### Removed
+
+* Compute vs wait vs post "where the sim spends time" strip.
+
+### Changed
+
+* Awake-occupancy heatmap is gone; early-dug chunks no longer light up
+  just because they woke first.
+
+## 3.4.0 — cause-based UPS view
+
+### Added
+
+* F7 now shows **where** simulation time goes: compute vs wait (sync) vs
+  post-tick work, from the engine's own per-phase timers. The slowest 40x40
+  chunk is marked. These timers are scheduling passes and location, not a
+  physics-rule split.
+* A 64x64 chunk-activity map sits next to the graph. Live shows currently
+  awake chunks; whole-run counts how often each cell was awake. The map
+  follows the world's aspect ratio and resets when a timed run starts.
+* Hover on the graph includes compute, wait, post, and the slowest chunk.
+
+### Changed
+
+* Ballistic counters stay the default. The 3.3.0 cost matrix found every
+  capture level below engine noise (~0.15 ms/tick in the test scene);
+  all-matter remains opt-in diagnostics.
+
+## 3.3.0 — metric cost matrix and dynamic UPS graph
+
+### Added
+
+* A 15-minute F7 metric cost matrix isolates ballistic blocks/moves,
+  all-matter blocks/moves, awake chunks, live population, and sim-time reads,
+  plus ballistic, all-matter, and complete bundles.
+* Every package runs three consecutive 15 s tick-only baselines and 15 s test
+  phases. Reports include 1 s UPS, wall-ms/tick progression, paired deltas,
+  active counters, and passive readings.
+
+### Changed
+
+* The UPS graph dynamically expands above 60 instead of clipping catch-up
+  phases, and the compact envelope keeps 60 as an internal reference line.
+* Moves are teal, Jam Share is fuchsia, and Jam Load is orange for clearer
+  visual separation.
+* F7 opens with the 5 s rolling-average view.
+
+### Fixed
+
+* F7 now has a single edge-triggered toggle path, preventing flicker while
+  the key is held.
+
+## 3.2.0 — jam load, all-matter capture, F7 axes
+
+Diagnostics that compare UPS with blocked particle work, without pretending
+the live-element population is the moving set.
+
+### Added
+
+* **Jam Load** (`blocked attempts / simulation updates`) is the primary jam
+  diagnostic on the HUD, result screen, and F7 graph. Jam Share (%) and
+  Flight Activity (events/update) stay as supporting ratios, computed from
+  trailing 5 s *sums*, not averages of percentages.
+* **All-matter capture** (off by default): optional exact counters for every
+  cellular-automata blocked/moved event, installed and removed at runtime.
+  F7 can toggle it; a built-in OFF/ON benchmark reports median/p95 sim-time
+  and UPS overhead. HUD/result jam figures stay ballistic-only.
+* **Colored right-hand axis rails** on the F7 graph for every enabled
+  independent scale (counts, awake chunks, live population, jam load, jam
+  share).
+* History samples now store `ticks` and `spanMs` (inferred on old saves).
+
+### Changed
+
+* **Live Dynamic Population** replaces the old Dynamic Elements label.
+  `sim.liveElementCount` is current allocated occupancy, including
+  stationary/sleeping elements.
+* Jam Intensity (/1k live elements) is retired; its numerator and
+  denominator were unrelated.
+
 ## 3.1.0 — streamer mode, interval-aware split deltas
 
 Viewer-facing HUD and a LiveSplit-style comparison that no longer locks onto

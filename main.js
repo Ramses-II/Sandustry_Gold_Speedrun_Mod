@@ -33,9 +33,10 @@ const TRIGGER_KEY = 'goldSpeedrun.triggers'; // DE: Legacy-Global, Fallback / EN
 const TRIGGER_PREFIX = 'goldSpeedrun.triggers.';
 const GOLD_MODE_HARD_MIGRATE_KEY = 'goldSpeedrun.migratedGoldModeHard.v1';
 const KEY_STABILITY_MIGRATE_KEY = 'goldSpeedrun.migratedKeyStability.v1';
+const ENFORCE_VALID_DEFAULTS_KEY = 'goldSpeedrun.enforceValidDefaultsV1';
 const PB_RUN_ID = '__pb__';
 
-const MOD_VERSION = '3.0.0';
+const MOD_VERSION = '3.10.0';
 const log = (...a) => console.log(`[${MOD_ID} v${MOD_VERSION}]`, ...a);
 
 // --- DE: Schalter der Mod-Verwaltung / EN: Mod-manager switch ---------------
@@ -94,17 +95,20 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|newBest': 'New personal best: {time}',
   'mods|goldSpeedrun|pbTooShort': 'Finished in {time} — under the 1:00 minimum, not stored as a best time',
   'mods|goldSpeedrun|waiting': 'Any action starts the run',
-  'mods|goldSpeedrun|waitingMove': 'Press W/A/S/D to start',
-  'mods|goldSpeedrun|waitingClick': 'Your first action starts the run',
-  'mods|goldSpeedrun|waitingMouse': 'Click to start the run',
-  'mods|goldSpeedrun|reset': 'Timer reset - next action starts a new run',
-  'mods|goldSpeedrun|resetKey': 'Reset speedrun timer',
+  'mods|goldSpeedrun|toast|defaultsReset': 'Settings reset to valid speedrun rules (Hard Mode, no skips).',
   'mods|goldSpeedrun|resultKey': 'Show last result',
   'mods|goldSpeedrun|tutorialSkipped': 'Tutorial skipped automatically',
   'mods|goldSpeedrun|artifacts': '{current} / {target} artifacts',
   'mods|goldSpeedrun|factory': 'Rank {current} / {target}',
   'mods|goldSpeedrun|tainted': 'CHEATS USED - run does not count',
   'mods|goldSpeedrun|noTutorial': 'No Tutorial',
+  'mods|goldSpeedrun|category|blueprints': 'Blueprints',
+  'mods|goldSpeedrun|dash|noBp': 'No Blueprints',
+  'mods|goldSpeedrun|dash|bpUsed': 'Blueprints',
+  'mods|goldSpeedrun|toast|bpTriggered': 'Switched to Blueprints category',
+  'mods|goldSpeedrun|dash|exportPng': 'Export share card as PNG',
+  'mods|goldSpeedrun|toast|pngSaved': 'Dashboard PNG saved',
+  'mods|goldSpeedrun|toast|pngCopied': 'Dashboard PNG copied to clipboard & saved',
 
   // DE: Ausloeser und Ergebnis / EN: Triggers and result
   'mods|goldSpeedrun|split|rank': 'Factory rank {level}',
@@ -118,9 +122,10 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|result|noBest': 'first finish',
   'mods|goldSpeedrun|result|sim': 'Simulation time',
   'mods|goldSpeedrun|result|play': 'Play-clock',
+  'mods|goldSpeedrun|result|real': 'Pause aware real time',
   'mods|goldSpeedrun|result|tickSourceMissing': 'No tick source - the simulation thread did not report step counts this run, so simulation time and the derived metrics are unavailable.',
   'mods|goldSpeedrun|clock|simShort': 'sim',
-  'mods|goldSpeedrun|clock|realShort': 'real',
+  'mods|goldSpeedrun|clock|realShort': 'p-real',
   'mods|goldSpeedrun|clock|playShort': 'play',
   'mods|goldSpeedrun|result|colSplit': 'Trigger',
   'mods|goldSpeedrun|result|colTime': 'Time',
@@ -130,6 +135,10 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|result|noSplits': 'No triggers fired - enable some under Splits.',
   'mods|goldSpeedrun|result|close': 'Close',
   'mods|goldSpeedrun|result|hint': 'F10 shows this again',
+  'mods|goldSpeedrun|result|wallStart': 'Wall start',
+  'mods|goldSpeedrun|result|wallEnd': 'Wall end',
+  'mods|goldSpeedrun|result|wallSpan': 'Wall span',
+  'mods|goldSpeedrun|result|wallNow': 'now',
   'mods|goldSpeedrun|hud|openDashboard': 'Press F10 for Speedrun Dashboard',
   'mods|goldSpeedrun|result|expand': 'Show full statistics',
   'mods|goldSpeedrun|result|collapse': 'Hide full statistics',
@@ -137,18 +146,21 @@ api.i18n.register('en', {
   // DE: Metriken (U, R, W und was sich daraus ergibt) / EN: Metrics (U, R, W and what follows from them)
   'mods|goldSpeedrun|metric|slowdown': 'Slowdown',
   'mods|goldSpeedrun|metric|deficit': 'Tick deficit',
+  'mods|goldSpeedrun|metric|jamRate': 'Jam Rate',
+  'mods|goldSpeedrun|metric|jamLoad': 'Jam Load',
+  'mods|goldSpeedrun|metric|jamShare': 'Jam Share',
   'mods|goldSpeedrun|metric|ticks': 'Executed ticks (U)',
   'mods|goldSpeedrun|metric|avgUps': 'Average UPS',
   'mods|goldSpeedrun|metric|idealTicks': 'Ideal ticks (60×R)',
   'mods|goldSpeedrun|metric|thinkMult': 'Thinking multiplier',
-  'mods|goldSpeedrun|metric|wrProbe': 'Play-clock − real time (W−R)',
+  'mods|goldSpeedrun|metric|wrProbe': 'Play-clock − pause aware real time (W−R)',
   'mods|goldSpeedrun|metric|dash': 'waiting for the run to start',
 
   // DE: Verlaufsgrafik / EN: History graph
   'mods|goldSpeedrun|graph|title': 'UPS over the whole run',
   'mods|goldSpeedrun|graph|live': 'Live UPS (last 60 s)',
-  'mods|goldSpeedrun|graph|empty': 'No data yet - turn on "Record UPS history" before starting a run.',
-  'mods|goldSpeedrun|graph|emptyRun': 'No data yet - start a run to record UPS.',
+  'mods|goldSpeedrun|graph|empty': 'No data yet - set Simulation monitoring to Standard or Full in the mod options.',
+  'mods|goldSpeedrun|graph|emptyRun': 'No data yet - start a run (or wait a second) to record UPS.',
 
   // DE: Ausloeser-Fenster / EN: Triggers window
   'mods|goldSpeedrun|trg|title': 'Split triggers',
@@ -177,13 +189,11 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|cfg|artifactTarget': 'Artifact target',
   'mods|goldSpeedrun|cfg|artifactTarget|desc': 'Only used by the Artifacts category. 0 counts every artifact the current map contains.',
   'mods|goldSpeedrun|cfg|mode': 'Gold ruleset',
-  'mods|goldSpeedrun|cfg|mode|desc': 'Normal counts every bit of gold you earn, so spending costs no progress. Hard Mode goes by your current balance: researching sets you back. Official ruleset is Hard Mode plus the rest of the official settings - it also starts the timer on any action including movement and keeps the automatic tutorial skip off, whatever those two options are set to.',
-  'mods|goldSpeedrun|cfg|mode|earned': 'Normal',
+  'mods|goldSpeedrun|cfg|mode|desc': 'Hard Mode is required for a valid speedrun: gold is your current balance, so researching sets you back. Total Earned is practice only and INVALID FOR SPEEDRUNS: it counts every bit of gold you take in, so spending costs no progress. Recording must start at or before the create-world menu. No other mods may be enabled.',
+  'mods|goldSpeedrun|cfg|mode|earned': 'Total Earned (INVALID FOR SPEEDRUNS)',
   'mods|goldSpeedrun|cfg|mode|balance': 'Hard Mode',
-  'mods|goldSpeedrun|cfg|mode|official': 'Official ruleset (Hard Mode)',
-  'mods|goldSpeedrun|modeNormal': 'Normal',
+  'mods|goldSpeedrun|modeNormal': 'Total Earned',
   'mods|goldSpeedrun|modeHard': 'Hard Mode',
-  'mods|goldSpeedrun|rules|forced': 'set by the Official ruleset option',
   'mods|goldSpeedrun|cfg|enabled': 'Mod enabled',
   'mods|goldSpeedrun|cfg|enabled|desc': 'Turns the whole mod off without uninstalling it: no timer, no overlay, no splits, no auto-skips. A run already in progress keeps its official real-time clock running in the background while this is off, so toggling it cannot be used to pause a run.',
   'mods|goldSpeedrun|cfg|preset': 'Category',
@@ -195,27 +205,21 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|cfg|preset|factory6': 'Factory Rank 6',
   'mods|goldSpeedrun|cfg|preset|factory7': 'Factory Rank 7 (max)',
   'mods|goldSpeedrun|cfg|preset|custom': 'Custom gold',
-  'mods|goldSpeedrun|cfg|startMode': 'What starts the timer',
-  'mods|goldSpeedrun|cfg|startMode|desc': 'Mouse press is the speedrun setting: the clock starts the moment you dig, grab, build or research. Walking around is free, and anything running without a click of yours - a digger drone, a belt - does not start it either.',
-  'mods|goldSpeedrun|cfg|startMode|mouse': 'Mouse press only',
-  'mods|goldSpeedrun|cfg|startMode|click': 'Mouse press or any progress',
-  'mods|goldSpeedrun|cfg|startMode|any': 'Any action, movement included',
-  'mods|goldSpeedrun|cfg|startMode|move': 'Movement only',
   'mods|goldSpeedrun|cfg|clockMode': 'Headline clock',
-  'mods|goldSpeedrun|cfg|clockMode|desc': 'All three times are always measured and always recorded - this only decides which one stands large on the timer, the other two stay underneath. Play-clock (W) is the official community metric: the game\'s own save-file clock. Real time (R) is the number a stopwatch next to the screen shows. Simulation time (T) counts the simulation steps the world actually ran, divided by 60.',
-  'mods|goldSpeedrun|cfg|clockMode|real': 'Real time (R)',
+  'mods|goldSpeedrun|cfg|clockMode|desc': 'All three times are always measured and always recorded - this only decides which one stands large on the timer, the other two stay underneath. Play-clock (W) is the official community metric: the game\'s own save-file clock. Pause aware real time (R) counts real milliseconds only while the game is running - pausing the game pauses this clock too. Simulation time (T) counts the simulation steps the world actually ran, divided by 60.',
+  'mods|goldSpeedrun|cfg|clockMode|real': 'Pause aware real time (R)',
   'mods|goldSpeedrun|cfg|clockMode|sim': 'Simulation time (T)',
   'mods|goldSpeedrun|cfg|clockMode|play': 'Play-clock (W)',
   'mods|goldSpeedrun|cfg|timeFormat': 'Timer precision',
   'mods|goldSpeedrun|cfg|timeFormat|seconds': 'Seconds (00:00:00)',
   'mods|goldSpeedrun|cfg|timeFormat|centis': 'Hundredths (00:00:00.00)',
   'mods|goldSpeedrun|cfg|timeFormat|millis': 'Milliseconds (00:00:00.000)',
-  'mods|goldSpeedrun|cfg|skipIntro': 'Skip intro and landing',
-  'mods|goldSpeedrun|cfg|skipIntro|desc': 'Jumps straight into the world on a new game, exactly like the in-game Skip Intro button. The clock stays untouched: the skipped landing cannot start it.',
-  'mods|goldSpeedrun|cfg|skipStory': 'Dismiss story text boxes',
-  'mods|goldSpeedrun|cfg|skipStory|desc': 'Closes the story pop-ups the moment they appear - the same as clicking them away, so the story still counts them as seen. While one is on screen the timer cannot start.',
-  'mods|goldSpeedrun|cfg|skipTutorial': 'Skip the tutorial automatically',
-  'mods|goldSpeedrun|cfg|skipTutorial|desc': 'Ends the tutorial as soon as a save is loaded, exactly like the in-game skip button. Only happens while the timer is still waiting, never during a run.',
+  'mods|goldSpeedrun|cfg|skipIntro': 'Skip intro and landing (INVALID FOR SPEEDRUNS)',
+  'mods|goldSpeedrun|cfg|skipIntro|desc': 'INVALID FOR SPEEDRUNS — practice only. Jumps straight into the world on a new game, exactly like the in-game Skip Intro button. Leave this off for a valid speedrun. Recording must start at or before the create-world menu.',
+  'mods|goldSpeedrun|cfg|skipStory': 'Dismiss story text boxes (INVALID FOR SPEEDRUNS)',
+  'mods|goldSpeedrun|cfg|skipStory|desc': 'INVALID FOR SPEEDRUNS — practice only. Closes the story pop-ups the moment they appear - the same as clicking them away, so the story still counts them as seen. Leave this off for a valid speedrun.',
+  'mods|goldSpeedrun|cfg|skipTutorial': 'Skip the tutorial automatically (INVALID FOR SPEEDRUNS)',
+  'mods|goldSpeedrun|cfg|skipTutorial|desc': 'INVALID FOR SPEEDRUNS — practice only. Ends the tutorial as soon as a save is loaded, exactly like the in-game skip button. Only happens while the timer is still waiting, never during a run. Leave this off for a valid speedrun.',
   'mods|goldSpeedrun|cfg|showOverlay': 'Show timer on screen',
   'mods|goldSpeedrun|cfg|showSplits': 'Show split table',
   'mods|goldSpeedrun|cfg|showSplits|desc': 'Lists the last triggers under the timer with time and the LiveSplit-style delta versus the personal best. The full table appears on the result screen when the run ends.',
@@ -265,29 +269,178 @@ api.i18n.register('en', {
 
   // DE: Offizielles Regelwerk / EN: Official ruleset
   'mods|goldSpeedrun|rules|badge': 'OFFICIAL RULESET',
-  'mods|goldSpeedrun|rules|custom': 'Custom rules',
+  'mods|goldSpeedrun|rules|custom': 'INVALID RUN',
+  'mods|goldSpeedrun|rules|invalid': 'INVALID RUN',
+  'mods|goldSpeedrun|rules|invalidBanner': 'INVALID RUN — not speedrun-legal settings',
   'mods|goldSpeedrun|rules|title': 'Official speedrun ruleset',
-  'mods|goldSpeedrun|rules|ok': 'Every setting matches the official ruleset.',
-  'mods|goldSpeedrun|rules|bad': 'These settings differ from the official ruleset:',
+  'mods|goldSpeedrun|rules|ok': 'Every setting matches the official speedrun rules.',
+  'mods|goldSpeedrun|rules|bad': 'These settings are not speedrun-legal:',
   'mods|goldSpeedrun|rules|need': 'needs: {value}',
   'mods|goldSpeedrun|rules|broken': 'RULESET CHANGED',
   'mods|goldSpeedrun|rules|brokenDesc': 'A setting of the official ruleset was changed while the run was going. The run no longer counts as official and is not stored as a best time.',
   'mods|goldSpeedrun|rules|locked': 'locked in when the run started',
+  'mods|goldSpeedrun|rules|skipIntro': 'Skip intro and landing',
+  'mods|goldSpeedrun|rules|skipStory': 'Dismiss story text boxes',
+  'mods|goldSpeedrun|rules|skipTutorial': 'Skip the tutorial automatically',
   'mods|goldSpeedrun|rules|mods': 'Other mods enabled',
   'mods|goldSpeedrun|rules|modsNone': 'none',
   'mods|goldSpeedrun|mods|clean': 'No additional mods',
   'mods|goldSpeedrun|mods|count': '{count} other mods',
-  'mods|goldSpeedrun|rules|badge': 'OFFICIAL',
-  'mods|goldSpeedrun|rules|broken': 'RULES BROKEN',
-  'mods|goldSpeedrun|rules|custom': 'CUSTOM',
   'mods|goldSpeedrun|cfg|showRuleset': 'Show ruleset badge',
-  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Marks on the timer and on the result screen whether the settings match the official ruleset: timer started by any action including movement, gold ruleset Hard Mode, tutorial skip off, and no other mod enabled.',
+  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Marks on the timer and on the result screen whether the settings are speedrun-legal: gold ruleset Hard Mode, intro/story/tutorial skips off, and no other mod enabled. Invalid settings show a red INVALID RUN banner naming what is wrong.',
   'mods|goldSpeedrun|cfg|showAdvancedMetrics': 'Show advanced metrics',
-  'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Adds the raw tick count, average UPS, the ticks a perfect 60 UPS machine would have run by now, the thinking multiplier (how many real seconds each simulated second cost) and the gap between play-clock and real time.',
-  'mods|goldSpeedrun|cfg|trackUpsHistory': 'Record UPS history',
-  'mods|goldSpeedrun|cfg|trackUpsHistory|desc': 'Keeps a UPS min/max/average graph of the whole run for the result screen, sampled once per second and stored in the save. Off by default - a very long run adds a modest amount of save data.',
+  'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Adds the raw tick count, average UPS, the ticks a perfect 60 UPS machine would have run by now, the thinking multiplier (how many real seconds each simulated second cost) and the gap between play-clock and pause aware real time.',
+  'mods|goldSpeedrun|cfg|monitoringMode': 'Simulation monitoring',
+  'mods|goldSpeedrun|cfg|monitoringMode|desc': 'Off: no simulation hooks and no UPS graph. Standard: ballistic (thrown) particles plus passive reads — light overhead. Full: intercepts every moving CA pixel (settled vs active collisions) — measurable sim cost, for diagnostics only.',
+  'mods|goldSpeedrun|cfg|monitoringMode|off': 'Disabled (zero overhead)',
+  'mods|goldSpeedrun|cfg|monitoringMode|standard': 'Standard (ballistic particles)',
+  'mods|goldSpeedrun|cfg|monitoringMode|full': 'Full diagnostics (all matter)',
   'mods|goldSpeedrun|cfg|showLiveSparkline': 'Show live UPS graph',
   'mods|goldSpeedrun|cfg|showLiveSparkline|desc': 'Adds a small live graph of the last 60 seconds of UPS under the timer. Sampled on the main thread only - no measurable cost to the simulation.',
+  'mods|goldSpeedrun|metrics|title': 'Simulation & Performance Diagnostics',
+  'mods|goldSpeedrun|metrics|openBtn': 'Fullscreen Graph (F7)',
+  'mods|goldSpeedrun|metrics|close': 'Close (ESC)',
+  'mods|goldSpeedrun|metrics|timeRange': 'Range:',
+  'mods|goldSpeedrun|metrics|range60s': 'Last 60s (10 Hz)',
+  'mods|goldSpeedrun|metrics|range180s': 'Last 3m (10 Hz)',
+  'mods|goldSpeedrun|metrics|rangeFull': 'Full Run (1 Hz)',
+  'mods|goldSpeedrun|metrics|layerUps': 'UPS (dynamic)',
+  'mods|goldSpeedrun|metrics|layerBlocks': 'Collisions',
+  'mods|goldSpeedrun|metrics|layerMoves': 'Moves',
+  'mods|goldSpeedrun|metrics|layerAwake': 'Awake Chunks',
+  'mods|goldSpeedrun|metrics|layerSimTime': 'Sim Step Time',
+  'mods|goldSpeedrun|metrics|layerLive': 'Live Dynamic Population',
+  'mods|goldSpeedrun|metrics|layerJamLoad': 'Jam Load (blk/upd)',
+  'mods|goldSpeedrun|metrics|layerJamShare': 'Jam Share (%)',
+  'mods|goldSpeedrun|metrics|layerJamRate': 'Jam Rate (%)',
+  'mods|goldSpeedrun|metrics|layerJamIntensity': 'Jam Load (blk/upd)',
+  'mods|goldSpeedrun|metrics|layerBlocksSettled': 'Collisions (Settled)',
+  'mods|goldSpeedrun|metrics|layerBlocksActive': 'Collisions (Active)',
+  'mods|goldSpeedrun|metrics|layerDeficit': 'Lost time (s)',
+  'mods|goldSpeedrun|metrics|scaleLinear': 'Linear',
+  'mods|goldSpeedrun|metrics|scaleLog': 'Logarithmic',
+  'mods|goldSpeedrun|metrics|scaleMode': 'Scale:',
+  'mods|goldSpeedrun|metrics|smooth': 'Smooth:',
+  'mods|goldSpeedrun|metrics|smoothOff': 'Off',
+  'mods|goldSpeedrun|metrics|smoothRolling': '5s Rolling Avg',
+  'mods|goldSpeedrun|metrics|smoothBands': 'Confidence Bands',
+  'mods|goldSpeedrun|metrics|curUps': 'Current UPS',
+  'mods|goldSpeedrun|metrics|jamRate': 'Jam Rate',
+  'mods|goldSpeedrun|metrics|jamLoad': 'Jam Load',
+  'mods|goldSpeedrun|metrics|jamShare': 'Jam Share',
+  'mods|goldSpeedrun|metrics|flightActivity': 'Flight Activity',
+  'mods|goldSpeedrun|metrics|activeChunks': 'Active Chunks',
+  'mods|goldSpeedrun|metrics|simStep': 'Sim Step',
+  'mods|goldSpeedrun|metrics|hintSimBottleneck': 'Sim Load: If UPS drops while Sim Step Time exceeds 16.6 ms, cellular automata physics rules are overloading the worker threads.',
+  'mods|goldSpeedrun|metrics|hintRenderBottleneck': 'Sync / Thread Wait: If UPS drops while Sim Step Time is low, worker thread barrier synchronization (waitMs) or OS core starvation is the bottleneck. (Render FPS is untied).',
+  'mods|goldSpeedrun|metrics|hintJamRate': 'Jam Share (%) is a dimensionless ratio (blocked / total events). Jam Load (blk/upd) is blocked attempts normalized per simulation tick — in 60 UPS play, it is collisions scaled by 1/60. Neither metric directly measures CPU workload.',
+  'mods|goldSpeedrun|metrics|cardUpsTitle': 'UPS (Simulation Rate)',
+  'mods|goldSpeedrun|metrics|cardUps': 'Simulation steps completed per real second by the background physics worker threads (target: 60 UPS = 16.67 ms/step). Below 60 means the game world is losing time (running in slow motion). NOTE: UPS is completely untied from render FPS! The simulation runs in independent Web Workers, so GPU or UI lag drops FPS, not UPS. If UPS drops below 60, compare Sim Step Time against Worker Wait: high compute time means CA physics rules are overloaded; high wait time means thread barrier synchronization or CPU core starvation.',
+  'mods|goldSpeedrun|metrics|cardBlocksTitle': 'Collisions',
+  'mods|goldSpeedrun|metrics|cardBlocks': 'Total element:blocked events in the interval: movement attempts where the destination cell was occupied. In Standard mode, only ballistic projectiles (thrown items) are captured. In Full mode, all matter is captured (where resting piles naturally dominate as gravity probes support each tick). Collision checks are simple O(1) grid reads and do NOT intrinsically cause high CPU load; they reflect physical obstruction, not processing cost.',
+  'mods|goldSpeedrun|metrics|cardMovesTitle': 'Moves',
+  'mods|goldSpeedrun|metrics|cardMoves': 'Total element:moved events: successful displacements of matter into free cells. In Standard mode, counts projectile steps in flight; in Full mode, counts all particle displacements and swaps (a swap produces 2 moves and 0 blocks). High moves represent actual mass throughput. A high collision count with low moves in Standard mode means thrown items are trapped against a blockage.',
+  'mods|goldSpeedrun|metrics|cardJamShareTitle': 'Jam Share (%)',
+  'mods|goldSpeedrun|metrics|cardJamShare': 'Formula: collisions / (collisions + moves) × 100. A pure dimensionless ratio measuring what percentage of movement attempts were obstructed. Because it measures proportion rather than volume, 2 blocked particles in a completely idle world will register ~100% Jam Share with zero performance impact. Never use Jam Share alone as a performance or load metric.',
+  'mods|goldSpeedrun|metrics|cardJamLoadTitle': 'Jam Load (blk/upd)',
+  'mods|goldSpeedrun|metrics|cardJamLoad': 'Formula: collisions / simulation_ticks. Average collisions occurring per simulation tick. In steady 60 UPS play, this is literally collisions / (60 × seconds) (collision count scaled by a constant factor). Normalizing by ticks ensures the value remains comparable if the simulation slows down. It reflects physical collision density per tick, NOT CPU execution cost (checking an occupied cell is computationally trivial).',
+  'mods|goldSpeedrun|metrics|cardAwakeTitle': 'Awake Chunks',
+  'mods|goldSpeedrun|metrics|cardAwake': 'Count of 40×40 cell grid chunks actively simulated this tick (chunkShouldUpdate === 1). Sleeping chunks with resting matter consume near-zero CPU. Awake chunks are partitioned across worker threads during simulation phases 1–4. Rising awake chunk counts directly increase worker thread dispatch overhead and total CA cell evaluations.',
+  'mods|goldSpeedrun|metrics|cardSimTimeTitle': 'Sim Step Time',
+  'mods|goldSpeedrun|metrics|cardSimTime': 'Wall-clock milliseconds spent by the simulation worker threads executing one step. Budget is 16.67 ms at 60 UPS. Primary simulation workload indicator: if this exceeds 16.67 ms, CA physics is overloaded. If this is low (<16.67 ms) but UPS still drops below 60, the bottleneck is worker thread synchronization/barrier wait (waitMs), phase dispatch (postMs), or OS thread starvation — NOT rendering, GPU, or DOM!',
+  'mods|goldSpeedrun|metrics|cardLiveTitle': 'Live Dynamic Population',
+  'mods|goldSpeedrun|metrics|cardLive': 'Total dynamic element slots allocated in engine shared memory (sim.liveElementCount): moving sands, liquids, gases, and projectiles (excludes static terrain). Represents active matter memory footprint. These slots remain allocated even when matter comes to rest and chunks go to sleep.',
+  'mods|goldSpeedrun|metrics|cardSettledTitle': 'Collisions (Settled)',
+  'mods|goldSpeedrun|metrics|cardSettled': 'Full Diagnostics split: blocked movement attempts with direction === "down" against terrain or an element. Downward gravity probes resting support every tick. Large totals are completely normal for settled piles and indicate static equilibrium, not lag.',
+  'mods|goldSpeedrun|metrics|cardActiveTitle': 'Collisions (Active)',
+  'mods|goldSpeedrun|metrics|cardActive': 'Full Diagnostics split: all non-downward blocked attempts (lateral flow, upward movement, unauthorized transitions). Tracks dynamic resistance: material avalanches, fluid pressure, compression in chutes, and launcher impacts.',
+  'mods|goldSpeedrun|metrics|cardDeficitTitle': 'Lost time (signed deficit)',
+  'mods|goldSpeedrun|metrics|cardDeficit': 'Neutral count from two raw counters: D = (real-ms / 1000 × 60) − ticks executed, accumulated over the window. No rate estimate, no clamp. Positive D = simulation behind real time; negative D = simulation ran ahead of 60 UPS (over-run). Unrecovered loss D_perm is the running floor of D over the next 2 s, so hitch-and-catch-up wobble is not counted. Shaded bands mark intervals where D_perm rose. Hover a band to scrub the bottleneck map to that time.',
+  'mods|goldSpeedrun|metrics|ttDeficit': 'Deficit D:',
+  'mods|goldSpeedrun|metrics|ttDeficitPerm': 'Unrecovered:',
+  'mods|goldSpeedrun|metrics|slowdownIn': 'In slowdown',
+  'mods|goldSpeedrun|metrics|slowdownNone': 'none',
+  'mods|goldSpeedrun|metrics|unrecovered': 'Unrecovered',
+  'mods|goldSpeedrun|metrics|heatmapBoundCompute': 'Compute-bound at this time — the map may show a hotspot.',
+  'mods|goldSpeedrun|metrics|heatmapBoundWait': 'Sync/wait-bound at this time — chunk colours are not the cause.',
+  'mods|goldSpeedrun|metrics|heatmapBoundEmpty': 'No phase timing at this time.',
+  'mods|goldSpeedrun|metrics|heatmapDisclaimer': 'Highest per-tick calculation chunks. Indicative, not definitive: exactly one chunk is always reported as slowest each tick, even if it is not causing UPS loss. Use as a place to look, not as blame.',
+  'mods|goldSpeedrun|metrics|monitoringOffTitle': 'Simulation monitoring is disabled',
+  'mods|goldSpeedrun|metrics|monitoringOffBody': 'The worker hooks and UPS history are off. Enable Standard monitoring to record ballistic particles with light overhead, or Full diagnostics for all-matter capture.',
+  'mods|goldSpeedrun|metrics|monitoringOffEnable': 'Enable Standard monitoring',
+  'mods|goldSpeedrun|metrics|benchConfirmTitle': 'Run Metric Cost Matrix',
+  'mods|goldSpeedrun|metrics|benchConfirmLead': 'This is an advanced ~15 minute test of metric-hook overhead. Mis-reading the result is easy. Do not run it on a speedrun.',
+  'mods|goldSpeedrun|metrics|benchConfirmHow': 'How to run: use a dedicated test world that has already been at steady-state particle movement for at least 10 minutes. Keep performance load between 90% and 100% so any extra cost shows up as an immediate UPS drop — but do not start already in the red (UPS already collapsing).',
+  'mods|goldSpeedrun|metrics|benchConfirmInterp': 'The matrix compares baseline (hooks off) against each metric package. A higher sim-step or lower UPS while a package is ON is that package’s overhead. Results depend on the current world; they do not name a single “problem chunk”.',
+  'mods|goldSpeedrun|metrics|benchConfirmForce': 'The test forces ballistic-only capture for the duration and will cancel if a speedrun is running or the game is paused.',
+  'mods|goldSpeedrun|metrics|benchConfirmStart': 'I understand — start the test',
+  'mods|goldSpeedrun|metrics|benchConfirmCancel': 'Cancel',
+  'mods|goldSpeedrun|metrics|ttSettled': 'Settled collisions:',
+  'mods|goldSpeedrun|metrics|ttActive': 'Active collisions:',
+  'mods|goldSpeedrun|metrics|samplePoint': 'Sample Point',
+  'mods|goldSpeedrun|metrics|ttUps': 'UPS:',
+  'mods|goldSpeedrun|metrics|ttCollisions': 'Collisions:',
+  'mods|goldSpeedrun|metrics|ttMoves': 'Moves:',
+  'mods|goldSpeedrun|metrics|ttSimUpdates': 'Sim Updates:',
+  'mods|goldSpeedrun|metrics|ttJamLoad': 'Jam Load:',
+  'mods|goldSpeedrun|metrics|ttJamShare': 'Jam Share:',
+  'mods|goldSpeedrun|metrics|ttFlightActivity': 'Flight Activity:',
+  'mods|goldSpeedrun|metrics|ttJamRate': 'Jam Rate:',
+  'mods|goldSpeedrun|metrics|ttJamIntensity': 'Jam Load:',
+  'mods|goldSpeedrun|metrics|ttDynamic': 'Live Dynamic Pop:',
+  'mods|goldSpeedrun|metrics|ttDynamicDesc': 'Total allocated dynamic element slots in engine (includes resting sand, liquids, gases; not movers).',
+  'mods|goldSpeedrun|metrics|ttAwake': 'Awake Chunks:',
+  'mods|goldSpeedrun|metrics|ttSimCompute': 'Sim Compute:',
+  'mods|goldSpeedrun|metrics|ttScope': 'Capture Scope:',
+  'mods|goldSpeedrun|metrics|scopeBallistic': 'Ballistic Only',
+  'mods|goldSpeedrun|metrics|scopeAllMatter': 'All Matter (Diagnostic)',
+  'mods|goldSpeedrun|metrics|scopeSwitch': 'Capture Scope:',
+  'mods|goldSpeedrun|metrics|scopeWarn': 'Notice: Exact all-matter capture intercepts every moving cellular automata pixel. Designed for benchmarking/diagnostics; can reduce simulation UPS.',
+  'mods|goldSpeedrun|metrics|benchBtn': 'Run Metric Cost Matrix (~15 min)',
+  'mods|goldSpeedrun|metrics|benchRunning': '{phase} · repeat {totalPhase} · {mode}',
+  'mods|goldSpeedrun|metrics|benchTitle': 'Metric Cost Matrix',
+  'mods|goldSpeedrun|metrics|benchBaseline': 'OFF (Baseline):',
+  'mods|goldSpeedrun|metrics|benchActive': 'ON (Active):',
+  'mods|goldSpeedrun|metrics|benchOverhead': 'Estimated Overhead:',
+  'mods|goldSpeedrun|metrics|benchCancel': 'Cancel',
+  'mods|goldSpeedrun|metrics|benchCopy': 'Copy Report',
+  'mods|goldSpeedrun|metrics|benchCopied': 'Copied to Clipboard!',
+  'mods|goldSpeedrun|metrics|benchClose': 'Close',
+  'mods|goldSpeedrun|metrics|key': 'Toggle Simulation Diagnostics Graph',
+  'mods|goldSpeedrun|metrics|causeTitle': 'Where the sim spends time',
+  'mods|goldSpeedrun|metrics|causeCompute': 'Compute',
+  'mods|goldSpeedrun|metrics|causeWait': 'Wait (sync)',
+  'mods|goldSpeedrun|metrics|causePost': 'Post',
+  'mods|goldSpeedrun|metrics|causeBoundCompute': 'Compute-bound',
+  'mods|goldSpeedrun|metrics|causeBoundWait': 'Sync-bound',
+  'mods|goldSpeedrun|metrics|causeSlowest': 'Slowest region',
+  'mods|goldSpeedrun|metrics|causeChunk': 'chunk ({x}, {y})',
+  'mods|goldSpeedrun|metrics|causeColumn': 'column {x}',
+  'mods|goldSpeedrun|metrics|causeEmpty': 'No phase timing yet — load a world and wait one tick.',
+  'mods|goldSpeedrun|metrics|causeNote': 'Scheduling-phase time, not a physics-rule split. Shows where the sim is spending time and whether it is computing or waiting on other threads.',
+  'mods|goldSpeedrun|metrics|heatmapTitle': 'Bottleneck map (ms)',
+  'mods|goldSpeedrun|metrics|heatmapSum': 'Cumulative',
+  'mods|goldSpeedrun|metrics|heatmapExp': 'Exp Decay',
+  'mods|goldSpeedrun|metrics|heatmapLinear': 'Linear Decay',
+  'mods|goldSpeedrun|metrics|heatmapPeak': 'Peak tick',
+  'mods|goldSpeedrun|metrics|heatmapLive': 'This tick',
+  'mods|goldSpeedrun|metrics|heatmapFloor': 'Outline',
+  'mods|goldSpeedrun|metrics|heatmapHalfLife': 'Half-life',
+  'mods|goldSpeedrun|metrics|heatmapWindow': 'Window',
+  'mods|goldSpeedrun|metrics|heatmapEmpty': 'No bottleneck map yet — load a world and wait one tick.',
+  'mods|goldSpeedrun|metrics|heatmapHint': 'Each cell is a 40×40 chunk. Colour shows worker bottleneck ms. Wheel to zoom, drag to pan, double-click to reset.',
+  'mods|goldSpeedrun|metrics|heatmapScale': 'Max: {ms}',
+  'mods|goldSpeedrun|metrics|heatmapCell': 'chunk ({x}, {y})  {ms}',
+  'mods|goldSpeedrun|metrics|heatmapCellDetail': 'chunk ({x}, {y})  {val} ({sub})',
+  'mods|goldSpeedrun|metrics|heatmapLiveBtn': 'Live',
+  'mods|goldSpeedrun|metrics|heatmapZoomReset': 'Reset',
+  'mods|goldSpeedrun|metrics|heatmapTimeline': 'Timeline',
+  'mods|goldSpeedrun|metrics|ttCompute': 'Compute:',
+  'mods|goldSpeedrun|metrics|ttWait': 'Wait:',
+  'mods|goldSpeedrun|metrics|ttPost': 'Post:',
+  'mods|goldSpeedrun|metrics|ttSlowest': 'Slowest chunk:',
+  'mods|goldSpeedrun|cfg|allMatterCapture': 'Capture all-matter events',
+  'mods|goldSpeedrun|cfg|allMatterCapture|desc': 'Diagnostic mode: intercepts all moving cellular automata pixels instead of ballistic particles only. Has a measurable simulation overhead; recommended only for short diagnostics.',
 
   // DE: Kategorien und Routen / EN: Categories and routes
   'mods|goldSpeedrun|dash|run': 'Run',
@@ -379,17 +532,20 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|newBest': 'Neue Bestzeit: {time}',
   'mods|goldSpeedrun|pbTooShort': 'Geschafft in {time} — unter der 1:00-Mindestzeit, nicht als Bestzeit gespeichert',
   'mods|goldSpeedrun|waiting': 'Jede Aktion startet den Lauf',
-  'mods|goldSpeedrun|waitingMove': 'W/A/S/D startet den Lauf',
-  'mods|goldSpeedrun|waitingClick': 'Die erste Aktion startet den Lauf',
-  'mods|goldSpeedrun|waitingMouse': 'Mausklick startet den Lauf',
-  'mods|goldSpeedrun|reset': 'Timer zurückgesetzt - die nächste Aktion startet neu',
-  'mods|goldSpeedrun|resetKey': 'Speedrun-Timer zurücksetzen',
+  'mods|goldSpeedrun|toast|defaultsReset': 'Einstellungen auf gültige Speedrun-Regeln gesetzt (Hard Mode, keine Skips).',
   'mods|goldSpeedrun|resultKey': 'Letztes Ergebnis zeigen',
   'mods|goldSpeedrun|tutorialSkipped': 'Tutorial automatisch übersprungen',
   'mods|goldSpeedrun|artifacts': '{current} / {target} Artefakte',
   'mods|goldSpeedrun|factory': 'Rang {current} / {target}',
   'mods|goldSpeedrun|tainted': 'CHEATS BENUTZT - Lauf zählt nicht',
   'mods|goldSpeedrun|noTutorial': 'Ohne Tutorial',
+  'mods|goldSpeedrun|category|blueprints': 'Blueprints',
+  'mods|goldSpeedrun|dash|noBp': 'Ohne Blueprints',
+  'mods|goldSpeedrun|dash|bpUsed': 'Blueprints',
+  'mods|goldSpeedrun|toast|bpTriggered': 'Zur Blueprint-Kategorie gewechselt',
+  'mods|goldSpeedrun|dash|exportPng': 'Ergebniskarte als PNG exportieren',
+  'mods|goldSpeedrun|toast|pngSaved': 'Dashboard-PNG gespeichert',
+  'mods|goldSpeedrun|toast|pngCopied': 'Dashboard-PNG in die Zwischenablage kopiert & gespeichert',
 
   'mods|goldSpeedrun|split|rank': 'Fabrikrang {level}',
   'mods|goldSpeedrun|split|artifact': 'Artefakt {index}',
@@ -402,9 +558,10 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|result|noBest': 'erster Durchlauf',
   'mods|goldSpeedrun|result|sim': 'Simulationszeit',
   'mods|goldSpeedrun|result|play': 'Spielzeit-Uhr',
+  'mods|goldSpeedrun|result|real': 'Pausenbewusste Echtzeit',
   'mods|goldSpeedrun|result|tickSourceMissing': 'Kein Schrittzähler - die Simulation hat diesen Lauf keine Schritte gemeldet, Simulationszeit und die daraus abgeleiteten Werte fehlen deshalb.',
   'mods|goldSpeedrun|clock|simShort': 'sim',
-  'mods|goldSpeedrun|clock|realShort': 'echt',
+  'mods|goldSpeedrun|clock|realShort': 'p-echt',
   'mods|goldSpeedrun|clock|playShort': 'spiel',
   'mods|goldSpeedrun|result|colSplit': 'Auslöser',
   'mods|goldSpeedrun|result|colTime': 'Zeit',
@@ -414,6 +571,10 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|result|noSplits': 'Kein Auslöser gefeuert - unter Splits welche einschalten.',
   'mods|goldSpeedrun|result|close': 'Schließen',
   'mods|goldSpeedrun|result|hint': 'F10 zeigt das nochmal',
+  'mods|goldSpeedrun|result|wallStart': 'Wanduhr Start',
+  'mods|goldSpeedrun|result|wallEnd': 'Wanduhr Ende',
+  'mods|goldSpeedrun|result|wallSpan': 'Wanduhr-Dauer',
+  'mods|goldSpeedrun|result|wallNow': 'jetzt',
   'mods|goldSpeedrun|hud|openDashboard': 'F10 öffnet das Speedrun-Dashboard',
   'mods|goldSpeedrun|result|expand': 'Alle Werte zeigen',
   'mods|goldSpeedrun|result|collapse': 'Alle Werte ausblenden',
@@ -421,18 +582,21 @@ api.i18n.register('de', {
   // DE: Metriken (U, R, W und Ableitungen) / EN: Metrics (U, R, W and derived values)
   'mods|goldSpeedrun|metric|slowdown': 'Verzögerung',
   'mods|goldSpeedrun|metric|deficit': 'Schritt-Rückstand',
+  'mods|goldSpeedrun|metric|jamRate': 'Blockrate',
+  'mods|goldSpeedrun|metric|jamLoad': 'Blocklast',
+  'mods|goldSpeedrun|metric|jamShare': 'Blockanteil',
   'mods|goldSpeedrun|metric|ticks': 'Ausgeführte Schritte (U)',
   'mods|goldSpeedrun|metric|avgUps': 'Mittlere UPS',
   'mods|goldSpeedrun|metric|idealTicks': 'Soll-Schritte (60×R)',
   'mods|goldSpeedrun|metric|thinkMult': 'Denk-Faktor',
-  'mods|goldSpeedrun|metric|wrProbe': 'Spielzeit-Uhr minus Echtzeit (W−R)',
+  'mods|goldSpeedrun|metric|wrProbe': 'Spielzeit-Uhr minus pausenbewusste Echtzeit (W−R)',
   'mods|goldSpeedrun|metric|dash': 'wartet auf den Laufstart',
 
   // DE: Verlaufsgrafik / EN: History graph
   'mods|goldSpeedrun|graph|title': 'UPS über den ganzen Lauf',
   'mods|goldSpeedrun|graph|live': 'UPS live (letzte 60 s)',
-  'mods|goldSpeedrun|graph|empty': 'Noch keine Daten - "UPS-Verlauf aufzeichnen" vor Laufstart einschalten.',
-  'mods|goldSpeedrun|graph|emptyRun': 'Noch keine Daten - starte einen Lauf, um UPS aufzuzeichnen.',
+  'mods|goldSpeedrun|graph|empty': 'Noch keine Daten - setze Simulationsüberwachung auf Standard oder Voll in den Mod-Optionen.',
+  'mods|goldSpeedrun|graph|emptyRun': 'Noch keine Daten - starte einen Lauf (oder warte eine Sekunde), um UPS aufzuzeichnen.',
 
   'mods|goldSpeedrun|trg|title': 'Split-Auslöser',
   'mods|goldSpeedrun|trg|key': 'Split-Auslöser öffnen',
@@ -459,13 +623,11 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|cfg|artifactTarget': 'Artefakt-Ziel',
   'mods|goldSpeedrun|cfg|artifactTarget|desc': 'Gilt nur für die Artefakt-Kategorie. 0 zählt alle Artefakte, die auf der aktuellen Karte liegen.',
   'mods|goldSpeedrun|cfg|mode': 'Gold-Regelwerk',
-  'mods|goldSpeedrun|cfg|mode|desc': 'Normal zählt jedes eingenommene Gold, Ausgeben kostet also keinen Fortschritt. Hard Mode geht nach dem aktuellen Kontostand: Forschen wirft zurück. Offizielles Regelwerk ist Hard Mode samt den übrigen offiziellen Vorgaben - der Timer startet dann bei jeder Aktion inklusive Bewegung, und der automatische Tutorial-Skip bleibt aus, egal was in diesen beiden Optionen steht.',
-  'mods|goldSpeedrun|cfg|mode|earned': 'Normal',
+  'mods|goldSpeedrun|cfg|mode|desc': 'Hard Mode ist für einen gültigen Speedrun vorgeschrieben: Gold ist der aktuelle Kontostand, Forschen wirft also zurück. Total Earned ist nur Training und UNGÜLTIG FÜR SPEEDRUNS: es zählt jedes eingenommene Gold, Ausgeben kostet also keinen Fortschritt. Die Aufnahme muss im oder vor dem Welt-erstellen-Menü beginnen. Keine anderen Mods dürfen aktiv sein.',
+  'mods|goldSpeedrun|cfg|mode|earned': 'Total Earned (UNGÜLTIG FÜR SPEEDRUNS)',
   'mods|goldSpeedrun|cfg|mode|balance': 'Hard Mode',
-  'mods|goldSpeedrun|cfg|mode|official': 'Offizielles Regelwerk (Hard Mode)',
-  'mods|goldSpeedrun|modeNormal': 'Normal',
+  'mods|goldSpeedrun|modeNormal': 'Total Earned',
   'mods|goldSpeedrun|modeHard': 'Hard Mode',
-  'mods|goldSpeedrun|rules|forced': 'gesetzt durch "Offizielles Regelwerk"',
   'mods|goldSpeedrun|cfg|enabled': 'Mod aktiviert',
   'mods|goldSpeedrun|cfg|enabled|desc': 'Schaltet den ganzen Mod ab, ohne ihn zu deinstallieren: kein Timer, keine Einblendung, keine Splits, keine automatischen Skips. Ein bereits laufender Lauf zählt seine offizielle Echtzeit im Hintergrund weiter, solange dies aus ist - das Umschalten lässt sich also nicht zum Anhalten eines Laufs missbrauchen.',
   'mods|goldSpeedrun|cfg|preset': 'Kategorie',
@@ -477,27 +639,21 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|cfg|preset|factory6': 'Fabrikrang 6',
   'mods|goldSpeedrun|cfg|preset|factory7': 'Fabrikrang 7 (max)',
   'mods|goldSpeedrun|cfg|preset|custom': 'Eigenes Gold',
-  'mods|goldSpeedrun|cfg|startMode': 'Was den Timer startet',
-  'mods|goldSpeedrun|cfg|startMode|desc': 'Mausdruck ist die Speedrun-Einstellung: die Uhr startet in dem Moment, in dem du gräbst, greifst, baust oder forschst. Herumlaufen ist frei, und was ohne deinen Klick weiterläuft - eine Grabdrohne, ein Förderband - startet sie ebenfalls nicht.',
-  'mods|goldSpeedrun|cfg|startMode|mouse': 'Nur Mausdruck',
-  'mods|goldSpeedrun|cfg|startMode|click': 'Mausdruck oder jeder Fortschritt',
-  'mods|goldSpeedrun|cfg|startMode|any': 'Jede Aktion, auch Bewegung',
-  'mods|goldSpeedrun|cfg|startMode|move': 'Nur Bewegung',
   'mods|goldSpeedrun|cfg|clockMode': 'Große Uhr',
-  'mods|goldSpeedrun|cfg|clockMode|desc': 'Alle drei Zeiten werden immer gemessen und immer festgehalten - das hier entscheidet nur, welche groß auf dem Timer steht, die anderen beiden stehen darunter. Die Spielzeit-Uhr (W) ist die offizielle Community-Wertung: die eigene Uhr des Spielstands. Die Echtzeit (R) ist die Zahl, die auch eine Stoppuhr neben dem Bildschirm zeigt. Die Simulationszeit (T) zählt die Schritte, die die Welt tatsächlich gelaufen ist, geteilt durch 60.',
-  'mods|goldSpeedrun|cfg|clockMode|real': 'Echtzeit (R)',
+  'mods|goldSpeedrun|cfg|clockMode|desc': 'Alle drei Zeiten werden immer gemessen und immer festgehalten - das hier entscheidet nur, welche groß auf dem Timer steht, die anderen beiden stehen darunter. Die Spielzeit-Uhr (W) ist die offizielle Community-Wertung: die eigene Uhr des Spielstands. Die pausenbewusste Echtzeit (R) zählt reale Millisekunden nur, solange das Spiel läuft - Pausieren hält sie an. Die Simulationszeit (T) zählt die Schritte, die die Welt tatsächlich gelaufen ist, geteilt durch 60.',
+  'mods|goldSpeedrun|cfg|clockMode|real': 'Pausenbewusste Echtzeit (R)',
   'mods|goldSpeedrun|cfg|clockMode|sim': 'Simulationszeit (T)',
   'mods|goldSpeedrun|cfg|clockMode|play': 'Spielzeit-Uhr (W)',
   'mods|goldSpeedrun|cfg|timeFormat': 'Genauigkeit der Uhr',
   'mods|goldSpeedrun|cfg|timeFormat|seconds': 'Sekunden (00:00:00)',
   'mods|goldSpeedrun|cfg|timeFormat|centis': 'Hundertstel (00:00:00.00)',
   'mods|goldSpeedrun|cfg|timeFormat|millis': 'Millisekunden (00:00:00.000)',
-  'mods|goldSpeedrun|cfg|skipIntro': 'Intro und Landeanflug überspringen',
-  'mods|goldSpeedrun|cfg|skipIntro|desc': 'Springt bei einem neuen Spiel direkt in die Welt, genau wie der Knopf "Skip Intro" im Spiel. Die Uhr bleibt unberührt: der übersprungene Landeanflug kann sie nicht starten.',
-  'mods|goldSpeedrun|cfg|skipStory': 'Story-Textboxen wegblenden',
-  'mods|goldSpeedrun|cfg|skipStory|desc': 'Schließt die Story-Einblendungen, sobald sie auftauchen - dasselbe wie Wegklicken, die Story zählt sie also weiter als gesehen. Solange eine im Bild ist, kann der Timer nicht starten.',
-  'mods|goldSpeedrun|cfg|skipTutorial': 'Tutorial automatisch überspringen',
-  'mods|goldSpeedrun|cfg|skipTutorial|desc': 'Beendet das Tutorial beim Laden eines Spielstands, genau wie der Knopf im Spiel. Passiert nur, solange der Timer noch wartet - nie mitten im Lauf.',
+  'mods|goldSpeedrun|cfg|skipIntro': 'Intro und Landeanflug überspringen (UNGÜLTIG FÜR SPEEDRUNS)',
+  'mods|goldSpeedrun|cfg|skipIntro|desc': 'UNGÜLTIG FÜR SPEEDRUNS — nur Training. Springt bei einem neuen Spiel direkt in die Welt, genau wie der Knopf "Skip Intro" im Spiel. Für einen gültigen Speedrun auslassen. Die Aufnahme muss im oder vor dem Welt-erstellen-Menü beginnen.',
+  'mods|goldSpeedrun|cfg|skipStory': 'Story-Textboxen wegblenden (UNGÜLTIG FÜR SPEEDRUNS)',
+  'mods|goldSpeedrun|cfg|skipStory|desc': 'UNGÜLTIG FÜR SPEEDRUNS — nur Training. Schließt die Story-Einblendungen, sobald sie auftauchen - dasselbe wie Wegklicken, die Story zählt sie also weiter als gesehen. Für einen gültigen Speedrun auslassen.',
+  'mods|goldSpeedrun|cfg|skipTutorial': 'Tutorial automatisch überspringen (UNGÜLTIG FÜR SPEEDRUNS)',
+  'mods|goldSpeedrun|cfg|skipTutorial|desc': 'UNGÜLTIG FÜR SPEEDRUNS — nur Training. Beendet das Tutorial beim Laden eines Spielstands, genau wie der Knopf im Spiel. Passiert nur, solange der Timer noch wartet - nie mitten im Lauf. Für einen gültigen Speedrun auslassen.',
   'mods|goldSpeedrun|cfg|showOverlay': 'Timer einblenden',
   'mods|goldSpeedrun|cfg|showSplits': 'Split-Tabelle zeigen',
   'mods|goldSpeedrun|cfg|showSplits|desc': 'Listet die letzten Auslöser unter der Uhr mit Zeit und dem LiveSplit-Delta zur Bestzeit. Die vollständige Tabelle erscheint am Ende im Ergebnisfenster.',
@@ -546,29 +702,178 @@ api.i18n.register('de', {
 
   // DE: Offizielles Regelwerk / EN: Official ruleset
   'mods|goldSpeedrun|rules|badge': 'OFFIZIELLES REGELWERK',
-  'mods|goldSpeedrun|rules|custom': 'Eigene Regeln',
+  'mods|goldSpeedrun|rules|custom': 'UNGÜLTIGER LAUF',
+  'mods|goldSpeedrun|rules|invalid': 'UNGÜLTIGER LAUF',
+  'mods|goldSpeedrun|rules|invalidBanner': 'UNGÜLTIGER LAUF — Einstellungen sind nicht speedrun-tauglich',
   'mods|goldSpeedrun|rules|title': 'Offizielles Speedrun-Regelwerk',
-  'mods|goldSpeedrun|rules|ok': 'Alle Einstellungen entsprechen dem offiziellen Regelwerk.',
-  'mods|goldSpeedrun|rules|bad': 'Diese Einstellungen weichen vom offiziellen Regelwerk ab:',
+  'mods|goldSpeedrun|rules|ok': 'Alle Einstellungen entsprechen den offiziellen Speedrun-Regeln.',
+  'mods|goldSpeedrun|rules|bad': 'Diese Einstellungen sind nicht speedrun-tauglich:',
   'mods|goldSpeedrun|rules|need': 'nötig: {value}',
   'mods|goldSpeedrun|rules|broken': 'REGELWERK VERSTELLT',
   'mods|goldSpeedrun|rules|brokenDesc': 'Während des laufenden Laufs wurde eine Einstellung des offiziellen Regelwerks geändert. Der Lauf gilt nicht mehr als offiziell und wird nicht als Bestzeit gespeichert.',
   'mods|goldSpeedrun|rules|locked': 'festgehalten beim Start des Laufs',
+  'mods|goldSpeedrun|rules|skipIntro': 'Intro und Landeanflug überspringen',
+  'mods|goldSpeedrun|rules|skipStory': 'Story-Textboxen wegblenden',
+  'mods|goldSpeedrun|rules|skipTutorial': 'Tutorial automatisch überspringen',
   'mods|goldSpeedrun|rules|mods': 'Andere Mods aktiv',
   'mods|goldSpeedrun|rules|modsNone': 'keine',
   'mods|goldSpeedrun|mods|clean': 'Keine weiteren Mods',
   'mods|goldSpeedrun|mods|count': '{count} weitere Mods',
-  'mods|goldSpeedrun|rules|badge': 'OFFIZIELL',
-  'mods|goldSpeedrun|rules|broken': 'REGELBRUCH',
-  'mods|goldSpeedrun|rules|custom': 'EIGENES REGELWERK',
   'mods|goldSpeedrun|cfg|showRuleset': 'Regelwerk-Abzeichen zeigen',
-  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Zeigt am Timer und im Ergebnisfenster, ob die Einstellungen dem offiziellen Regelwerk entsprechen: Start durch jede Aktion inklusive Bewegung, Gold-Regelwerk Hard Mode, Tutorial-Skip aus, und kein anderer Mod aktiv.',
+  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Zeigt am Timer und im Ergebnisfenster, ob die Einstellungen speedrun-tauglich sind: Gold-Regelwerk Hard Mode, Intro-/Story-/Tutorial-Skip aus, und kein anderer Mod aktiv. Ungültige Einstellungen zeigen ein rotes UNGÜLTIGER LAUF mit der abweichenden Option.',
   'mods|goldSpeedrun|cfg|showAdvancedMetrics': 'Erweiterte Messwerte zeigen',
-  'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Zeigt zusätzlich die rohe Schrittzahl, die mittleren UPS, die Schritte, die eine perfekte 60-UPS-Maschine inzwischen gelaufen wäre, den Denk-Faktor (wie viele reale Sekunden jede simulierte Sekunde kostete) und den Abstand zwischen Spielzeit-Uhr und Echtzeit.',
-  'mods|goldSpeedrun|cfg|trackUpsHistory': 'UPS-Verlauf aufzeichnen',
-  'mods|goldSpeedrun|cfg|trackUpsHistory|desc': 'Hält eine Min/Max/Mittel-Grafik der UPS des ganzen Laufs für das Ergebnisfenster fest, einmal pro Sekunde abgetastet und im Spielstand gespeichert. Standardmäßig aus - ein sehr langer Lauf legt dadurch etwas mehr Spielstanddaten an.',
+  'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Zeigt zusätzlich die rohe Schrittzahl, die mittleren UPS, die Schritte, die eine perfekte 60-UPS-Maschine inzwischen gelaufen wäre, den Denk-Faktor (wie viele reale Sekunden jede simulierte Sekunde kostete) und den Abstand zwischen Spielzeit-Uhr und pausenbewusster Echtzeit.',
+  'mods|goldSpeedrun|cfg|monitoringMode': 'Simulationsüberwachung',
+  'mods|goldSpeedrun|cfg|monitoringMode|desc': 'Aus: keine Simulations-Hooks und keine UPS-Grafik. Standard: Wurfpartikel plus passive Werte — geringer Overhead. Voll: fängt jedes bewegte CA-Pixel ab (ruhend vs. aktiv) — messbare Sim-Kosten, nur zur Diagnose.',
+  'mods|goldSpeedrun|cfg|monitoringMode|off': 'Aus (kein Overhead)',
+  'mods|goldSpeedrun|cfg|monitoringMode|standard': 'Standard (Wurfpartikel)',
+  'mods|goldSpeedrun|cfg|monitoringMode|full': 'Volldiagnose (gesamte Materie)',
   'mods|goldSpeedrun|cfg|showLiveSparkline': 'Live-UPS-Grafik zeigen',
   'mods|goldSpeedrun|cfg|showLiveSparkline|desc': 'Zeigt eine kleine Live-Grafik der letzten 60 Sekunden UPS unter dem Timer. Wird nur im Hauptthread abgetastet - keine messbaren Kosten für die Simulation.',
+  'mods|goldSpeedrun|metrics|title': 'Simulations- & Leistungsdiagnose',
+  'mods|goldSpeedrun|metrics|openBtn': 'Vollbild-Graph (F7)',
+  'mods|goldSpeedrun|metrics|close': 'Schließen (ESC)',
+  'mods|goldSpeedrun|metrics|timeRange': 'Zeitbereich:',
+  'mods|goldSpeedrun|metrics|range60s': 'Letzte 60s (10 Hz)',
+  'mods|goldSpeedrun|metrics|range180s': 'Letzte 3m (10 Hz)',
+  'mods|goldSpeedrun|metrics|rangeFull': 'Kompletter Lauf (1 Hz)',
+  'mods|goldSpeedrun|metrics|layerUps': 'UPS (dynamisch)',
+  'mods|goldSpeedrun|metrics|layerBlocks': 'Kollisionen',
+  'mods|goldSpeedrun|metrics|layerMoves': 'Bewegungen',
+  'mods|goldSpeedrun|metrics|layerAwake': 'Aktive Abschnitte',
+  'mods|goldSpeedrun|metrics|layerSimTime': 'Sim-Rechenzeit',
+  'mods|goldSpeedrun|metrics|layerLive': 'Dynamische Population (Live)',
+  'mods|goldSpeedrun|metrics|layerJamLoad': 'Blocklast (Block/Schritt)',
+  'mods|goldSpeedrun|metrics|layerJamShare': 'Blockanteil (%)',
+  'mods|goldSpeedrun|metrics|layerJamRate': 'Blockrate (%)',
+  'mods|goldSpeedrun|metrics|layerJamIntensity': 'Blocklast (Block/Schritt)',
+  'mods|goldSpeedrun|metrics|layerBlocksSettled': 'Kollisionen (Ruhend)',
+  'mods|goldSpeedrun|metrics|layerBlocksActive': 'Kollisionen (Aktiv)',
+  'mods|goldSpeedrun|metrics|layerDeficit': 'Verlorene Zeit (s)',
+  'mods|goldSpeedrun|metrics|scaleLinear': 'Linear',
+  'mods|goldSpeedrun|metrics|scaleLog': 'Logarithmisch',
+  'mods|goldSpeedrun|metrics|scaleMode': 'Skala:',
+  'mods|goldSpeedrun|metrics|smooth': 'Glättung:',
+  'mods|goldSpeedrun|metrics|smoothOff': 'Aus',
+  'mods|goldSpeedrun|metrics|smoothRolling': '5s Gleit. Schnitt',
+  'mods|goldSpeedrun|metrics|smoothBands': 'Konfidenzbänder',
+  'mods|goldSpeedrun|metrics|curUps': 'Momentan-UPS',
+  'mods|goldSpeedrun|metrics|jamRate': 'Blockrate',
+  'mods|goldSpeedrun|metrics|jamLoad': 'Blocklast',
+  'mods|goldSpeedrun|metrics|jamShare': 'Blockanteil',
+  'mods|goldSpeedrun|metrics|flightActivity': 'Flugaktivität',
+  'mods|goldSpeedrun|metrics|activeChunks': 'Aktive Chunks',
+  'mods|goldSpeedrun|metrics|simStep': 'Sim-Schritt',
+  'mods|goldSpeedrun|metrics|hintSimBottleneck': 'Sim-Last: Fällt UPS bei Sim-Schrittzeiten über 16,6 ms, überlasten die CA-Physikregeln die Worker-Threads.',
+  'mods|goldSpeedrun|metrics|hintRenderBottleneck': 'Sync / Thread-Warten: Fällt UPS bei niedriger Schrittzeit, sind Thread-Barrieren (waitMs) oder CPU-Kern-Engpässe die Ursache. (Render-FPS ist entkoppelt).',
+  'mods|goldSpeedrun|metrics|hintJamRate': 'Blockanteil (%) ist eine reine Prozentquote (Block / Gesamt). Blocklast (Block/Schritt) normiert Kollisionen je Tick — bei 60 UPS entspricht dies Kollisionen mal 1/60. Keine der beiden Metriken misst direkt CPU-Aufwand.',
+  'mods|goldSpeedrun|metrics|cardUpsTitle': 'UPS (Simulationsrate)',
+  'mods|goldSpeedrun|metrics|cardUps': 'Simulationsschritte pro realer Sekunde, ausgeführt durch den Hintergrund-Worker-Threadpool (Ziel: 60 UPS = 16,67 ms/Schritt). Unter 60 verliert die Spielwelt Zeit (Zeitdehnung/Slowmotion). HINWEIS: UPS ist komplett von den Render-FPS entkoppelt! Die Simulation läuft in separaten Web Workern; GPU- oder UI-Lag senkt FPS, nicht UPS. Fällt UPS unter 60, prüfe Sim-Rechenzeit vs. Worker-Warten: hohe Rechenzeit = CA-Physik überlastet; hohes Warten = Thread-Synchronisation/Barrieren oder CPU-Kern-Engpass.',
+  'mods|goldSpeedrun|metrics|cardBlocksTitle': 'Kollisionen',
+  'mods|goldSpeedrun|metrics|cardBlocks': 'Anzahl der element:blocked-Ereignisse im Intervall: Bewegungsversuche, deren Zielzelle belegt war. Im Standardmodus werden nur ballistische Partikel (geworfene Objekte) erfasst. Im Vollmodus wird sämtliche Materie erfasst (wo ruhende Haufen dominieren, da die Schwerkraft jeden Tick die Auflage prüft). Kollisionsprüfungen sind triviale O(1)-Gitterabfragen und erzeugen für sich kaum CPU-Last; sie messen physische Hindernisse, nicht Rechenaufwand.',
+  'mods|goldSpeedrun|metrics|cardMovesTitle': 'Bewegungen',
+  'mods|goldSpeedrun|metrics|cardMoves': 'Anzahl der element:moved-Ereignisse: erfolgreiche Verschiebungen von Materie in freie Zellen. Im Standardmodus zählt dies Wurfpartikel im Flug; im Vollmodus alle CA-Partikelbewegungen und -Tausche (ein Platztausch erzeugt 2 Moves und 0 Blöcke). Hohe Moves bedeuten echten Massendurchsatz. Hohe Kollisionen bei wenigen Moves im Standardmodus bedeuten blockierte Wurfgeschosse an Hindernissen.',
+  'mods|goldSpeedrun|metrics|cardJamShareTitle': 'Blockanteil (%)',
+  'mods|goldSpeedrun|metrics|cardJamShare': 'Formel: Kollisionen / (Kollisionen + Bewegungen) × 100. Ein reines dimensionsloses Verhältnis, das den Prozentsatz blockierter Bewegungsversuche angibt. Da es Anteile statt Mengen misst, ergeben 2 festsitzende Partikel in einer sonst stillen Welt ~100% Blockanteil bei null Auswirkung auf die Performance. Nie als isolierten Leistungs- oder Lastwert interpretieren.',
+  'mods|goldSpeedrun|metrics|cardJamLoadTitle': 'Blocklast (Block/Schritt)',
+  'mods|goldSpeedrun|metrics|cardJamLoad': 'Formel: Kollisionen / Simulationsschritte. Durchschnittliche Kollisionen pro Simulationstick. Bei stabilen 60 UPS entspricht dies buchstäblich Kollisionen / (60 × Sekunden) (Kollisionsanzahl mal konstanter Faktor). Die Normierung über Ticks hält den Wert stabil, wenn die Simulation verlangsamt. Sie spiegelt die physische Kollisionsdichte je Schritt wider, NICHT den CPU-Aufwand (Zellbelegungsprüfungen sind rechnerisch trivial).',
+  'mods|goldSpeedrun|metrics|cardAwakeTitle': 'Aktive Chunks',
+  'mods|goldSpeedrun|metrics|cardAwake': 'Anzahl der 40×40-Gitterabschnitte, die diesen Tick aktiv simuliert werden (chunkShouldUpdate === 1). Schlafende Chunks mit ruhender Materie verbrauchen nahezu null CPU. Aktive Chunks werden in den Simulationsphasen 1–4 auf die Worker-Threads aufgeteilt. Ein Anstieg aktiver Chunks treibt den Dispatch-Overhead und die Anzahl der CA-Zellberechnungen direkt nach oben.',
+  'mods|goldSpeedrun|metrics|cardSimTimeTitle': 'Sim-Rechenzeit',
+  'mods|goldSpeedrun|metrics|cardSimTime': 'Wanduhren-Millisekunden, die die Simulations-Worker-Threads für die Ausführung eines Schritts benötigen. Das Budget bei 60 UPS beträgt 16,67 ms. Primärer Indikator für Simulationslast: übersteigt die Zeit 16,67 ms, ist die CA-Physik überlastet. Liegt sie niedrig (<16,67 ms), aber UPS sinkt trotzdem unter 60, liegt der Engpass bei Thread-Synchronisation/Barrieren (waitMs), Manager-Dispatch (postMs) oder CPU-Kern-Drosselung — NICHT an Render/GPU/DOM!',
+  'mods|goldSpeedrun|metrics|cardLiveTitle': 'Dynamische Population (Live)',
+  'mods|goldSpeedrun|metrics|cardLive': 'Im Shared Memory der Engine allozierte dynamische Elementslots (sim.liveElementCount): fallender Sand, Flüssigkeiten, Gase und Geschosse (ohne statisches Terrain). Repräsentiert den Speicher-Footprint aktiver Materie. Slots bleiben belegt, auch wenn Materie zur Ruhe kommt und Chunks einschlafen.',
+  'mods|goldSpeedrun|metrics|cardSettledTitle': 'Kollisionen (Ruhend)',
+  'mods|goldSpeedrun|metrics|cardSettled': 'Volldiagnose-Aufteilung: blockierte Bewegungsversuche mit direction === "down" gegen Terrain oder ein Element. Die Schwerkraft prüft die tragende Auflage jeden Tick neu. Hohe Zahlen sind bei ruhenden Haufen völlig normal und zeigen statisches Gleichgewicht, keinen Lag.',
+  'mods|goldSpeedrun|metrics|cardActiveTitle': 'Kollisionen (Aktiv)',
+  'mods|goldSpeedrun|metrics|cardActive': 'Volldiagnose-Aufteilung: alle nicht nach unten gerichteten Blockversuche (seitlicher Fluss, Aufwärtsdrang, unerlaubte Übergänge). Erfasst dynamischen Widerstand: Schüttkegel-Lawinen, Flüssigkeitsdruck, Stau in Trichtern und Werfer-Aufschläge.',
+  'mods|goldSpeedrun|metrics|cardDeficitTitle': 'Verlorene Zeit (vorzeichenbehaftetes Defizit)',
+  'mods|goldSpeedrun|metrics|cardDeficit': 'Neutrale Zählung aus zwei Rohzählern: D = (Echt-ms / 1000 × 60) − ausgeführte Ticks, aufsummiert über das Fenster. Keine Rate, kein Clamp. Positives D = Simulation hinter der Echtzeit; negatives D = Simulation lief vor 60 UPS (Überlauf). Unaufgeholte Last D_perm ist das laufende Minimum von D über die nächsten 2 s, damit Hitch-und-Aufhol-Wobble nicht zählt. Schattierte Bänder markieren Intervalle, in denen D_perm stieg. Ein Band hovern, um die Engpasskarte dorthin zu setzen.',
+  'mods|goldSpeedrun|metrics|ttDeficit': 'Defizit D:',
+  'mods|goldSpeedrun|metrics|ttDeficitPerm': 'Unaufgeholt:',
+  'mods|goldSpeedrun|metrics|slowdownIn': 'In Verlangsamung',
+  'mods|goldSpeedrun|metrics|slowdownNone': 'keine',
+  'mods|goldSpeedrun|metrics|unrecovered': 'Unaufgeholt',
+  'mods|goldSpeedrun|metrics|heatmapBoundCompute': 'Rechenbegrenzt zu diesem Zeitpunkt — die Karte kann einen Hotspot zeigen.',
+  'mods|goldSpeedrun|metrics|heatmapBoundWait': 'Sync/Warte-begrenzt zu diesem Zeitpunkt — Abschnittfarben sind nicht die Ursache.',
+  'mods|goldSpeedrun|metrics|heatmapBoundEmpty': 'Keine Phasenzeit zu diesem Zeitpunkt.',
+  'mods|goldSpeedrun|metrics|heatmapDisclaimer': 'Höchste Rechenzeiten je Tick. Hinweis, kein Urteil: genau ein Abschnitt ist immer der langsamste Tick und wird gemeldet, auch wenn er keinen UPS-Verlust verursacht. Ort zum Nachschauen, keine Schuldzuweisung.',
+  'mods|goldSpeedrun|metrics|monitoringOffTitle': 'Simulationsüberwachung ist aus',
+  'mods|goldSpeedrun|metrics|monitoringOffBody': 'Worker-Hooks und UPS-Verlauf sind aus. Aktiviere Standard, um Wurfpartikel mit geringem Overhead aufzuzeichnen, oder Volldiagnose für Gesamtmaterie.',
+  'mods|goldSpeedrun|metrics|monitoringOffEnable': 'Standardüberwachung einschalten',
+  'mods|goldSpeedrun|metrics|benchConfirmTitle': 'Metrik-Kostenmatrix starten',
+  'mods|goldSpeedrun|metrics|benchConfirmLead': 'Das ist ein fortgeschrittener Test von etwa 15 Minuten zum Overhead der Metrik-Hooks. Fehlinterpretation ist leicht. Nicht in einem Speedrun starten.',
+  'mods|goldSpeedrun|metrics|benchConfirmHow': 'So testen: eigene Testwelt, die bereits mindestens 10 Minuten im stationären Partikelbetrieb läuft. Last zwischen 90 % und 100 %, damit extra Kosten sofort als UPS-Abfall sichtbar werden — aber nicht schon im Roten starten (UPS bricht schon ein).',
+  'mods|goldSpeedrun|metrics|benchConfirmInterp': 'Die Matrix vergleicht die Basislinie (Hooks aus) mit jedem Metrikpaket. Höhere Sim-Schrittzeit oder niedrigere UPS bei EIN ist der Overhead dieses Pakets. Ergebnisse hängen von der aktuellen Welt ab; sie benennen keinen einzelnen „Problem-Abschnitt“.',
+  'mods|goldSpeedrun|metrics|benchConfirmForce': 'Der Test erzwingt für die Dauer nur Wurfpartikel und bricht ab, wenn ein Speedrun läuft oder das Spiel pausiert ist.',
+  'mods|goldSpeedrun|metrics|benchConfirmStart': 'Verstanden — Test starten',
+  'mods|goldSpeedrun|metrics|benchConfirmCancel': 'Abbrechen',
+  'mods|goldSpeedrun|metrics|ttSettled': 'Ruhende Kollisionen:',
+  'mods|goldSpeedrun|metrics|ttActive': 'Aktive Kollisionen:',
+  'mods|goldSpeedrun|metrics|samplePoint': 'Messpunkt',
+  'mods|goldSpeedrun|metrics|ttUps': 'UPS:',
+  'mods|goldSpeedrun|metrics|ttCollisions': 'Kollisionen:',
+  'mods|goldSpeedrun|metrics|ttMoves': 'Bewegungen:',
+  'mods|goldSpeedrun|metrics|ttSimUpdates': 'Sim-Schritte:',
+  'mods|goldSpeedrun|metrics|ttJamLoad': 'Blocklast:',
+  'mods|goldSpeedrun|metrics|ttJamShare': 'Blockanteil:',
+  'mods|goldSpeedrun|metrics|ttFlightActivity': 'Flugaktivität:',
+  'mods|goldSpeedrun|metrics|ttJamRate': 'Blockrate:',
+  'mods|goldSpeedrun|metrics|ttJamIntensity': 'Blocklast:',
+  'mods|goldSpeedrun|metrics|ttDynamic': 'Dynamische Pop (Live):',
+  'mods|goldSpeedrun|metrics|ttDynamicDesc': 'Belegte dynamische Elementslots in der Engine (inkl. ruhendem Sand, Flüssigkeiten, Gasen; keine reinen Beweger).',
+  'mods|goldSpeedrun|metrics|ttAwake': 'Aktive Chunks:',
+  'mods|goldSpeedrun|metrics|ttSimCompute': 'Sim-Rechenzeit:',
+  'mods|goldSpeedrun|metrics|ttScope': 'Erfassungsbereich:',
+  'mods|goldSpeedrun|metrics|scopeBallistic': 'Nur Wurfpartikel',
+  'mods|goldSpeedrun|metrics|scopeAllMatter': 'Alle Materie (Diagnose)',
+  'mods|goldSpeedrun|metrics|scopeSwitch': 'Erfassungsbereich:',
+  'mods|goldSpeedrun|metrics|scopeWarn': 'Hinweis: Die Gesamtmaterie-Erfassung fängt alle bewegten CA-Pixel ab. Dient zu Benchmark-/Diagnosezwecken und kann die UPS senken.',
+  'mods|goldSpeedrun|metrics|benchBtn': 'Metrik-Kostenmatrix starten (~15 Min.)',
+  'mods|goldSpeedrun|metrics|benchRunning': '{phase} · Wiederholung {totalPhase} · {mode}',
+  'mods|goldSpeedrun|metrics|benchTitle': 'Metrik-Kostenmatrix',
+  'mods|goldSpeedrun|metrics|benchBaseline': 'AUS (Basislinie):',
+  'mods|goldSpeedrun|metrics|benchActive': 'EIN (Aktiv):',
+  'mods|goldSpeedrun|metrics|benchOverhead': 'Geschätzter Overhead:',
+  'mods|goldSpeedrun|metrics|benchCancel': 'Abbrechen',
+  'mods|goldSpeedrun|metrics|benchCopy': 'Bericht kopieren',
+  'mods|goldSpeedrun|metrics|benchCopied': 'In Zwischenablage kopiert!',
+  'mods|goldSpeedrun|metrics|benchClose': 'Schließen',
+  'mods|goldSpeedrun|metrics|key': 'Simulationsdiagnose-Graph umschalten',
+  'mods|goldSpeedrun|metrics|causeTitle': 'Wohin die Simulationszeit geht',
+  'mods|goldSpeedrun|metrics|causeCompute': 'Rechnen',
+  'mods|goldSpeedrun|metrics|causeWait': 'Warten (Sync)',
+  'mods|goldSpeedrun|metrics|causePost': 'Nachlauf',
+  'mods|goldSpeedrun|metrics|causeBoundCompute': 'Rechenbegrenzt',
+  'mods|goldSpeedrun|metrics|causeBoundWait': 'Sync-begrenzt',
+  'mods|goldSpeedrun|metrics|causeSlowest': 'Langsamste Region',
+  'mods|goldSpeedrun|metrics|causeChunk': 'Abschnitt ({x}, {y})',
+  'mods|goldSpeedrun|metrics|causeColumn': 'Spalte {x}',
+  'mods|goldSpeedrun|metrics|causeEmpty': 'Noch keine Phasenzeit — Welt laden und einen Tick abwarten.',
+  'mods|goldSpeedrun|metrics|causeNote': 'Zeit der Scheduling-Phasen, keine Aufteilung nach Physikregeln. Zeigt wo die Simulation Zeit verbringt und ob sie rechnet oder auf andere Threads wartet.',
+  'mods|goldSpeedrun|metrics|heatmapTitle': 'Engpasskarte (ms)',
+  'mods|goldSpeedrun|metrics|heatmapSum': 'Kumulativ',
+  'mods|goldSpeedrun|metrics|heatmapExp': 'Exp. Abkühlung',
+  'mods|goldSpeedrun|metrics|heatmapLinear': 'Lin. Abkühlung',
+  'mods|goldSpeedrun|metrics|heatmapPeak': 'Max. Tick',
+  'mods|goldSpeedrun|metrics|heatmapLive': 'Dieser Tick',
+  'mods|goldSpeedrun|metrics|heatmapFloor': 'Umriss',
+  'mods|goldSpeedrun|metrics|heatmapHalfLife': 'Halbwertszeit',
+  'mods|goldSpeedrun|metrics|heatmapWindow': 'Fenster',
+  'mods|goldSpeedrun|metrics|heatmapEmpty': 'Noch keine Engpasskarte — Welt laden und einen Tick abwarten.',
+  'mods|goldSpeedrun|metrics|heatmapHint': 'Jede Zelle ist ein 40×40-Abschnitt. Farbe zeigt Engpass-Millisekunden der Worker. Mausrad zum Zoomen, Ziehen zum Verschieben, Doppelklick zum Zurücksetzen.',
+  'mods|goldSpeedrun|metrics|heatmapScale': 'Max: {ms}',
+  'mods|goldSpeedrun|metrics|heatmapCell': 'Abschnitt ({x}, {y})  {ms}',
+  'mods|goldSpeedrun|metrics|heatmapCellDetail': 'Abschnitt ({x}, {y})  {val} ({sub})',
+  'mods|goldSpeedrun|metrics|heatmapLiveBtn': 'Live',
+  'mods|goldSpeedrun|metrics|heatmapZoomReset': 'Reset',
+  'mods|goldSpeedrun|metrics|heatmapTimeline': 'Zeitachse',
+  'mods|goldSpeedrun|metrics|ttCompute': 'Rechnen:',
+  'mods|goldSpeedrun|metrics|ttWait': 'Warten:',
+  'mods|goldSpeedrun|metrics|ttPost': 'Nachlauf:',
+  'mods|goldSpeedrun|metrics|ttSlowest': 'Langsamster Abschnitt:',
+  'mods|goldSpeedrun|cfg|allMatterCapture': 'Gesamtmaterie erfassen',
+  'mods|goldSpeedrun|cfg|allMatterCapture|desc': 'Diagnose-Modus: fängt alle bewegten CA-Pixel anstelle von nur Wurfpartikeln ab. Hat messbaren Simulations-Overhead; nur für kurze Diagnosen empfohlen.',
 
   'mods|goldSpeedrun|dash|run': 'Lauf',
   'mods|goldSpeedrun|dash|categories': 'Kategorien',
@@ -774,7 +1079,7 @@ const categoryFromCustom = custom => {
   if (kind === 'artifacts') target = target > 0 ? Math.floor(target) : artifactTotal();
   else if (kind === 'factory') target = target > 0 ? Math.floor(target) : 6;
   else target = target > 0 ? Math.floor(target) : 100000;
-  const gm = custom.goldMode === 'balance' || custom.goldMode === 'official' ? custom.goldMode : 'earned';
+  const gm = custom.goldMode === 'earned' ? 'earned' : 'balance';
   return {
     id: custom.id,
     kind,
@@ -866,54 +1171,19 @@ const getFactoryLevel = () => {
 let earnedTotal = null;   // DE: Laufsumme im Speicher / EN: running total, in memory
 let lastBalance = null;
 
-// DE: Die dritte Wahl beim Gold-Regelwerk stellt den ganzen offiziellen Lauf ein,
-// DE: nicht nur das Gold: sie zieht auch den Startmodus und den Tutorial-Skip auf
-// DE: die Vorgabe. Die beiden Optionen bleiben stehen, wie sie sind - sie werden
-// DE: nur nicht mehr gefragt, solange die offizielle Wahl aktiv ist.
-// EN: The third choice in the gold ruleset sets up the whole official run, not
-// EN: just gold: it also pulls the start mode and the tutorial skip to the
-// EN: required values. Those two options stay as they are - they just stop
-// EN: being consulted while the official choice is active.
-const officialMode = () => api.settings.get('goldMode') === 'official';
-
 const goldMode = () => {
   try {
     const cat = category();
     if (cat && cat.custom) {
-      return cat.goldMode === 'balance' || cat.goldMode === 'official' ? 'balance' : 'earned';
+      return cat.goldMode === 'earned' ? 'earned' : 'balance';
     }
   } catch (e) { /* DE: Kategorie noch nicht bereit / EN: category not ready yet */ }
-  const v = api.settings.get('goldMode');
-  return v === 'balance' || v === 'official' ? 'balance' : 'earned';
+  return api.settings.get('goldMode') === 'earned' ? 'earned' : 'balance';
 };
 
-// DE: Ueberall statt api.settings.get('skipTutorial') benutzen: im offiziellen
-// DE: Regelwerk laeuft das Tutorial mit, auch wenn der Schalter an ist.
-// EN: Use this everywhere instead of api.settings.get('skipTutorial'): under
-// EN: the official ruleset the tutorial still plays out, even if the switch is on.
-const skipTutorialEnabled = () =>
-  !officialMode() && api.settings.get('skipTutorial') === true;
-
-// DE: Was das offizielle Regelwerk den uebrigen Optionen vorschreibt. Die drei
-// DE: Vorgaben der Kategorieregeln stehen oben; Intro und Story kommen dazu,
-// DE: damit der Spielanfang ablaeuft wie ohne Mod - sonst faengt der Lauf mit
-// DE: einer uebersprungenen Sequenz an, die alle anderen mitspielen.
-// EN: What the official ruleset dictates for the remaining options. The three
-// EN: category-rule requirements are above; intro and story are added here so
-// EN: the start of the game plays out just like without the mod - otherwise
-// EN: the run would start with a skipped sequence that everyone else plays.
-const OFFICIAL_FORCED = {
-  startMode: 'any',
-  skipTutorial: false,
-  skipIntro: false,
-  skipStory: false,
-};
-
-// DE: Die Werte, die vor dem Umschalten galten - damit das Zurueckschalten die
-// DE: eigenen Einstellungen nicht dauerhaft verbrannt hat.
-// EN: The values that were in effect before switching over - so switching
-// EN: back doesn't permanently burn the player's own settings.
-const OFFICIAL_BACKUP = 'goldSpeedrun.beforeOfficial';
+const skipTutorialEnabled = () => api.settings.get('skipTutorial') === true;
+const skipStoryEnabled = () => api.settings.get('skipStory') === true;
+const skipIntroEnabled = () => api.settings.get('skipIntro') === true;
 
 // DE: api.settings kann nur lesen. Geschrieben wird deshalb direkt in den Topf,
 // DE: aus dem es liest: state.session.settings.externalModSettings[<mod>]. Das
@@ -959,72 +1229,31 @@ const writeSetting = (key, value) => {
   return bag[key] === value;
 };
 
-// DE: 2.9 hat Installationen einmalig auf Hard Mode (balance) gestellt und
-// DE: damit die Bestzeiten unter ...earned unsichtbar gemacht. Wer nur durch
-// DE: jene Umstellung auf balance steht, kommt zurueck auf Normal.
-// EN: 2.9 switched installs to Hard Mode (balance) once and thereby hid
-// EN: bests stored under ...earned. Anyone who is on balance only because of
-// EN: that switch is put back on Normal.
-const undoGoldModeHardMigrate = () => {
+// DE: Einmalige Umstellung auf die gültigen Speedrun-Vorgaben: Hard Mode und
+// DE: alle drei Skips aus. Bestehende Installationen dürfen nicht still auf
+// DE: ungültigen Defaults weiterlaufen.
+// EN: One-time switch to the valid speedrun defaults: Hard Mode and all three
+// EN: skips off. Existing installs must not keep silently running on invalid defaults.
+const enforceValidDefaults = () => {
   try {
-    if (api.storage.local.get(GOLD_MODE_HARD_MIGRATE_KEY) !== true) return false;
-    const v = api.settings.get('goldMode');
-    if (v === 'balance' && writeSetting('goldMode', 'earned')) {
-      log('Gold-Regelwerk zurueck auf Normal (Bestzeiten lagen unter earned)');
-    }
-    try { api.storage.local.set(GOLD_MODE_HARD_MIGRATE_KEY, null); } catch (e) { /* ignore */ }
-    return v === 'balance';
+    if (api.storage.local.get(ENFORCE_VALID_DEFAULTS_KEY) === true) return false;
   } catch (e) {
     return false;
   }
-};
+  if (!settingsBag()) return false;
 
-// DE: Haelt die Anzeige der Einstellungen mit dem tatsaechlichen Zustand gleich:
-// DE: solange das offizielle Regelwerk gewaehlt ist, stehen die beiden anderen
-// DE: Optionen auf der Vorgabe und springen sofort zurueck, wenn jemand sie
-// DE: verstellt. Beim Verlassen kommen die alten Werte zurueck.
-// EN: Keeps the settings display in sync with the actual state: as long as the
-// EN: official ruleset is selected, the other two options sit on the required
-// EN: value and snap straight back if anyone changes them. Leaving it restores
-// EN: the old values.
-const syncOfficialSettings = () => {
   let changed = false;
-  const backup = api.storage.local.get(OFFICIAL_BACKUP);
-  const hasBackup = backup && typeof backup === 'object';
+  if (api.settings.get('goldMode') !== 'balance' && writeSetting('goldMode', 'balance')) changed = true;
+  if (api.settings.get('skipIntro') !== false && writeSetting('skipIntro', false)) changed = true;
+  if (api.settings.get('skipStory') !== false && writeSetting('skipStory', false)) changed = true;
+  if (api.settings.get('skipTutorial') !== false && writeSetting('skipTutorial', false)) changed = true;
 
-  if (officialMode()) {
-    // DE: Fehlt die Sicherung ganz, oder kamen dem Regelwerk seit dem letzten
-    // DE: Umschalten Schluessel dazu, wird sie erst vervollstaendigt - danach
-    // DE: erst wird ueberschrieben, sonst sichert man den erzwungenen Wert.
-    // EN: If the backup is missing entirely, or the ruleset gained keys since
-    // EN: the last switch-over, it gets completed first - only then does the
-    // EN: overwrite happen, otherwise the forced value would get backed up.
-    const before = hasBackup ? Object.assign({}, backup) : {};
-    let backupChanged = !hasBackup;
-    for (const key of Object.keys(OFFICIAL_FORCED)) {
-      if (before[key] !== undefined) continue;
-      before[key] = api.settings.get(key);
-      backupChanged = true;
-    }
-    if (backupChanged) api.storage.local.set(OFFICIAL_BACKUP, before);
-    for (const key of Object.keys(OFFICIAL_FORCED)) {
-      if (api.settings.get(key) === OFFICIAL_FORCED[key]) continue;
-      if (writeSetting(key, OFFICIAL_FORCED[key])) changed = true;
-    }
-    if (changed) log('Offizielles Regelwerk: Einstellungen auf die Vorgabe gesetzt', OFFICIAL_FORCED);
-    return changed;
-  }
+  try { api.storage.local.set('goldSpeedrun.beforeOfficial', null); } catch (e) { /* ignore */ }
+  try { api.storage.local.set(GOLD_MODE_HARD_MIGRATE_KEY, null); } catch (e) { /* ignore */ }
+  try { api.storage.local.set(ENFORCE_VALID_DEFAULTS_KEY, true); } catch (e) { /* ignore */ }
 
-  if (hasBackup) {
-    api.storage.local.set(OFFICIAL_BACKUP, null);
-    for (const key of Object.keys(OFFICIAL_FORCED)) {
-      const previous = backup[key];
-      if (previous === undefined) continue;
-      if (api.settings.get(key) === previous) continue;
-      if (writeSetting(key, previous)) changed = true;
-    }
-    if (changed) log('Offizielles Regelwerk verlassen - vorherige Einstellungen wiederhergestellt');
-  }
+  log('Einstellungen auf gültige Speedrun-Vorgaben gesetzt (Hard Mode, keine Skips)');
+  try { api.ui.toast({ key: 'mods|goldSpeedrun|toast|defaultsReset' }); } catch (e) { /* ignore */ }
   return changed;
 };
 
@@ -1067,6 +1296,63 @@ const progressOf = cat => {
 
 // DE: Kategoriename fuer HUD und Stream, z.B. "100k Gold % · Hard Mode · Ohne Tutorial".
 // EN: Category name for the HUD and stream, e.g. "100k Gold % · Hard Mode · No Tutorial".
+// --- DE: Blueprint-Kategorie / EN: Blueprint category -----------------------
+// DE: Ein Lauf unter Standardregeln erlaubt keine externen oder gespeicherten
+// DE: Blueprints. In-Game-Kopieren (Ctrl+C) von existierenden Strukturen im
+// DE: aktuellen Lauf ist erlaubt. Sobald ein Blueprint importiert, geladen oder
+// DE: aus einem anderen Spielstand eingefuegt wird, wechselt der Lauf in die
+// DE: Blueprint-Kategorie.
+//
+// EN: A run under standard rules does not allow external or saved blueprints.
+// EN: In-game copy (Ctrl+C) of existing structures in the current run is allowed.
+// EN: Once a blueprint is imported, loaded, or pasted from another save,
+// EN: the run transitions to the Blueprint category.
+const runUsesBlueprints = () => {
+  try {
+    api.storage.ensure(NS);
+    return api.storage.get(NS, 'blueprintsUsed') === true;
+  } catch (e) {
+    return false;
+  }
+};
+
+const markBlueprintsUsed = reason => {
+  if (runUsesBlueprints()) return;
+  try {
+    api.storage.ensure(NS);
+    api.storage.set(NS, 'blueprintsUsed', true);
+  } catch (e) { /* ignore */ }
+  log(`Lauf auf Blueprint-Kategorie umgestellt (${reason})`);
+  try {
+    api.ui.toast({ key: 'mods|goldSpeedrun|toast|bpTriggered' });
+  } catch (e) { /* ignore */ }
+  notifyResult();
+};
+
+let currentRunToken = 'run_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+let sessionCopyOk = false;
+
+const resetRunProvenance = () => {
+  currentRunToken = 'run_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+  sessionCopyOk = false;
+  try {
+    const cb = sandkit.engine && sandkit.engine.api && sandkit.engine.api.clipboard;
+    if (cb && typeof cb.clear === 'function') {
+      cb.clear();
+    }
+  } catch (e) { /* ignore */ }
+};
+
+const handleClipboardSet = (structures, signalLinks) => {
+  try {
+    const sceneOk = (typeof activeScene === 'function' && activeScene() === enums.Scene.Game);
+    const armedOrRunning = (typeof isArmed === 'function' && isArmed()) || (typeof isRunning === 'function' && isRunning());
+    if (sceneOk && armedOrRunning) {
+      sessionCopyOk = true;
+    }
+  } catch (e) { /* ignore */ }
+};
+
 const categoryLabel = () => {
   const cat = category();
   const parts = [];
@@ -1095,6 +1381,9 @@ const categoryLabel = () => {
   if (skipTutorialEnabled()) {
     parts.push(t('mods|goldSpeedrun|noTutorial'));
   }
+  if (runUsesBlueprints()) {
+    parts.push(t('mods|goldSpeedrun|category|blueprints'));
+  }
   return parts.join(' · ');
 };
 
@@ -1106,18 +1395,20 @@ const categoryLabel = () => {
 // EN: The best time is the play-clock (W) - the official community metric.
 const goldModeFor = cat => {
   if (cat && cat.custom) {
-    return cat.goldMode === 'balance' || cat.goldMode === 'official' ? 'balance' : 'earned';
+    return cat.goldMode === 'earned' ? 'earned' : 'balance';
   }
   return goldMode();
 };
 
-const bestKeyFor = (cat, mode) => {
+const bestKeyFor = (cat, mode, bpOverride) => {
   const c = cat || category();
   const gm = c.kind === 'gold' ? (mode || goldModeFor(c)) : 'x';
-  if (c.custom) return `${BEST_PREFIX}.custom.${c.id}.${gm}`;
+  const useBp = bpOverride !== undefined ? bpOverride : runUsesBlueprints();
+  const bp = useBp ? '.bp' : '';
+  if (c.custom) return `${BEST_PREFIX}.custom.${c.id}.${gm}${bp}`;
   const bits = [c.id, gm];
   if (c.id === 'custom') bits.push(String(c.target));
-  return `${BEST_PREFIX}.${bits.join('.')}`;
+  return `${BEST_PREFIX}.${bits.join('.')}${bp}`;
 };
 
 const bestKey = () => bestKeyFor(category());
@@ -1539,6 +1830,57 @@ const formatShort = (ms, fmt) => {
   return full.startsWith('00:') ? full.slice(3) : full;
 };
 
+const formatWallClock = ts => {
+  if (!Number.isFinite(ts) || ts <= 0) return '—';
+  try { return new Date(ts).toLocaleString(); } catch (e) { return '—'; }
+};
+
+const readWallBounds = () => {
+  api.storage.ensure(NS);
+  const startedAtWall = api.storage.get(NS, 'startedAtWall');
+  const finishedAtWall = api.storage.get(NS, 'finishedAtWall');
+  return {
+    startedAtWall: Number.isFinite(startedAtWall) ? startedAtWall : null,
+    finishedAtWall: Number.isFinite(finishedAtWall) ? finishedAtWall : null,
+  };
+};
+
+const wallClockSummary = () => {
+  const { startedAtWall, finishedAtWall } = readWallBounds();
+  const end = finishedAtWall || Date.now();
+  const span = startedAtWall ? Math.max(0, end - startedAtWall) : null;
+  return { startedAtWall, finishedAtWall, end, span };
+};
+
+const gameVersionLabel = () => {
+  const candidates = [];
+  try { candidates.push(sandkit && sandkit.version); } catch (e) {}
+  try { candidates.push(sandkit && sandkit.engine && sandkit.engine.version); } catch (e) {}
+  try { candidates.push(sandkit && sandkit.state && sandkit.state.store && sandkit.state.store.meta && sandkit.state.store.meta.gameVersion); } catch (e) {}
+  try { candidates.push(sandkit && sandkit.state && sandkit.state.store && sandkit.state.store.meta && sandkit.state.store.meta.version); } catch (e) {}
+  try { candidates.push(api && (api.gameVersion || api.version)); } catch (e) {}
+  try { if (typeof window !== 'undefined') candidates.push(window.__SANDKIT_VERSION__ || window.GAME_VERSION); } catch (e) {}
+  try {
+    if (typeof document !== 'undefined' && document.title) {
+      const m = document.title.match(/v?(\d+\.\d+(?:\.\d+)?[\w.-]*)/i);
+      if (m) candidates.push(m[1]);
+    }
+  } catch (e) {}
+  for (let i = 0; i < candidates.length; i++) {
+    const v = candidates[i];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+    if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  }
+  return null;
+};
+
+const exportVersionLine = () => {
+  const game = gameVersionLabel();
+  return game
+    ? `Sandustry v${game} · Speedrun Mod v${MOD_VERSION}`
+    : `Sandustry Gold Speedrun Challenge v${MOD_VERSION}`;
+};
+
 // DE: Platzhalter in Uhrenlaenge, solange der Lauf noch scharf ist und wartet.
 // EN: Placeholder the same length as the clock, while the run is armed and waiting.
 const dashTime = fmt => {
@@ -1587,8 +1929,11 @@ const readSplits = () => {
 const armRun = () => {
   api.storage.ensure(NS);
   const run = readRun();
-  if (typeof run.startedAt !== 'number' && run.finishedAt !== null) {
-    api.storage.set(NS, 'finishedAt', null);
+  if (typeof run.startedAt !== 'number') {
+    if (run.finishedAt !== null) {
+      api.storage.set(NS, 'finishedAt', null);
+    }
+    resetRunProvenance();
   }
 };
 
@@ -1611,13 +1956,12 @@ const isRunning = () => {
 //    faellt ein Schritt aus oder laeuft er doppelt, steht trotzdem die
 //    richtige Zahl im Puffer.
 //
-// R  Echtzeit aus performance.now(), ohne Deckel, akkumuliert nur waehrend
-//    der Lauf tatsaechlich unterwegs ist (Spiel laeuft, nicht pausiert). Das
-//    ist die Zahl, die auch eine Stoppuhr neben dem Bildschirm zeigt, und sie
-//    bleibt die Video-Referenz: nur sie laesst sich an einem Video
-//    nachpruefen. R haengt nie an der Fabrik - sie ist eine reine
-//    Betriebssystem-Uhr. Was die Fabrik kostet, zeigt sich als Abstand
-//    zwischen R und T, nicht an R selbst.
+// R  Pausenbewusste Echtzeit aus performance.now(), ohne Deckel, akkumuliert
+//    nur waehrend der Lauf tatsaechlich unterwegs ist (Spiel laeuft, nicht
+//    pausiert). Das ist keine Wanduhr: Pausieren haelt R mit an. Sie bleibt
+//    die Video-Referenz fuer die unpausierten Abschnitte, und R haengt nie
+//    an der Fabrik - sie ist eine reine Betriebssystem-Uhr. Was die Fabrik
+//    kostet, zeigt sich als Abstand zwischen R und T, nicht an R selbst.
 //
 // W  api.time.getTimeMs() - die eigene Spielzeit-Uhr des Spiels, identisch
 //    mit der playTime, die auch ohne diesen Mod im Spielstand steht. Sie
@@ -1645,13 +1989,12 @@ const isRunning = () => {
 //    reads back. No counter of its own, no estimate - if a step gets
 //    skipped or double-counted, the buffer still holds the correct number.
 //
-// R  Real time from performance.now(), uncapped, only accumulated while the
-//    run is actually under way (game running, not paused). This is the
-//    number a stopwatch next to the screen would also show, and it stays
-//    the video reference: it's the only one that can be checked against a
-//    video. R never depends on the factory - it is a pure operating-system
-//    clock. What the factory costs shows up as the gap between R and T, not
-//    in R itself.
+// R  Pause-aware real time from performance.now(), uncapped, only accumulated
+//    while the run is actually under way (game running, not paused). This
+//    is not wall-clock time: pausing the game pauses R too. It stays the
+//    video reference for unpaused segments, and it never depends on the
+//    factory - it is a pure operating-system clock. What the factory costs
+//    shows up as the gap between R and T, not in R itself.
 //
 // W  api.time.getTimeMs() - the game's own play-clock, identical to the
 //    playTime shown in the save file even without this mod. It sums frame
@@ -1674,16 +2017,86 @@ const isRunning = () => {
 const TICK_HZ = 60;
 const TICK_MS = 1000 / TICK_HZ;
 
-const TICK_BUF_KEY = 'goldSpeedrunTicks';
-const TICK_BUF_SPEC = { type: 'int32', length: 1 };
+// DE: Gemeinsamer Speicher fuer Simulations-Metriken (16 Kanaele):
+// DE: Index 0: tick (store.meta.tick - exakter Schrittzaehler)
+// DE: Index 1: awakeChunks (aktive 40x40-Abschnitte)
+// DE: Index 2: ballisticBlocks (Werfer-Kollisionen)
+// DE: Index 3: ballisticMoves (Werfer-Bewegungen)
+// DE: Index 4: liveElements (aktive Elemente)
+// DE: Index 5: simTimeMs * 100 (Dauer des Simulationsschritts in ms)
+//
+// EN: Shared memory for simulation metrics (16 channels):
+// EN: Index 0: tick (store.meta.tick - exact step counter)
+// EN: Index 1: awakeChunks (active 40x40 chunks)
+// EN: Index 2: ballisticBlocks (thrown particle collisions)
+// EN: Index 3: ballisticMoves (thrown particle moves)
+// EN: Index 4: liveElements (active elements)
+// EN: Index 5: simTimeMs * 100 (sim step duration in ms)
+// EN: Index 6: allMatterBlocks (all-matter collisions - diagnostic)
+// EN: Index 7: allMatterMoves (all-matter moves - diagnostic)
+// EN: Index 8: allMatterControl (0 = off, 1 = on - written by main thread)
+// EN: Index 9: allMatterActive (0 = inactive, 1 = active - confirmed by worker)
+// EN: Index 10: metricControlMask (individually switchable benchmark measurements)
+// EN: Index 11: metricActiveMask (confirmed by worker 0)
+// EN: Index 12: metricControlGeneration (main-thread transition number)
+// EN: Index 13: metricAckCount (workers that applied the current generation)
+// EN: Index 14: allMatterBlocksSettled (direction=down against terrain/element)
+// EN: Index 15: allMatterBlocksActive (all other all-matter blocks)
+// EN: goldSpeedrunPhaseV1 (float32): compute/wait/post + phase work/spin + slowest chunk
+// EN: goldSpeedrunHeatmapV3 (int32): 16-int header + 128x128 live bottleneck ms + 128x128 sum ms + 128x128 peak ms
+// EN: header 8 = resetControl, 9 = restoreControl, 10 = restoreAck
+const METRICS_BUF_KEY = 'goldSpeedrunMetricsV4';
+const METRICS_BUF_SPEC = { type: 'int32', length: 16 };
+const PHASE_BUF_KEY = 'goldSpeedrunPhaseV1';
+const PHASE_BUF_SPEC = { type: 'float32', length: 16 };
+const HEATMAP_MAX = 128;
+const HEATMAP_HEADER = 16;
+const HEATMAP_CELLS = HEATMAP_MAX * HEATMAP_MAX;
+const HEATMAP_BUF_KEY = 'goldSpeedrunHeatmapV3';
+const HEATMAP_BUF_SPEC = { type: 'int32', length: HEATMAP_HEADER + 3 * HEATMAP_CELLS };
+const HEATMAP_LIVE_OFF = HEATMAP_HEADER;
+const HEATMAP_SUM_OFF = HEATMAP_HEADER + HEATMAP_CELLS;
+const HEATMAP_PEAK_OFF = HEATMAP_HEADER + 2 * HEATMAP_CELLS;
+const CHUNK_SIZE = 40;
+const METRIC_BALLISTIC_BLOCKS = 1 << 0;
+const METRIC_BALLISTIC_MOVES = 1 << 1;
+const METRIC_ALL_BLOCKS = 1 << 2;
+const METRIC_ALL_MOVES = 1 << 3;
+const METRIC_AWAKE = 1 << 4;
+const METRIC_LIVE = 1 << 5;
+const METRIC_SIM_TIME = 1 << 6;
+const METRIC_PASSIVE = METRIC_AWAKE | METRIC_LIVE | METRIC_SIM_TIME;
+const METRIC_BALLISTIC = METRIC_BALLISTIC_BLOCKS | METRIC_BALLISTIC_MOVES;
+const METRIC_ALL_MATTER = METRIC_ALL_BLOCKS | METRIC_ALL_MOVES;
+const METRIC_NORMAL = METRIC_BALLISTIC | METRIC_PASSIVE;
+const METRIC_COMPLETE = METRIC_NORMAL | METRIC_ALL_MATTER;
 
 let tickBuf = null;
 try {
-  tickBuf = api.shared.buffers.create(TICK_BUF_KEY, TICK_BUF_SPEC);
+  tickBuf = api.shared.buffers.create(METRICS_BUF_KEY, METRICS_BUF_SPEC);
 } catch (e) {
   tickBuf = null;
-  log('Schritt-Speicher nicht verfuegbar -', (e && e.message) || e);
+  log('Metrik-Speicher nicht verfuegbar -', (e && e.message) || e);
 }
+
+let phaseBuf = null;
+try {
+  phaseBuf = api.shared.buffers.create(PHASE_BUF_KEY, PHASE_BUF_SPEC);
+} catch (e) {
+  try { phaseBuf = api.shared.buffers.get(PHASE_BUF_KEY); } catch (e2) { phaseBuf = null; }
+  if (!phaseBuf) log('Phasen-Speicher nicht verfuegbar -', (e && e.message) || e);
+}
+
+let heatmapBuf = null;
+try {
+  heatmapBuf = api.shared.buffers.create(HEATMAP_BUF_KEY, HEATMAP_BUF_SPEC);
+} catch (e) {
+  try { heatmapBuf = api.shared.buffers.get(HEATMAP_BUF_KEY); } catch (e2) { heatmapBuf = null; }
+  if (!heatmapBuf) log('Heatmap-Speicher nicht verfuegbar -', (e && e.message) || e);
+}
+try {
+  if (tickBuf) setMetricCaptureMask(METRIC_NORMAL);
+} catch (e) {}
 // DE: Schaltet das 'update:post'-Ereignis im Simulations-Thread ein, auf das
 // DE: worker.js sich einhaengt - ohne das bleibt der Puffer leer.
 // EN: Enables the 'update:post' event in the simulation thread, which
@@ -1701,6 +2114,628 @@ const rawTick = () => {
     return (tickBuf && Atomics.load(tickBuf, 0)) || 0;
   } catch (e) {
     return 0;
+  }
+};
+
+const rawAwakeChunks = () => {
+  try {
+    return (tickBuf && Atomics.load(tickBuf, 1)) || 0;
+  } catch (e) {
+    return 0;
+  }
+};
+
+let totalBallisticBlocks = 0;
+let totalBallisticMoves = 0;
+let totalAllBlocks = 0;
+let totalAllMoves = 0;
+let totalAllBlocksSettled = 0;
+let totalAllBlocksActive = 0;
+let lastRawBlocks = 0;
+let lastRawMoves = 0;
+let lastRawAllBlocks = 0;
+let lastRawAllMoves = 0;
+let lastRawAllBlocksSettled = 0;
+let lastRawAllBlocksActive = 0;
+let rawSyncInitialized = false;
+
+const syncEventCounters = () => {
+  if (!tickBuf) return;
+  try {
+    const rb = Atomics.load(tickBuf, 2);
+    const rm = Atomics.load(tickBuf, 3);
+    const rab = Atomics.load(tickBuf, 6);
+    const ram = Atomics.load(tickBuf, 7);
+    const ras = Atomics.load(tickBuf, 14);
+    const raa = Atomics.load(tickBuf, 15);
+    if (!rawSyncInitialized) {
+      lastRawBlocks = rb;
+      lastRawMoves = rm;
+      lastRawAllBlocks = rab;
+      lastRawAllMoves = ram;
+      lastRawAllBlocksSettled = ras;
+      lastRawAllBlocksActive = raa;
+      totalBallisticBlocks = rb >>> 0;
+      totalBallisticMoves = rm >>> 0;
+      totalAllBlocks = rab >>> 0;
+      totalAllMoves = ram >>> 0;
+      totalAllBlocksSettled = ras >>> 0;
+      totalAllBlocksActive = raa >>> 0;
+      rawSyncInitialized = true;
+      return;
+    }
+    totalBallisticBlocks += ((rb - lastRawBlocks) >>> 0);
+    totalBallisticMoves += ((rm - lastRawMoves) >>> 0);
+    totalAllBlocks += ((rab - lastRawAllBlocks) >>> 0);
+    totalAllMoves += ((ram - lastRawAllMoves) >>> 0);
+    totalAllBlocksSettled += ((ras - lastRawAllBlocksSettled) >>> 0);
+    totalAllBlocksActive += ((raa - lastRawAllBlocksActive) >>> 0);
+    lastRawBlocks = rb;
+    lastRawMoves = rm;
+    lastRawAllBlocks = rab;
+    lastRawAllMoves = ram;
+    lastRawAllBlocksSettled = ras;
+    lastRawAllBlocksActive = raa;
+  } catch (e) {}
+};
+
+const rawBallisticBlocks = () => {
+  syncEventCounters();
+  return totalBallisticBlocks;
+};
+
+const rawBallisticMoves = () => {
+  syncEventCounters();
+  return totalBallisticMoves;
+};
+
+const rawLiveElements = () => {
+  try {
+    return (tickBuf && Atomics.load(tickBuf, 4)) || 0;
+  } catch (e) {
+    return 0;
+  }
+};
+
+const rawSimTimeMs = () => {
+  try {
+    const v = tickBuf && Atomics.load(tickBuf, 5);
+    return v ? Math.round(v) / 100 : 0;
+  } catch (e) {
+    return 0;
+  }
+};
+
+const rawAllMatterBlocks = () => {
+  syncEventCounters();
+  return totalAllBlocks;
+};
+
+const rawAllMatterMoves = () => {
+  syncEventCounters();
+  return totalAllMoves;
+};
+
+const rawAllMatterBlocksSettled = () => {
+  syncEventCounters();
+  return totalAllBlocksSettled;
+};
+
+const rawAllMatterBlocksActive = () => {
+  syncEventCounters();
+  return totalAllBlocksActive;
+};
+
+const roundMs2 = v => Math.round((Number(v) || 0) * 100) / 100;
+
+const readPhaseSnapshot = () => {
+  try {
+    const flag = sandkit.state.shared && sandkit.state.shared.workerDetailEnabled;
+    if (flag && flag[0] !== 1) flag[0] = 1;
+  } catch (e) {}
+  if (!phaseBuf) return null;
+  try {
+    const tick = phaseBuf[0];
+    if (!Number.isFinite(tick) || tick <= 0) return null;
+    return {
+      tick,
+      computeMs: roundMs2(phaseBuf[1]),
+      waitMs: roundMs2(phaseBuf[2]),
+      postMs: roundMs2(phaseBuf[3]),
+      phaseWork: [roundMs2(phaseBuf[4]), roundMs2(phaseBuf[5]), roundMs2(phaseBuf[6]), roundMs2(phaseBuf[7])],
+      phaseSpin: [roundMs2(phaseBuf[8]), roundMs2(phaseBuf[9]), roundMs2(phaseBuf[10]), roundMs2(phaseBuf[11])],
+      slowestMs: roundMs2(phaseBuf[12]),
+      slowestX: Number.isFinite(phaseBuf[13]) ? phaseBuf[13] : -1,
+      slowestY: Number.isFinite(phaseBuf[14]) ? phaseBuf[14] : -1,
+      processedUnits: Number.isFinite(phaseBuf[15]) ? phaseBuf[15] : 0,
+    };
+  } catch (e) {
+    return null;
+  }
+};
+
+const worldCellSize = () => {
+  try {
+    const sz = sandkit.state.store.world.size;
+    const width = sz && sz.width;
+    const height = sz && sz.height;
+    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+      return { width, height };
+    }
+  } catch (e) {}
+  return { width: 0, height: 0 };
+};
+
+let pendingHeatmapRestore = null;
+
+const requestHeatmapReset = () => {
+  pendingHeatmapRestore = null;
+  try {
+    if (heatmapBuf) Atomics.add(heatmapBuf, 8, 1);
+    lastHistorySumGrid.fill(0);
+    api.storage.set(NS, 'heatmapSnapshot', null);
+  } catch (e) {}
+};
+
+const heatmapMeta = () => {
+  if (!heatmapBuf) return null;
+  try {
+    const chunkWidth = heatmapBuf[1] | 0;
+    const chunkHeight = heatmapBuf[2] | 0;
+    const gridW = heatmapBuf[3] | 0;
+    const gridH = heatmapBuf[4] | 0;
+    if (gridW < 1 || gridH < 1 || gridW > HEATMAP_MAX || gridH > HEATMAP_MAX || chunkWidth <= 0 || chunkHeight <= 0) return null;
+    return {
+      tick: heatmapBuf[0] | 0,
+      chunkWidth,
+      chunkHeight,
+      gridW,
+      gridH,
+      lastMs: (heatmapBuf[5] | 0) / 100,
+      sumMaxMs: heatmapBuf[6] | 0,
+      peakMaxMs: (heatmapBuf[7] | 0) / 100,
+    };
+  } catch (e) {
+    return null;
+  }
+};
+
+const heatmapLiveCopy = new Int32Array(HEATMAP_CELLS);
+const heatmapSumCopy = new Int32Array(HEATMAP_CELLS);
+const heatmapPeakCopy = new Int32Array(HEATMAP_CELLS);
+const lastHistorySumGrid = new Int32Array(HEATMAP_CELLS);
+const scratchScrubGrid = new Int32Array(HEATMAP_CELLS);
+const scratchCumulGrid = new Int32Array(HEATMAP_CELLS);
+const scratchHeatGrid = new Float32Array(HEATMAP_CELLS);
+
+const getSparseHeatmapSnapshot = () => {
+  if (!heatmapBuf) return null;
+  const sums = [];
+  const peaks = [];
+  try {
+    for (let i = 0; i < HEATMAP_CELLS; i++) {
+      const s = heatmapBuf[HEATMAP_SUM_OFF + i] | 0;
+      if (s > 0) sums.push([i, s]);
+      const p = heatmapBuf[HEATMAP_PEAK_OFF + i] | 0;
+      if (p > 0) peaks.push([i, p]);
+    }
+    return {
+      sums,
+      peaks,
+      sumMax: heatmapBuf[6] | 0,
+      peakMax: heatmapBuf[7] | 0,
+      worldTimeMs: now(),
+    };
+  } catch (e) {
+    return null;
+  }
+};
+
+const heatmapSnapshotFromHistory = () => {
+  const sumsMap = new Map();
+  let sumMax = 0;
+  for (let i = 0; i < historyBuf.length; i++) {
+    const hits = historyBuf[i] && historyBuf[i].hits;
+    if (!hits) continue;
+    for (let j = 0; j < hits.length; j++) {
+      const gi = hits[j][0] | 0;
+      const delta = hits[j][1] | 0;
+      if (gi < 0 || gi >= HEATMAP_CELLS || delta <= 0) continue;
+      const next = (sumsMap.get(gi) || 0) + delta;
+      sumsMap.set(gi, next);
+      if (next > sumMax) sumMax = next;
+    }
+  }
+  if (sumsMap.size === 0) return null;
+  return {
+    sums: Array.from(sumsMap.entries()),
+    peaks: [],
+    sumMax,
+    peakMax: 0,
+    worldTimeMs: now(),
+  };
+};
+
+const heatmapSnapshotHasData = snap => Boolean(
+  snap && (
+    (Array.isArray(snap.sums) && snap.sums.length > 0) ||
+    (Array.isArray(snap.peaks) && snap.peaks.length > 0)
+  )
+);
+
+const applyHeatmapSnapshotToBuf = snap => {
+  if (!heatmapBuf || !snap) return false;
+  try {
+    heatmapBuf.fill(0, HEATMAP_SUM_OFF, HEATMAP_SUM_OFF + HEATMAP_CELLS);
+    heatmapBuf.fill(0, HEATMAP_PEAK_OFF, HEATMAP_PEAK_OFF + HEATMAP_CELLS);
+    lastHistorySumGrid.fill(0);
+    let sumMax = 0;
+    let peakMax = 0;
+    const sums = Array.isArray(snap.sums) ? snap.sums : [];
+    for (let i = 0; i < sums.length; i++) {
+      const gi = sums[i][0] | 0;
+      const ms = sums[i][1] | 0;
+      if (gi < 0 || gi >= HEATMAP_CELLS || ms <= 0) continue;
+      heatmapBuf[HEATMAP_SUM_OFF + gi] = ms;
+      lastHistorySumGrid[gi] = ms;
+      if (ms > sumMax) sumMax = ms;
+    }
+    const peaks = Array.isArray(snap.peaks) ? snap.peaks : [];
+    for (let i = 0; i < peaks.length; i++) {
+      const gi = peaks[i][0] | 0;
+      const ms100 = peaks[i][1] | 0;
+      if (gi < 0 || gi >= HEATMAP_CELLS || ms100 <= 0) continue;
+      heatmapBuf[HEATMAP_PEAK_OFF + gi] = ms100;
+      if (ms100 > peakMax) peakMax = ms100;
+    }
+    heatmapBuf[6] = (snap.sumMax | 0) > 0 ? (snap.sumMax | 0) : sumMax;
+    heatmapBuf[7] = (snap.peakMax | 0) > 0 ? (snap.peakMax | 0) : peakMax;
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+const retryHeatmapRestoreIfNeeded = () => {
+  if (!pendingHeatmapRestore || !heatmapBuf) return;
+  try {
+    const req = Atomics.load(heatmapBuf, 9);
+    const ack = Atomics.load(heatmapBuf, 10);
+    const sumMax = heatmapBuf[6] | 0;
+    const expected = pendingHeatmapRestore.sumMax | 0;
+    if (ack === req && (expected <= 0 || sumMax >= expected)) {
+      lastHistorySumGrid.set(heatmapBuf.subarray(HEATMAP_SUM_OFF, HEATMAP_SUM_OFF + HEATMAP_CELLS));
+      pendingHeatmapRestore = null;
+      return;
+    }
+    applyHeatmapSnapshotToBuf(pendingHeatmapRestore);
+    if (ack === req) Atomics.add(heatmapBuf, 9, 1);
+  } catch (e) {}
+};
+
+const restoreHeatmapFromSave = () => {
+  let snap = null;
+  try { snap = api.storage.get(NS, 'heatmapSnapshot'); } catch (e) { snap = null; }
+  if (!heatmapSnapshotHasData(snap)) snap = heatmapSnapshotFromHistory();
+  if (!heatmapSnapshotHasData(snap)) {
+    requestHeatmapReset();
+    return;
+  }
+  if (!applyHeatmapSnapshotToBuf(snap)) {
+    requestHeatmapReset();
+    return;
+  }
+  pendingHeatmapRestore = snap;
+  try {
+    if (heatmapBuf) Atomics.add(heatmapBuf, 9, 1);
+  } catch (e) {}
+};
+
+const formatMsOrSec = ms => {
+  if (!Number.isFinite(ms) || ms <= 0) return '0 ms';
+  if (ms >= 3600000) {
+    const hrs = Math.floor(ms / 3600000);
+    const remMins = Math.floor((ms % 3600000) / 60000);
+    return `${hrs}h ${remMins}m`;
+  }
+  if (ms >= 60000) {
+    const mins = Math.floor(ms / 60000);
+    const secs = Math.floor((ms % 60000) / 1000);
+    return `${mins}m ${secs}s`;
+  }
+  if (ms >= 1000) return `${(ms / 1000).toFixed(2)} s`;
+  if (ms >= 10) return `${ms.toFixed(1)} ms`;
+  return `${ms.toFixed(2)} ms`;
+};
+
+const getHeatmapData = (mode, scrubRelMs, rangeType, maxRelMs, decayFloor = 0.06, decayHalfLife = 30000, linearWindow = 60000) => {
+  const meta = heatmapMeta();
+  if (!meta || !heatmapBuf) return null;
+
+  if (mode === 'live') {
+    heatmapLiveCopy.set(heatmapBuf.subarray(HEATMAP_LIVE_OFF, HEATMAP_LIVE_OFF + HEATMAP_CELLS));
+    return { meta, cells: heatmapLiveCopy, maxVal: Math.max(1, Math.round(meta.lastMs * 100)), isMs100: true };
+  }
+
+  if (mode === 'peak' && scrubRelMs === null) {
+    heatmapPeakCopy.set(heatmapBuf.subarray(HEATMAP_PEAK_OFF, HEATMAP_PEAK_OFF + HEATMAP_CELLS));
+    return { meta, cells: heatmapPeakCopy, maxVal: Math.max(1, Math.round(meta.peakMaxMs * 100)), isMs100: true };
+  }
+
+  const targetEndMs = scrubRelMs !== null ? scrubRelMs : maxRelMs;
+
+  if (mode === 'sum') {
+    if (scrubRelMs === null) {
+      heatmapSumCopy.set(heatmapBuf.subarray(HEATMAP_SUM_OFF, HEATMAP_SUM_OFF + HEATMAP_CELLS));
+      return { meta, cells: heatmapSumCopy, maxVal: Math.max(1, meta.sumMaxMs), isMs100: false };
+    }
+    scratchScrubGrid.fill(0);
+    let maxVal = 0;
+    const len = historyBuf.length;
+    for (let i = 0; i < len; i++) {
+      const b = historyBuf[i];
+      const rel = b.relMs || 0;
+      if (rel > targetEndMs) break;
+      const hits = b.hits;
+      if (!hits) continue;
+      for (let j = 0; j < hits.length; j++) {
+        const [gi, delta] = hits[j];
+        const next = scratchScrubGrid[gi] + delta;
+        scratchScrubGrid[gi] = next;
+        if (next > maxVal) maxVal = next;
+      }
+    }
+    return { meta, cells: scratchScrubGrid, maxVal: Math.max(1, maxVal), isMs100: false };
+  }
+
+  // Decay modes: 'exp' or 'linear'
+  scratchScrubGrid.fill(0);
+  scratchHeatGrid.fill(0);
+  if (scrubRelMs !== null) {
+    scratchCumulGrid.fill(0);
+  }
+
+  const tHalf = Number.isFinite(decayHalfLife) && decayHalfLife > 0 ? decayHalfLife : 30000;
+  const tWin = Number.isFinite(linearWindow) && linearWindow > 0 ? linearWindow : 60000;
+  const maxLookback = mode === 'exp' ? (tHalf * 5) : tWin;
+  const floorRatio = Number.isFinite(decayFloor) ? decayFloor : 0.06;
+
+  let maxRecentHeat = 0;
+  let maxCumul = (scrubRelMs === null && meta.sumMaxMs > 0) ? meta.sumMaxMs : 0;
+  const len = historyBuf.length;
+
+  for (let i = 0; i < len; i++) {
+    const b = historyBuf[i];
+    const rel = b.relMs || 0;
+    if (rel > targetEndMs) break;
+    const hits = b.hits;
+    if (!hits) continue;
+
+    if (scrubRelMs !== null) {
+      for (let j = 0; j < hits.length; j++) {
+        const [gi, delta] = hits[j];
+        const nextC = scratchCumulGrid[gi] + delta;
+        scratchCumulGrid[gi] = nextC;
+        if (nextC > maxCumul) maxCumul = nextC;
+      }
+    }
+
+    const ageMs = targetEndMs - rel;
+    if (ageMs < 0 || ageMs > maxLookback) continue;
+    const weight = mode === 'exp'
+      ? Math.pow(0.5, ageMs / tHalf)
+      : Math.max(0, 1 - (ageMs / tWin));
+    if (weight <= 0) continue;
+
+    for (let j = 0; j < hits.length; j++) {
+      const [gi, delta] = hits[j];
+      const nextH = scratchHeatGrid[gi] + delta * weight;
+      scratchHeatGrid[gi] = nextH;
+      if (nextH > maxRecentHeat) maxRecentHeat = nextH;
+    }
+  }
+
+  const cumulSource = (scrubRelMs === null)
+    ? heatmapBuf.subarray(HEATMAP_SUM_OFF, HEATMAP_SUM_OFF + HEATMAP_CELLS)
+    : scratchCumulGrid;
+  if (scrubRelMs === null && maxCumul === 0) {
+    maxCumul = meta.sumMaxMs;
+  }
+
+  let maxDisplayVal = 0;
+  if (maxRecentHeat > 0 && maxCumul > 0) {
+    const floorBase = floorRatio * maxRecentHeat;
+    for (let gi = 0; gi < HEATMAP_CELLS; gi++) {
+      const h = scratchHeatGrid[gi];
+      const c = cumulSource[gi] | 0;
+      if (h <= 0 && c <= 0) continue;
+      const floorVal = c > 0 ? (floorBase * (c / maxCumul)) : 0;
+      const totalVal = Math.round((h + floorVal) * 100);
+      scratchScrubGrid[gi] = totalVal;
+      if (totalVal > maxDisplayVal) maxDisplayVal = totalVal;
+    }
+  } else if (maxCumul > 0) {
+    for (let gi = 0; gi < HEATMAP_CELLS; gi++) {
+      const c = cumulSource[gi] | 0;
+      if (c <= 0) continue;
+      const totalVal = Math.round(c * 0.05 * 100);
+      scratchScrubGrid[gi] = totalVal;
+      if (totalVal > maxDisplayVal) maxDisplayVal = totalVal;
+    }
+  }
+
+  return {
+    meta,
+    cells: scratchScrubGrid,
+    maxVal: Math.max(1, maxDisplayVal),
+    isMs100: true,
+    cumulSource,
+    recentHeat: scratchHeatGrid,
+    isDecay: true,
+  };
+};
+
+const copyHeatmapGrid = kind => {
+  const meta = heatmapMeta();
+  if (!meta || !heatmapBuf) return null;
+  try {
+    let off = HEATMAP_LIVE_OFF;
+    let dest = heatmapLiveCopy;
+    if (kind === 'run' || kind === 'sum') {
+      off = HEATMAP_SUM_OFF;
+      dest = heatmapSumCopy;
+    } else if (kind === 'peak') {
+      off = HEATMAP_PEAK_OFF;
+      dest = heatmapPeakCopy;
+    }
+    dest.set(heatmapBuf.subarray(off, off + HEATMAP_CELLS));
+    return { meta, cells: dest };
+  } catch (e) {
+    return null;
+  }
+};
+
+const emptyCauseFields = () => ({
+  computeMs: 0,
+  waitMs: 0,
+  postMs: 0,
+  slowestMs: 0,
+  slowestX: -1,
+  slowestY: -1,
+});
+
+const causeFieldsFromPhase = phase => {
+  if (!phase) return emptyCauseFields();
+  return {
+    computeMs: phase.computeMs,
+    waitMs: phase.waitMs,
+    postMs: phase.postMs,
+    slowestMs: phase.slowestMs,
+    slowestX: phase.slowestX,
+    slowestY: phase.slowestY,
+  };
+};
+
+const causeTotal = s => (Number(s.computeMs) || 0) + (Number(s.waitMs) || 0) + (Number(s.postMs) || 0);
+
+const mergeCausePreferHotter = (a, b) => {
+  const aTot = causeTotal(a);
+  const bTot = causeTotal(b);
+  const hotter = bTot > aTot ? b : a;
+  return {
+    computeMs: Math.max(a.computeMs || 0, b.computeMs || 0),
+    waitMs: Math.max(a.waitMs || 0, b.waitMs || 0),
+    postMs: Math.max(a.postMs || 0, b.postMs || 0),
+    slowestMs: Math.max(a.slowestMs || 0, b.slowestMs || 0),
+    slowestX: hotter.slowestX,
+    slowestY: hotter.slowestY,
+  };
+};
+
+const aggregateCauseStats = samples => {
+  if (!samples || !samples.length) return null;
+  let sumC = 0;
+  let sumW = 0;
+  let sumP = 0;
+  let n = 0;
+  let best = null;
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i];
+    const c = Number(s.computeMs);
+    const w = Number(s.waitMs);
+    const p = Number(s.postMs);
+    if (!Number.isFinite(c) && !Number.isFinite(w) && !Number.isFinite(p)) continue;
+    const cc = Number.isFinite(c) ? c : 0;
+    const ww = Number.isFinite(w) ? w : 0;
+    const pp = Number.isFinite(p) ? p : 0;
+    if (cc <= 0 && ww <= 0 && pp <= 0) continue;
+    sumC += cc;
+    sumW += ww;
+    sumP += pp;
+    n++;
+    const tot = cc + ww + pp;
+    if (!best || tot > best.total) {
+      best = {
+        total: tot,
+        x: Number.isFinite(s.slowestX) ? s.slowestX : -1,
+        y: Number.isFinite(s.slowestY) ? s.slowestY : -1,
+        ms: Number(s.slowestMs) || 0,
+      };
+    }
+  }
+  if (!n) return null;
+  const computeMs = sumC / n;
+  const waitMs = sumW / n;
+  const postMs = sumP / n;
+  const total = computeMs + waitMs + postMs;
+  return {
+    computeMs,
+    waitMs,
+    postMs,
+    total,
+    computeShare: total > 0 ? computeMs / total : 0,
+    waitShare: total > 0 ? waitMs / total : 0,
+    postShare: total > 0 ? postMs / total : 0,
+    bound: waitMs > computeMs ? 'wait' : 'compute',
+    slowestX: best ? best.x : -1,
+    slowestY: best ? best.y : -1,
+    slowestMs: best ? best.ms : 0,
+    samples: n,
+  };
+};
+
+const setAllMatterCapture = enabled => {
+  try {
+    if (tickBuf) {
+      Atomics.store(tickBuf, 8, enabled ? 1 : 0);
+      setMetricCaptureMask(METRIC_NORMAL | (enabled ? METRIC_ALL_MATTER : 0));
+    }
+  } catch (e) {}
+};
+
+function setMetricCaptureMask(mask) {
+  try {
+    if (!tickBuf) return;
+    const next = mask | 0;
+    if (Atomics.load(tickBuf, 10) === next) return;
+    Atomics.store(tickBuf, 10, next);
+    Atomics.store(tickBuf, 13, 0);
+    Atomics.add(tickBuf, 12, 1);
+  } catch (e) {}
+}
+
+const activeMetricMask = () => {
+  try {
+    return tickBuf ? Atomics.load(tickBuf, 11) : 0;
+  } catch (e) {
+    return 0;
+  }
+};
+
+const metricMaskSettled = mask => {
+  try {
+    return activeMetricMask() === mask
+      && Boolean(tickBuf)
+      && Atomics.load(tickBuf, 13) >= workerCount();
+  } catch (e) {
+    return false;
+  }
+};
+
+const isAllMatterCaptureRequested = () => {
+  try {
+    return Boolean(tickBuf && Atomics.load(tickBuf, 8) === 1);
+  } catch (e) {
+    return false;
+  }
+};
+
+const isAllMatterCaptureActive = () => {
+  try {
+    const mask = activeMetricMask();
+    return Boolean((mask & METRIC_ALL_BLOCKS) && (mask & METRIC_ALL_MOVES));
+  } catch (e) {
+    return false;
   }
 };
 
@@ -1757,6 +2792,13 @@ const startClocks = () => {
   api.storage.set(NS, 'upsUElapsed', 0);
   api.storage.set(NS, 'upsSlowdown', 0);
   api.storage.set(NS, 'upsDeficit', 0);
+  api.storage.set(NS, 'upsBlocksStart', rawBallisticBlocks());
+  api.storage.set(NS, 'upsMovesStart', rawBallisticMoves());
+  api.storage.set(NS, 'upsBlocksFinal', 0);
+  api.storage.set(NS, 'upsMovesFinal', 0);
+  api.storage.set(NS, 'upsJamRateFinal', 0);
+  api.storage.set(NS, 'upsJamShareFinal', 0);
+  api.storage.set(NS, 'upsJamLoadFinal', 0);
 };
 
 // DE: Nach dem Laden genau die gespeicherten Werte weiterzaehlen.
@@ -1794,6 +2836,8 @@ const detectHotReload = () => {
   const savedRms = readClock('upsRms');
   if (Math.abs(savedRms - rMs) > 1000) {
     resumeClocks();
+    loadHistoryFromSave();
+    restoreHeatmapFromSave();
     return true;
   }
   return false;
@@ -1867,8 +2911,8 @@ const liveU = () => {
   return uTicks;
 };
 
-// DE: R - Echtzeit des Laufs in ms. Wird weiter gemessen, Wertung ist W.
-// EN: R - real time of the run in ms. Still measured; scoring is W.
+// DE: R - pausenbewusste Echtzeit des Laufs in ms. Wird weiter gemessen, Wertung ist W.
+// EN: R - pause-aware real time of the run in ms. Still measured; scoring is W.
 const elapsed = () => {
   const run = readRun();
   if (typeof run.startedAt !== 'number') return 0;
@@ -1940,6 +2984,679 @@ const tickDeficit = () => {
   return idealTicks() - liveU();
 };
 const tickDeficitMs = () => tickDeficit() * TICK_MS;
+
+// DE: Neutrale Defizit-Zaehlung fuer die F7-Diagnose. Nur spanMs und ticks
+// DE: der Eimer, vorzeichenbehaftet, ohne Rate und ohne Clamp. D_perm ist das
+// DE: laufende Minimum von D ueber den naechsten Horizont H, damit Aufhol-
+// DE: Wobble nicht als bleibender Verlust zaehlt.
+// EN: Neutral deficit count for F7 diagnostics. Only bucket spanMs and ticks,
+// EN: signed, no rate and no clamp. D_perm is the running floor of D over the
+// EN: next horizon H, so catch-up wobble is not counted as kept loss.
+const SLOWDOWN_HORIZON_MS = 2000;
+const SLOWDOWN_EXIT_BUCKETS = 2;
+const SLOWDOWN_RISE_EPS = 1;
+
+const bucketSpanMsOf = b => {
+  const s = Number(b && b.spanMs);
+  return Number.isFinite(s) && s > 0 ? s : 1000;
+};
+
+const bucketTicksOf = b => {
+  const ticks = Number(b && b.ticks);
+  if (Number.isFinite(ticks) && ticks >= 0) return ticks;
+  const ups = Number(b && (b.avg !== undefined ? b.avg : b.ups));
+  if (Number.isFinite(ups)) return Math.max(0, ups * (bucketSpanMsOf(b) / 1000));
+  return 0;
+};
+
+const bucketDeltaD = b => (bucketSpanMsOf(b) / 1000) * TICK_HZ - bucketTicksOf(b);
+
+const emptyDeficitInfo = () => ({
+  d: [],
+  dPerm: [],
+  phaseMask: [],
+  phases: [],
+  lastD: 0,
+  lastDPerm: 0,
+  unrecoveredTicks: 0,
+  unrecoveredSec: 0,
+  slowdownMs: 0,
+});
+
+const annotateDeficitSeries = (samples, horizonMs) => {
+  const H = Number.isFinite(horizonMs) && horizonMs > 0 ? horizonMs : SLOWDOWN_HORIZON_MS;
+  const n = samples && samples.length ? samples.length : 0;
+  if (!n) return emptyDeficitInfo();
+
+  const relAt = i => {
+    const r = Number(samples[i] && samples[i].relMs);
+    return Number.isFinite(r) ? r : i * bucketSpanMsOf(samples[i]);
+  };
+
+  const d = new Array(n);
+  let acc = 0;
+  for (let i = 0; i < n; i++) {
+    acc += bucketDeltaD(samples[i]);
+    d[i] = acc;
+  }
+
+  const dPerm = new Array(n);
+  let k = 0;
+  for (let i = 0; i < n; i++) {
+    const endRel = relAt(i) + H;
+    if (k < i) k = i;
+    while (k + 1 < n && relAt(k + 1) <= endRel) k++;
+    let mn = d[i];
+    for (let j = i + 1; j <= k; j++) {
+      if (d[j] < mn) mn = d[j];
+    }
+    dPerm[i] = mn;
+  }
+
+  const phaseMask = new Array(n).fill(false);
+  const phases = [];
+  let inPhase = false;
+  let healthy = 0;
+  let start = 0;
+  let startD = 0;
+  let peakD = 0;
+
+  for (let i = 1; i < n; i++) {
+    const rise = dPerm[i] - dPerm[i - 1];
+    const up = rise > SLOWDOWN_RISE_EPS;
+    if (!inPhase) {
+      if (up) {
+        inPhase = true;
+        healthy = 0;
+        start = i;
+        startD = dPerm[i - 1];
+        peakD = dPerm[i];
+        phaseMask[i] = true;
+      }
+    } else if (up) {
+      healthy = 0;
+      if (dPerm[i] > peakD) peakD = dPerm[i];
+      phaseMask[i] = true;
+    } else {
+      healthy += 1;
+      if (healthy < SLOWDOWN_EXIT_BUCKETS) {
+        phaseMask[i] = true;
+      } else {
+        const end = i - healthy;
+        const lost = peakD - startD;
+        if (lost > SLOWDOWN_RISE_EPS && end >= start) {
+          for (let j = start; j <= end; j++) phaseMask[j] = true;
+          phases.push({
+            startIdx: start,
+            endIdx: end,
+            startRelMs: relAt(start),
+            endRelMs: relAt(end),
+            lostTicks: lost,
+          });
+        } else {
+          for (let j = start; j <= i; j++) phaseMask[j] = false;
+        }
+        inPhase = false;
+        healthy = 0;
+      }
+    }
+  }
+  if (inPhase) {
+    const end = n - 1;
+    const lost = peakD - startD;
+    if (lost > SLOWDOWN_RISE_EPS) {
+      for (let j = start; j <= end; j++) phaseMask[j] = true;
+      phases.push({
+        startIdx: start,
+        endIdx: end,
+        startRelMs: relAt(start),
+        endRelMs: relAt(end),
+        lostTicks: lost,
+      });
+    } else {
+      for (let j = start; j <= end; j++) phaseMask[j] = false;
+    }
+  }
+
+  let unrecoveredTicks = 0;
+  let slowdownMs = 0;
+  for (let p = 0; p < phases.length; p++) {
+    const ph = phases[p];
+    unrecoveredTicks += ph.lostTicks;
+    slowdownMs += Math.max(0, ph.endRelMs - ph.startRelMs + bucketSpanMsOf(samples[ph.endIdx]));
+  }
+
+  return {
+    d,
+    dPerm,
+    phaseMask,
+    phases,
+    lastD: d[n - 1],
+    lastDPerm: dPerm[n - 1],
+    unrecoveredTicks,
+    unrecoveredSec: unrecoveredTicks / TICK_HZ,
+    slowdownMs,
+  };
+};
+
+const sampleAtRelMs = relMs => {
+  const pick = arr => {
+    if (!arr || !arr.length) return null;
+    if (relMs === null || !Number.isFinite(relMs)) return arr[arr.length - 1];
+    let best = null;
+    let bestD = Infinity;
+    for (let i = 0; i < arr.length; i++) {
+      const r = Number(arr[i].relMs);
+      if (!Number.isFinite(r)) continue;
+      const dist = Math.abs(r - relMs);
+      if (dist < bestD) {
+        bestD = dist;
+        best = arr[i];
+      }
+    }
+    return best || arr[arr.length - 1];
+  };
+  const hi = pick(highResBuffer);
+  const lo = pick(historyBuf);
+  if (relMs === null || !Number.isFinite(relMs)) return hi || lo;
+  if (hi && lo) {
+    const dh = Math.abs((Number(hi.relMs) || 0) - relMs);
+    const dl = Math.abs((Number(lo.relMs) || 0) - relMs);
+    return dh <= dl ? hi : lo;
+  }
+  return hi || lo;
+};
+
+const causeBoundOfSample = s => {
+  if (!s) return null;
+  const c = Number(s.computeMs) || 0;
+  const w = Number(s.waitMs) || 0;
+  if (c <= 0 && w <= 0) return null;
+  return { bound: w > c ? 'wait' : 'compute', computeMs: c, waitMs: w, postMs: Number(s.postMs) || 0 };
+};
+
+const formatSecSigned = v => {
+  if (!Number.isFinite(v)) return '—';
+  const abs = Math.abs(v);
+  const txt = abs >= 10 ? abs.toFixed(1) : abs.toFixed(2);
+  return (v > 0 ? '+' : v < 0 ? '-' : '') + txt + ' s';
+};
+
+// DE: Blocklast (Kollisionen pro Simulationsschritt) ueber den gesamten Lauf
+// EN: Jam load (blocked attempts per simulation update) over the entire run
+const jamLoadPerUpdate = () => {
+  const run = readRun();
+  if (typeof run.startedAt !== 'number') return 0;
+  if (typeof run.finishedAt === 'number') {
+    const finalVal = readClock('upsJamLoadFinal');
+    if (Number.isFinite(finalVal) && finalVal >= 0) return finalVal;
+  }
+  const curB = rawBallisticBlocks();
+  const startB = readClock('upsBlocksStart');
+  const dB = Math.max(0, curB - startB);
+  const u = liveU();
+  return u > 0 ? dB / u : 0;
+};
+
+// DE: Blockanteil (Kollisionen / (Kollisionen + Bewegungen)) in Prozent ueber den gesamten Lauf
+// EN: Jam share (collisions / (collisions + moves)) in percent over the entire run
+const jamSharePercent = () => {
+  const run = readRun();
+  if (typeof run.startedAt !== 'number') return 0;
+  if (typeof run.finishedAt === 'number') {
+    const finalVal = readClock('upsJamShareFinal') || readClock('upsJamRateFinal');
+    if (Number.isFinite(finalVal)) return finalVal;
+  }
+  const curB = rawBallisticBlocks();
+  const curM = rawBallisticMoves();
+  const startB = readClock('upsBlocksStart');
+  const startM = readClock('upsMovesStart');
+  const dB = Math.max(0, curB - startB);
+  const dM = Math.max(0, curM - startM);
+  return (dB + dM > 0) ? (dB / (dB + dM)) * 100 : 0;
+};
+
+// DE: Flugaktivitaet (Bewegungsversuche pro Simulationsschritt) ueber den gesamten Lauf
+// EN: Flight activity (ballistic attempts per simulation update) over the entire run
+const flightActivityPerUpdate = () => {
+  const run = readRun();
+  if (typeof run.startedAt !== 'number') return 0;
+  const curB = rawBallisticBlocks();
+  const curM = rawBallisticMoves();
+  const startB = readClock('upsBlocksStart');
+  const startM = readClock('upsMovesStart');
+  const dB = Math.max(0, curB - startB);
+  const dM = Math.max(0, curM - startM);
+  const u = liveU();
+  return u > 0 ? (dB + dM) / u : 0;
+};
+
+// DE: Rueckwaertskompatible Aliase
+const jamRatePercent = jamSharePercent;
+const jamIntensityPerK = () => jamLoadPerUpdate() * 1000;
+
+const JAM_WINDOW_MS = 5000;
+
+const sampleSpanMs = (c, fallbackMs) => (
+  c && Number.isFinite(c.spanMs) && c.spanMs > 0 ? c.spanMs : (fallbackMs || 100)
+);
+
+const sampleTicksOf = (c, fallbackMs) => {
+  if (c && Number.isFinite(c.ticks) && c.ticks > 0) return c.ticks;
+  const span = sampleSpanMs(c, fallbackMs);
+  const ups = c && Number.isFinite(c.avg) ? c.avg : (c && Number.isFinite(c.ups) ? c.ups : 60);
+  return Math.max(0, Number.isFinite(ups) ? ups * (span / 1000) : 0);
+};
+
+const sampleEventCount = (c, kind, scope) => {
+  if (!c) return null;
+  if (scope === 'allMatter') {
+    let v;
+    if (kind === 'settled') v = c.allBlocksSettled;
+    else if (kind === 'active') v = c.allBlocksActive;
+    else v = kind === 'blocks' ? c.allBlocks : c.allMoves;
+    if (v === null || v === undefined || !Number.isFinite(v)) return null;
+    return Math.max(0, v);
+  }
+  if (kind === 'settled' || kind === 'active') return null;
+  const v = kind === 'blocks' ? (c.blocks || 0) : (c.moves || 0);
+  return Number.isFinite(v) ? Math.max(0, v) : 0;
+};
+
+const sampleJamInstant = (c, scope, fallbackMs) => {
+  const blocks = sampleEventCount(c, 'blocks', scope);
+  const moves = sampleEventCount(c, 'moves', scope);
+  const ticks = sampleTicksOf(c, fallbackMs);
+  if (blocks === null || moves === null) return null;
+  const events = blocks + moves;
+  return {
+    blocks,
+    moves,
+    ticks,
+    jamShare: events > 0 ? blocks / events : 0,
+    jamLoad: ticks > 0 ? blocks / ticks : 0,
+    flight: ticks > 0 ? events / ticks : 0,
+  };
+};
+
+const trailingJamWindow = (src, idx, scope, fallbackMs, targetMs) => {
+  if (!src || idx < 0 || idx >= src.length) return null;
+  let blocks = 0;
+  let moves = 0;
+  let ticks = 0;
+  let span = 0;
+  let n = 0;
+  let minShare = Infinity;
+  let maxShare = -Infinity;
+  let minLoad = Infinity;
+  let maxLoad = -Infinity;
+  for (let j = idx; j >= 0; j--) {
+    const inst = sampleJamInstant(src[j], scope, fallbackMs);
+    if (!inst) return null;
+    blocks += inst.blocks;
+    moves += inst.moves;
+    ticks += inst.ticks;
+    span += sampleSpanMs(src[j], fallbackMs);
+    n += 1;
+    if (Number.isFinite(inst.jamShare)) {
+      if (inst.jamShare < minShare) minShare = inst.jamShare;
+      if (inst.jamShare > maxShare) maxShare = inst.jamShare;
+    }
+    if (Number.isFinite(inst.jamLoad)) {
+      if (inst.jamLoad < minLoad) minLoad = inst.jamLoad;
+      if (inst.jamLoad > maxLoad) maxLoad = inst.jamLoad;
+    }
+    if (span >= (targetMs || JAM_WINDOW_MS) && n >= 1) break;
+  }
+  const events = blocks + moves;
+  return {
+    blocks,
+    moves,
+    ticks,
+    spanMs: span,
+    jamShare: events > 0 ? blocks / events : 0,
+    jamLoad: ticks > 0 ? blocks / ticks : 0,
+    flight: ticks > 0 ? events / ticks : 0,
+    minShare: minShare === Infinity ? 0 : minShare,
+    maxShare: maxShare === -Infinity ? 0 : maxShare,
+    minLoad: minLoad === Infinity ? 0 : minLoad,
+    maxLoad: maxLoad === -Infinity ? 0 : maxLoad,
+  };
+};
+
+const percentile = (arr, p) => {
+  if (!arr || arr.length === 0) return 0;
+  const sorted = arr.slice().sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * p)));
+  return sorted[idx];
+};
+
+const medianOf = arr => {
+  if (!arr || arr.length === 0) return 0;
+  const sorted = arr.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+
+const workerCount = () => {
+  try {
+    return (sandkit.state.environment && sandkit.state.environment.threadMeta && sandkit.state.environment.threadMeta.threadCount) || 1;
+  } catch (e) {
+    return 1;
+  }
+};
+
+let allMatterRuntimeOverride = null;
+const monitoringMode = () => {
+  try {
+    const v = api.settings.get('monitoringMode');
+    if (v === 'off' || v === 'standard' || v === 'full') return v;
+  } catch (e) {}
+  try {
+    if (api.settings.get('allMatterCapture') === true) return 'full';
+    if (api.settings.get('trackUpsHistory') === false) return 'off';
+  } catch (e) {}
+  return 'standard';
+};
+const monitoringEnabled = () => monitoringMode() !== 'off' || allMatterRuntimeOverride !== null;
+const allMatterCaptureWanted = () => (
+  allMatterRuntimeOverride !== null
+    ? allMatterRuntimeOverride === true
+    : monitoringMode() === 'full'
+);
+
+const applyMonitoringMask = () => {
+  if (benchState.running) return;
+  if (monitoringMode() === 'off' && allMatterRuntimeOverride === null) {
+    try { if (tickBuf) Atomics.store(tickBuf, 8, 0); } catch (e) {}
+    setMetricCaptureMask(0);
+    return;
+  }
+  setAllMatterCapture(allMatterCaptureWanted());
+};
+
+const syncAllMatterCaptureControl = () => {
+  applyMonitoringMask();
+};
+
+const BENCH_PHASE_MS = 15000;
+const BENCH_REPEATS = 3;
+const BENCH_TESTS = [
+  { id: 'ballistic-blocks', label: 'Ballistic blocks', mask: METRIC_BALLISTIC_BLOCKS },
+  { id: 'ballistic-moves', label: 'Ballistic moves', mask: METRIC_BALLISTIC_MOVES },
+  { id: 'all-blocks', label: 'All-matter blocks', mask: METRIC_ALL_BLOCKS },
+  { id: 'all-moves', label: 'All-matter moves', mask: METRIC_ALL_MOVES },
+  { id: 'awake-chunks', label: 'Awake-chunk scan', mask: METRIC_AWAKE },
+  { id: 'live-elements', label: 'Live-population read', mask: METRIC_LIVE },
+  { id: 'sim-time', label: 'Simulation-time read', mask: METRIC_SIM_TIME },
+  { id: 'ballistic-bundle', label: 'Ballistic bundle', mask: METRIC_BALLISTIC },
+  { id: 'all-matter-bundle', label: 'All-matter bundle', mask: METRIC_ALL_MATTER },
+  { id: 'complete-bundle', label: 'Complete diagnostics', mask: METRIC_COMPLETE },
+];
+let benchState = {
+  running: false,
+  testIndex: 0,
+  repeat: 0,
+  mode: 'idle',
+  pendingMode: null,
+  targetMask: 0,
+  phaseStart: 0,
+  bucket: null,
+  records: [],
+  restoreOverride: null,
+  restoreWanted: false,
+  result: null,
+  copiedAt: 0,
+};
+
+const resetBenchState = extra => {
+  benchState = {
+    running: false,
+    testIndex: 0,
+    repeat: 0,
+    mode: 'idle',
+    pendingMode: null,
+    targetMask: 0,
+    phaseStart: 0,
+    bucket: null,
+    records: [],
+    restoreOverride: null,
+    restoreWanted: false,
+    result: null,
+    copiedAt: 0,
+    ...extra,
+  };
+};
+
+try { applyMonitoringMask(); } catch (e) {}
+
+const summarizeBenchSide = records => {
+  const sim = records.map(s => s.simMsAvg).filter(n => Number.isFinite(n));
+  const ups = records.map(s => s.ups).filter(n => Number.isFinite(n));
+  const wall = records.map(s => s.wallMsPerTick).filter(n => Number.isFinite(n));
+  return {
+    n: records.length,
+    simMed: medianOf(sim),
+    simP95: percentile(sim, 0.95),
+    upsMed: medianOf(ups),
+    upsP05: percentile(ups, 0.05),
+    upsP95: percentile(ups, 0.95),
+    wallMed: medianOf(wall),
+    wallP95: percentile(wall, 0.95),
+  };
+};
+
+const benchCurrentTest = () => BENCH_TESTS[Math.min(benchState.testIndex, BENCH_TESTS.length - 1)];
+
+const finalizeBenchBucket = () => {
+  const b = benchState.bucket;
+  if (!b || b.spanMs <= 0 || !benchState.running) return;
+  const test = benchCurrentTest();
+  const simEnabled = benchState.mode === 'test' && Boolean(test.mask & METRIC_SIM_TIME);
+  benchState.records.push({
+    testId: test.id,
+    testLabel: test.label,
+    repeat: benchState.repeat + 1,
+    phase: benchState.mode,
+    second: b.second + 1,
+    mask: benchState.mode === 'test' ? test.mask : 0,
+    spanMs: Math.round(b.spanMs),
+    ticks: b.ticks,
+    ups: b.spanMs > 0 ? (b.ticks * 1000) / b.spanMs : 0,
+    wallMsPerTick: b.ticks > 0 ? b.spanMs / b.ticks : null,
+    ballisticBlocks: b.ballisticBlocks,
+    ballisticMoves: b.ballisticMoves,
+    allBlocks: b.allBlocks,
+    allMoves: b.allMoves,
+    awakeAvg: benchState.mode === 'test' && (test.mask & METRIC_AWAKE) ? b.awakeSum / b.spanMs : null,
+    awakeMax: benchState.mode === 'test' && (test.mask & METRIC_AWAKE) ? b.awakeMax : null,
+    liveAvg: benchState.mode === 'test' && (test.mask & METRIC_LIVE) ? b.liveSum / b.spanMs : null,
+    liveMax: benchState.mode === 'test' && (test.mask & METRIC_LIVE) ? b.liveMax : null,
+    simMsAvg: simEnabled ? b.simMsSum / b.spanMs : null,
+    simMsMax: simEnabled ? b.simMsMax : null,
+  });
+  benchState.bucket = null;
+};
+
+const startBenchPhase = mode => {
+  const test = benchCurrentTest();
+  benchState.mode = 'settling';
+  benchState.pendingMode = mode;
+  benchState.targetMask = mode === 'test' ? test.mask : 0;
+  benchState.phaseStart = 0;
+  benchState.bucket = null;
+  setMetricCaptureMask(benchState.targetMask);
+};
+
+const finishMetricBenchmark = () => {
+  finalizeBenchBucket();
+  const summaries = BENCH_TESTS.map(test => {
+    const baselineRecords = benchState.records.filter(r => r.testId === test.id && r.phase === 'baseline');
+    const testRecords = benchState.records.filter(r => r.testId === test.id && r.phase === 'test');
+    const baseline = summarizeBenchSide(baselineRecords);
+    const active = summarizeBenchSide(testRecords);
+    const wallDelta = active.wallMed - baseline.wallMed;
+    const wallPct = baseline.wallMed > 0 ? (wallDelta / baseline.wallMed) * 100 : 0;
+    const upsDelta = active.upsMed - baseline.upsMed;
+    const upsPct = baseline.upsMed > 0 ? (upsDelta / baseline.upsMed) * 100 : 0;
+    return { test, baseline, active, wallDelta, wallPct, upsDelta, upsPct };
+  });
+  const summaryLines = [
+    'Gold Speedrun metric cost matrix (scene-dependent)',
+    `build ${MOD_VERSION}  workers ${workerCount()}  ${BENCH_TESTS.length} packages x ${BENCH_REPEATS} repeats x ${BENCH_PHASE_MS / 1000}s baseline/test`,
+    'Baseline = tick publication only. wallMs/tick is derived from wall time and ticks.',
+  ];
+  summaries.forEach(s => {
+    summaryLines.push(
+      `${s.test.id}  wall med/p95 ${s.baseline.wallMed.toFixed(3)}/${s.baseline.wallP95.toFixed(3)} -> ${s.active.wallMed.toFixed(3)}/${s.active.wallP95.toFixed(3)} ms/tick  delta ${s.wallDelta >= 0 ? '+' : ''}${s.wallDelta.toFixed(3)} (${s.wallPct >= 0 ? '+' : ''}${s.wallPct.toFixed(1)}%)  UPS med ${s.baseline.upsMed.toFixed(2)} -> ${s.active.upsMed.toFixed(2)} (${s.upsPct >= 0 ? '+' : ''}${s.upsPct.toFixed(1)}%)`
+    );
+  });
+  const baselineBySlot = new Map();
+  benchState.records.forEach(r => {
+    if (r.phase === 'baseline') baselineBySlot.set(`${r.testId}|${r.repeat}|${r.second}`, r);
+  });
+  const csvHeader = 'test,repeat,phase,second,mask,spanMs,ticks,ups,wallMsPerTick,baselineUps,upsDelta,baselineWallMsPerTick,wallMsPerTickDelta,ballisticBlocks,ballisticMoves,allBlocks,allMoves,awakeAvg,awakeMax,liveAvg,liveMax,simMsAvg,simMsMax';
+  const csvValue = v => Number.isFinite(v) ? String(Math.round(v * 10000) / 10000) : '';
+  const csvRows = benchState.records.map(r => {
+    const paired = r.phase === 'test' ? baselineBySlot.get(`${r.testId}|${r.repeat}|${r.second}`) : null;
+    return [
+    r.testId, r.repeat, r.phase, r.second, r.mask, r.spanMs, csvValue(r.ticks),
+    csvValue(r.ups), csvValue(r.wallMsPerTick),
+    csvValue(paired && paired.ups), csvValue(paired ? r.ups - paired.ups : null),
+    csvValue(paired && paired.wallMsPerTick), csvValue(paired && Number.isFinite(paired.wallMsPerTick) && Number.isFinite(r.wallMsPerTick) ? r.wallMsPerTick - paired.wallMsPerTick : null),
+    csvValue(r.ballisticBlocks), csvValue(r.ballisticMoves), csvValue(r.allBlocks), csvValue(r.allMoves),
+    csvValue(r.awakeAvg), csvValue(r.awakeMax), csvValue(r.liveAvg), csvValue(r.liveMax),
+    csvValue(r.simMsAvg), csvValue(r.simMsMax),
+  ].join(',');
+  });
+  const report = summaryLines.concat(['', 'ONE_SECOND_PROGRESSION_CSV', csvHeader], csvRows).join('\n');
+  allMatterRuntimeOverride = benchState.restoreOverride;
+  benchState.running = false;
+  benchState.mode = 'idle';
+  benchState.result = { summaries, report, preview: summaryLines.join('\n') };
+  applyMonitoringMask();
+  try { notifyMetrics(); } catch (e) {}
+};
+
+const startMetricBenchmark = () => {
+  if (benchState.running || isRunning() || gamePaused() || !rawTickSourceReady()) return;
+  resetBenchState({
+    running: true,
+    testIndex: 0,
+    repeat: 0,
+    mode: 'settling',
+    pendingMode: 'baseline',
+    targetMask: 0,
+    phaseStart: 0,
+    bucket: null,
+    records: [],
+    restoreOverride: allMatterRuntimeOverride,
+    restoreWanted: allMatterCaptureWanted(),
+    result: null,
+    copiedAt: 0,
+  });
+  allMatterRuntimeOverride = false;
+  bucketAccum = null;
+  sparklineAccum = null;
+  try { if (tickBuf) Atomics.store(tickBuf, 8, 0); } catch (e) {}
+  setMetricCaptureMask(0);
+  try { notifyMetrics(); } catch (e) {}
+};
+
+const cancelMetricBenchmark = () => {
+  if (!benchState.running) return;
+  allMatterRuntimeOverride = benchState.restoreOverride;
+  benchState.running = false;
+  benchState.mode = 'idle';
+  benchState.bucket = null;
+  applyMonitoringMask();
+  try { notifyMetrics(); } catch (e) {}
+};
+
+const tickMetricBenchmark = sample => {
+  if (!benchState.running) return;
+  const now = performance.now();
+  if (benchState.mode === 'settling') {
+    if (!metricMaskSettled(benchState.targetMask)) return;
+    benchState.mode = benchState.pendingMode;
+    benchState.pendingMode = null;
+    benchState.phaseStart = now;
+    benchState.bucket = null;
+    return;
+  }
+
+  const phaseEnd = benchState.phaseStart + BENCH_PHASE_MS;
+  if (sample) {
+    const sampleEnd = Number.isFinite(sample.timeMs) ? sample.timeMs : now;
+    const sampleSpan = Math.max(1, Number.isFinite(sample.spanMs) ? sample.spanMs : 100);
+    let partStart = Math.max(benchState.phaseStart, sampleEnd - sampleSpan);
+    const clippedEnd = Math.min(phaseEnd, sampleEnd);
+    while (partStart < clippedEnd) {
+      const second = Math.min(14, Math.floor((partStart - benchState.phaseStart) / 1000));
+      const secondEnd = Math.min(clippedEnd, benchState.phaseStart + (second + 1) * 1000);
+      const partMs = secondEnd - partStart;
+      const ratio = partMs / sampleSpan;
+      if (!benchState.bucket || benchState.bucket.second !== second) {
+        finalizeBenchBucket();
+        benchState.bucket = {
+          second, spanMs: 0, ticks: 0,
+          ballisticBlocks: 0, ballisticMoves: 0, allBlocks: 0, allMoves: 0,
+          awakeSum: 0, awakeMax: 0, liveSum: 0, liveMax: 0, simMsSum: 0, simMsMax: 0,
+        };
+      }
+      const b = benchState.bucket;
+      b.spanMs += partMs;
+      b.ticks += sampleTicksOf(sample, 100) * ratio;
+      b.ballisticBlocks += (Number.isFinite(sample.blocks) ? sample.blocks : 0) * ratio;
+      b.ballisticMoves += (Number.isFinite(sample.moves) ? sample.moves : 0) * ratio;
+      b.allBlocks += (Number.isFinite(sample.allBlocks) ? sample.allBlocks : 0) * ratio;
+      b.allMoves += (Number.isFinite(sample.allMoves) ? sample.allMoves : 0) * ratio;
+      const awake = Number.isFinite(sample.awake) ? sample.awake : 0;
+      const live = Number.isFinite(sample.live) ? sample.live : 0;
+      const simMs = Number.isFinite(sample.simMs) ? sample.simMs : 0;
+      b.awakeSum += awake * partMs;
+      b.awakeMax = Math.max(b.awakeMax, awake);
+      b.liveSum += live * partMs;
+      b.liveMax = Math.max(b.liveMax, live);
+      b.simMsSum += simMs * partMs;
+      b.simMsMax = Math.max(b.simMsMax, simMs);
+      partStart = secondEnd;
+    }
+  }
+
+  if (now >= phaseEnd) {
+    finalizeBenchBucket();
+    if (benchState.mode === 'baseline') {
+      startBenchPhase('test');
+      return;
+    }
+    if (benchState.repeat + 1 < BENCH_REPEATS) {
+      benchState.repeat += 1;
+      startBenchPhase('baseline');
+      return;
+    }
+    benchState.repeat = 0;
+    benchState.testIndex += 1;
+    if (benchState.testIndex >= BENCH_TESTS.length) {
+      finishMetricBenchmark();
+      return;
+    }
+    startBenchPhase('baseline');
+    return;
+  }
+};
+
+const benchmarkProgress = () => {
+  if (!benchState.running) return null;
+  const test = benchCurrentTest();
+  const elapsedSec = benchState.phaseStart > 0 ? Math.min(15, Math.floor((performance.now() - benchState.phaseStart) / 1000) + 1) : 0;
+  return {
+    package: `${benchState.testIndex + 1}/${BENCH_TESTS.length} ${test.label}`,
+    repeat: `${benchState.repeat + 1}/${BENCH_REPEATS}`,
+    phase: benchState.mode === 'settling' ? `settling ${benchState.pendingMode || ''}` : benchState.mode,
+    seconds: `${elapsedSec}/15s`,
+  };
+};
 
 const avgUps = () => {
   const rSec = elapsed() / 1000;
@@ -2469,61 +4186,20 @@ const graceFor = ms => {
   eventGraceUntil = Math.max(eventGraceUntil, Date.now() + ms);
 };
 
-// DE: Drei Regelwerke:
-//   'mouse' - nur ein Druck der Maustaste startet: Graben, Greifen, Bauen,
-//             Forschen. Laufen ist frei, und was ohne Klick weiterlaeuft -
-//             etwa eine grabende Drohne - startet ebenfalls nichts.
-//   'click' - zusaetzlich alles, was Fortschritt bedeutet, auch ohne Klick.
-//   'any'   - zusaetzlich schon die erste Bewegung.
-//   'move'  - nur Bewegung, wie in Version 1.x.
-//
-// EN: Three rulesets:
-//   'mouse' - only a mouse press starts it: digging, grabbing, building,
-//             researching. Walking is free, and anything that keeps running
-//             without a click - say, a digging drone - doesn't start it either.
-//   'click' - additionally, anything that counts as progress, even without a click.
-//   'any'   - additionally, even the first movement.
-//   'move'  - movement only, as in version 1.x.
-const startMode = () => {
-  if (officialMode()) return 'any';
-  const v = api.settings.get('startMode');
-  return v === 'click' || v === 'any' || v === 'move' ? v : 'mouse';
-};
-
-const startsOnMovement = () => {
-  const m = startMode();
-  return m === 'any' || m === 'move';
-};
-
-// DE: Der Druck der Maustaste: Werkzeug- oder Waffenaktion im Spielfeld, Bauen,
-// DE: Forschen. Gilt in jedem Regelwerk ausser "nur Bewegung".
-// EN: A mouse press: a tool or weapon action in the play field, building,
-// EN: researching. Applies under every ruleset except "movement only".
-const startsOnMouse = () => startMode() !== 'move';
-
-// DE: Fortschritt ohne eigenen Klick - Drohnen, Foerderbaender, Aufsammeln.
-// EN: Progress without a click of your own - drones, conveyor belts, picking things up.
-const startsOnEvent = () => {
-  const m = startMode();
-  return m === 'click' || m === 'any';
-};
+// DE: Der Timer startet immer bei der ersten echten Spielhandlung: Bewegung,
+// DE: Graben, Bauen, Forschen, und auch Fortschritt ohne eigenen Klick
+// DE: (Drohnen, Foerderbaender). Das ist die offizielle Speedrun-Vorgabe.
+// EN: The timer always starts on the first real in-game action: movement,
+// EN: digging, building, researching, and also progress without a click of
+// EN: your own (drones, belts). That is the official speedrun requirement.
 
 // --- DE: Offizielles Regelwerk / EN: Official ruleset -----------------------
-// DE: Die Vorgabe der offiziellen Speedrun-Kategorien: ausser diesem Mod ist
-// DE: nichts aktiv, jede Aktion startet die Uhr, Gold zaehlt nach Kontostand, und
-// DE: das Tutorial wird nicht automatisch uebersprungen. Nur wenn alles vier
-// DE: stimmt, traegt der Lauf das Abzeichen.
-// EN: What the official speedrun categories require: nothing but this mod is
-// EN: active, any action starts the clock, gold counts by balance, and the
-// EN: tutorial isn't auto-skipped. Only when all four hold does the run carry
-// EN: the badge.
+// DE: Gueltig ist ein Lauf nur, wenn Gold nach Kontostand zaehlt, Intro,
+// DE: Story und Tutorial nicht uebersprungen werden, und ausser diesem Mod
+// DE: nichts aktiv ist.
+// EN: A run is valid only when gold counts by balance, intro, story and
+// EN: tutorial are not skipped, and nothing but this mod is active.
 const OFFICIAL_RULES = [
-  {
-    id: 'startMode',
-    labelKey: 'mods|goldSpeedrun|cfg|startMode',
-    valueKey: 'mods|goldSpeedrun|cfg|startMode|any',
-    ok: () => startMode() === 'any',
-  },
   {
     id: 'goldMode',
     labelKey: 'mods|goldSpeedrun|cfg|mode',
@@ -2532,7 +4208,7 @@ const OFFICIAL_RULES = [
   },
   {
     id: 'skipTutorial',
-    labelKey: 'mods|goldSpeedrun|cfg|skipTutorial',
+    labelKey: 'mods|goldSpeedrun|rules|skipTutorial',
     // DE: "Aus" - dieselbe Beschriftung wie bei den Gold-Marken.
     // EN: "Off" - the same label as used for the gold marks.
     valueKey: 'mods|goldSpeedrun|cfg|splitGold|off',
@@ -2540,13 +4216,13 @@ const OFFICIAL_RULES = [
   },
   {
     id: 'skipIntro',
-    labelKey: 'mods|goldSpeedrun|cfg|skipIntro',
+    labelKey: 'mods|goldSpeedrun|rules|skipIntro',
     valueKey: 'mods|goldSpeedrun|cfg|splitGold|off',
     ok: () => !skipIntroEnabled(),
   },
   {
     id: 'skipStory',
-    labelKey: 'mods|goldSpeedrun|cfg|skipStory',
+    labelKey: 'mods|goldSpeedrun|rules|skipStory',
     valueKey: 'mods|goldSpeedrun|cfg|splitGold|off',
     ok: () => !skipStoryEnabled(),
   },
@@ -2666,9 +4342,18 @@ const rulesetView = () => {
 const showRuleset = () => api.settings.get('showRuleset') !== false;
 
 const startRun = reason => {
-  if (!modEnabled()) return false;
-  if (Date.now() < suppressUntil) return false;
-  if (uiBlocksStart()) return false;
+  if (!modEnabled()) {
+    log('Start verweigert: Mod aus');
+    return false;
+  }
+  if (Date.now() < suppressUntil) {
+    log('Start verweigert: suppressUntil', { reason, remainingMs: suppressUntil - Date.now() });
+    return false;
+  }
+  if (uiBlocksStart()) {
+    log('Start verweigert: Intro-Bildschirm', { reason });
+    return false;
+  }
   // DE: Vor der eigentlichen Spielszene (Intro, Landeanflug) kann keine echte
   // DE: Spielhandlung stattfinden - die Start-Ausloeser bleiben aber die ganze
   // DE: Zeit ueber scharf geschaltet. Ohne diese Sperre kann ein Ereignis aus dem
@@ -2681,8 +4366,14 @@ const startRun = reason => {
   // EN: itself (world generation, intro/tutorial skip) can slip through as
   // EN: the "first action" once the fixed 1.5 s grace period from game:ready
   // EN: has elapsed, even though no player has done anything yet.
-  if (activeScene() !== enums.Scene.Game) return false;
-  if (!isArmed()) return false;
+  if (activeScene() !== enums.Scene.Game) {
+    log('Start verweigert: Szene ist nicht Game', { reason, scene: activeScene() });
+    return false;
+  }
+  if (!isArmed()) {
+    log('Start verweigert: nicht scharf', { reason });
+    return false;
+  }
 
   // DE: Schon geschaffte Spielstaende (Creative, 1M Gold, fertige Karte) duerfen
   // DE: keinen Lauf starten - sonst endet er in Millisekunden und stoert die PB.
@@ -2696,17 +4387,27 @@ const startRun = reason => {
     return false;
   }
 
+  if (benchState.running) {
+    log('Start verweigert: Benchmark laeuft', { reason });
+    cancelMetricBenchmark();
+    return false;
+  }
   const startedAt = now();
   startClocks();
   api.storage.set(NS, 'startedAt', startedAt);
   api.storage.set(NS, 'finishedAt', null);
+  api.storage.set(NS, 'startedAtWall', Date.now());
+  api.storage.set(NS, 'finishedAtWall', null);
   api.storage.set(NS, 'splits', []);
   api.storage.set(NS, 'goldMarkIndex', 0);
   api.storage.set(NS, 'official', rulesetStatus().ok);
   api.storage.set(NS, 'officialBroken', false);
+  if (api.storage.get(NS, 'blueprintsUsed') !== true) {
+    api.storage.set(NS, 'blueprintsUsed', false);
+  }
   resetEarned();
   setResultDismissed(true);
-
+  requestHeatmapReset();
 
   log(`Timer gestartet (${reason}), Kategorie: ${categoryLabel()}`);
   return true;
@@ -2748,7 +4449,6 @@ const movementCodes = () => {
 // DE: input:keydown ist ein Interceptor - hier wird nur mitgelesen, nie abgebrochen.
 // EN: input:keydown is an interceptor - this only reads along, never cancels it.
 api.hooks.intercept('input:keydown', payload => {
-  if (!startsOnMovement()) return;
   if (!isArmed()) return;
 
   const code = payload && (payload.code || payload.key);
@@ -2763,21 +4463,142 @@ api.hooks.intercept('input:keydown', payload => {
 // EN: Any tool, weapon or building action in the play field. Fires on click,
 // EN: before the action is executed - the earliest fair starting point.
 api.hooks.intercept('action:intercept', payload => {
-  if (!startsOnMouse()) return;
   if (!isArmed()) return;
   if (!payload || !payload.action) return;   // DE: Klick ohne aktives Werkzeug / EN: click without an active tool
   startRun('Aktion');
 });
 
 api.hooks.intercept('building:place', () => {
-  if (!startsOnMouse()) return;
   if (isArmed()) startRun('Bauen');
 });
 
 api.hooks.intercept('progression:purchase', () => {
-  if (!startsOnMouse()) return;
   if (isArmed()) startRun('Forschen');
 });
+
+// --- DE: Blueprint- und Zwischenablage-Hooks / EN: Blueprint and clipboard hooks ---
+let blueprintHooksInstalled = false;
+const installBlueprintHooks = () => {
+  if (blueprintHooksInstalled) return true;
+  try {
+    const eng = sandkit.engine && sandkit.engine.api;
+    if (!eng) return false;
+    const bp = eng.blueprints;
+    const cb = eng.clipboard;
+    if (!bp && !cb) return false;
+
+    // 1. Wrap blueprints.importString
+    if (bp && typeof bp.importString === 'function' && !bp.importString.__gsWrapped) {
+      const origImport = bp.importString;
+      bp.importString = function(str) {
+        if (isArmed() || isRunning()) {
+          markBlueprintsUsed('import_string');
+        }
+        return origImport.apply(this, arguments);
+      };
+      bp.importString.__gsWrapped = true;
+    }
+
+    // 2. Wrap blueprints.load
+    if (bp && typeof bp.load === 'function' && !bp.load.__gsWrapped) {
+      const origLoad = bp.load;
+      bp.load = function(id) {
+        if (isArmed() || isRunning()) {
+          markBlueprintsUsed('blueprint_load');
+        }
+        return origLoad.apply(this, arguments);
+      };
+      bp.load.__gsWrapped = true;
+    }
+
+    // 3. Wrap blueprints.save
+    if (bp && typeof bp.save === 'function' && !bp.save.__gsWrapped) {
+      const origSave = bp.save;
+      bp.save = function(name, data, signalLinks) {
+        if (isArmed() || isRunning()) {
+          markBlueprintsUsed('blueprint_save');
+        }
+        return origSave.apply(this, arguments);
+      };
+      bp.save.__gsWrapped = true;
+    }
+
+    // 4. Wrap blueprints.exportString
+    if (bp && typeof bp.exportString === 'function' && !bp.exportString.__gsWrapped) {
+      const origExportString = bp.exportString;
+      bp.exportString = function(id) {
+        if (isArmed() || isRunning()) {
+          markBlueprintsUsed('blueprint_export');
+        }
+        return origExportString.apply(this, arguments);
+      };
+      bp.exportString.__gsWrapped = true;
+    }
+
+    // 5. Wrap blueprints.exportAllString
+    if (bp && typeof bp.exportAllString === 'function' && !bp.exportAllString.__gsWrapped) {
+      const origExportAllString = bp.exportAllString;
+      bp.exportAllString = function() {
+        if (isArmed() || isRunning()) {
+          markBlueprintsUsed('blueprint_export_all');
+        }
+        return origExportAllString.apply(this, arguments);
+      };
+      bp.exportAllString.__gsWrapped = true;
+    }
+
+    // 6. Wrap clipboard.selectFromHistory
+    if (cb && typeof cb.selectFromHistory === 'function' && !cb.selectFromHistory.__gsWrapped) {
+      const origSelectFromHistory = cb.selectFromHistory;
+      cb.selectFromHistory = function(id) {
+        if (isArmed() || isRunning()) {
+          markBlueprintsUsed('clipboard_history');
+        }
+        return origSelectFromHistory.apply(this, arguments);
+      };
+      cb.selectFromHistory.__gsWrapped = true;
+    }
+
+    // 7. Wrap clipboard.set for session copy tracking
+    if (cb && typeof cb.set === 'function' && !cb.set.__gsWrapped) {
+      const origSet = cb.set;
+      cb.set = function(structures, signalLinks) {
+        handleClipboardSet(structures, signalLinks);
+        return origSet.apply(this, arguments);
+      };
+      cb.set.__gsWrapped = true;
+    }
+
+    const bpReady = !bp || !!(bp.importString && bp.importString.__gsWrapped);
+    const cbReady = !cb || !!(cb.set && cb.set.__gsWrapped);
+
+    if (bp && cb && bpReady && cbReady) {
+      blueprintHooksInstalled = true;
+      log('Blueprint-Hooks erfolgreich installiert');
+      return true;
+    }
+  } catch (e) {
+    log('Fehler beim Installieren der Blueprint-Hooks:', e);
+  }
+  return false;
+};
+
+api.events.on('structures:pasted', payload => {
+  if (!isArmed() && !isRunning()) return;
+  if (runUsesBlueprints()) return;
+
+  const placed = (payload && Array.isArray(payload.structures)) ? payload.structures : [];
+  if (placed.length === 0) return;
+
+  if (sessionCopyOk) {
+    return;
+  }
+
+  markBlueprintsUsed('unverified_paste');
+});
+
+// Try installing immediately
+installBlueprintHooks();
 
 // DE: Alles, was Fortschritt bedeutet, aber ohne eigenen Klick auslaufen kann -
 // DE: etwa eine Drohne, die weitergraebt, oder ein eingesammeltes Artefakt.
@@ -2801,7 +4622,6 @@ const START_EVENTS = [
 ];
 
 const startFromEvent = name => {
-  if (!startsOnEvent()) return;
   if (Date.now() < eventGraceUntil) return;
   if (isArmed()) startRun(name);
 };
@@ -2924,6 +4744,8 @@ const scoredRealTime = () => {
 const discardRun = reason => {
   api.storage.set(NS, 'startedAt', null);
   api.storage.set(NS, 'finishedAt', null);
+  api.storage.set(NS, 'startedAtWall', null);
+  api.storage.set(NS, 'finishedAtWall', null);
   api.storage.set(NS, 'splits', []);
   api.storage.set(NS, 'goldMarkIndex', 0);
   api.storage.set(NS, 'official', false);
@@ -2998,7 +4820,23 @@ const finishRun = cat => {
   api.storage.set(NS, 'upsUFinal', liveU());
   api.storage.set(NS, 'upsWFinal', playTime);
   api.storage.set(NS, 'upsTickReady', rawTickSourceReady());
+
+  const curB = rawBallisticBlocks();
+  const curM = rawBallisticMoves();
+  const startB = readClock('upsBlocksStart');
+  const startM = readClock('upsMovesStart');
+  const dB = Math.max(0, curB - startB);
+  const dM = Math.max(0, curM - startM);
+  const finalJam = (dB + dM > 0) ? (dB / (dB + dM)) * 100 : 0;
+  const finalJamLoad = liveU() > 0 ? (dB / liveU()) : 0;
+  api.storage.set(NS, 'upsBlocksFinal', curB);
+  api.storage.set(NS, 'upsMovesFinal', curM);
+  api.storage.set(NS, 'upsJamRateFinal', finalJam);
+  api.storage.set(NS, 'upsJamShareFinal', finalJam);
+  api.storage.set(NS, 'upsJamLoadFinal', finalJamLoad);
+
   api.storage.set(NS, 'finishedAt', now());
+  api.storage.set(NS, 'finishedAtWall', Date.now());
   flushHistoryToSave();
 
   const fmt = timeFormat();
@@ -3050,6 +4888,8 @@ const finishRun = cat => {
     // DE: (T/R - 1) * 100: negativ heisst "die Welt ist hinterher".
     // EN: (T/R - 1) * 100: negative means "the world is behind".
     slowdownPercent: Math.round(slowdown * 100) / 100,
+    jamRatePercent: Math.round(finalJam * 100) / 100,
+    jamLoad: Math.round(finalJamLoad * 1000) / 1000,
     // DE: Schritte, die einer idealen 60-UPS-Maschine gefehlt haben.
     // EN: Steps a perfect 60-UPS machine would have been missing.
     tickDeficit: Math.round(deficit),
@@ -3057,6 +4897,7 @@ const finishRun = cat => {
     splits: splits.map(s =>
       `${formatTime(s.t, 'millis')}  (sim ${formatTime(Number.isFinite(s.sim) ? s.sim : s.t, 'millis')})  ${displaySplitLabel(s, splits)}  ${s.gold} Gold`),
     cheatsUsed: cheatsUsed(),
+    blueprintsUsed: runUsesBlueprints(),
     mods,
   });
 };
@@ -3110,6 +4951,8 @@ api.events.on('frame:render', () => {
   // EN: frame would inflate that gap.
   advanceClocks();
 
+  if (!blueprintHooksInstalled) installBlueprintHooks();
+
   if (!modEnabled()) return;
 
   // DE: Jeden Frame messen, damit kurz aufeinander folgendes Einnehmen und Ausgeben
@@ -3142,7 +4985,6 @@ api.events.on('frame:render', () => {
   // DE: Doppelter Boden fuer den Fall, dass eine Aenderung ohne onChange kommt.
   // EN: A safety net in case a change arrives without an onChange event.
   syncActiveFromPresetSetting();
-  if (syncOfficialSettings()) refreshSettingsUi();
 
   if (earnedTotal !== null) api.storage.set(NS, 'earned', earnedTotal);
 });
@@ -3386,19 +5228,61 @@ const HISTORY_SAMPLE_MS = 100;     // DE: 10 Hz Abtastung im Hauptthread / EN: 1
 const HISTORY_BUCKET_MS = 1000;    // DE: 1 Hz gespeicherte Eimer / EN: 1 Hz stored buckets
 const HISTORY_MAX_BUCKETS = 5000;  // DE: ab hier je zwei Eimer zu einem verschmelzen / EN: beyond this, merge two buckets into one
 const SPARKLINE_MAX_BUCKETS = 60;  // DE: Live-Grafik: 60 abgeschlossene Sekunden / EN: live graph: 60 finalized seconds
+const HIGHRES_MAX_SAMPLES = 3000;  // DE: 3000 x 100 ms = 300 s (5 min) hochaufloesender Ringspeicher / EN: 5 min high-res ring buffer
 
 let sparklineBuckets = [];    // DE: abgeschlossene 1-s-Eimer, Farbe bleibt / EN: finalized 1 s buckets, color stays
 let sparklineAccum = null;    // DE: laufender Live-Eimer / EN: current live bucket
 let bucketAccum = null;       // DE: laufender 1-Hz-Eimer / EN: running 1 Hz bucket
-let historyBuf = [];          // DE: { min, max, avg }[] - kompletter Lauf / EN: { min, max, avg }[] - the whole run
-let lastHistorySample = null; // DE: { tick, atMs } fuer die Momentan-UPS / EN: { tick, atMs } for the instantaneous UPS
+let historyBuf = [];          // DE: { min, max, avg, blocks, moves, awake, live, simMs }[] - kompletter Lauf
+let highResBuffer = [];       // DE: 10 Hz hochaufloesende Messpunkte fuer Diagnose / EN: 10 Hz diagnostic samples
+let lastHistorySample = null; // DE: { tick, atMs, blocks, moves }
 
-const trackHistoryEnabled = () => api.settings.get('trackUpsHistory') === true;
+const trackHistoryEnabled = () => monitoringMode() !== 'off';
 const liveSparklineEnabled = () => api.settings.get('showLiveSparkline') === true;
 
 const loadHistoryFromSave = () => {
   const v = api.storage.get(NS, 'upsHistory');
-  historyBuf = Array.isArray(v) ? v.filter(b => b && Number.isFinite(b.avg)) : [];
+  historyBuf = Array.isArray(v)
+    ? v.filter(b => b && Number.isFinite(b.avg)).map(b => {
+      const avgUps = Number.isFinite(b.avg) ? b.avg : 60;
+      const spanMs = Number.isFinite(b.spanMs) && b.spanMs > 0 ? b.spanMs : 1000;
+      const ticks = Number.isFinite(b.ticks) ? b.ticks : Math.max(0, Math.round(avgUps * (spanMs / 1000)));
+      return {
+        relMs: Number.isFinite(b.relMs) ? b.relMs : 0,
+        spanMs,
+        ticks,
+        min: Number.isFinite(b.min) ? b.min : b.avg,
+        max: Number.isFinite(b.max) ? b.max : b.avg,
+        avg: b.avg,
+        blocks: Number.isFinite(b.blocks) ? b.blocks : 0,
+        moves: Number.isFinite(b.moves) ? b.moves : 0,
+        allBlocks: Number.isFinite(b.allBlocks) ? b.allBlocks : null,
+        allMoves: Number.isFinite(b.allMoves) ? b.allMoves : null,
+        awake: Number.isFinite(b.awake) ? b.awake : 0,
+        live: Number.isFinite(b.live) ? b.live : 0,
+        simMs: Number.isFinite(b.simMs) ? b.simMs : 0,
+        computeMs: Number.isFinite(b.computeMs) ? b.computeMs : 0,
+        waitMs: Number.isFinite(b.waitMs) ? b.waitMs : 0,
+        postMs: Number.isFinite(b.postMs) ? b.postMs : 0,
+        slowestMs: Number.isFinite(b.slowestMs) ? b.slowestMs : 0,
+        slowestX: Number.isFinite(b.slowestX) ? b.slowestX : -1,
+        slowestY: Number.isFinite(b.slowestY) ? b.slowestY : -1,
+        hits: Array.isArray(b.hits) ? b.hits : null,
+      };
+    })
+    : [];
+  const curWorldTime = now();
+  if (historyBuf.length > 0) {
+    const hasValidRel = historyBuf.some(b => Number.isFinite(b.relMs) && b.relMs > 0);
+    if (!hasValidRel) {
+      const len = historyBuf.length;
+      const stepMs = 1000;
+      const endMs = curWorldTime > 0 ? curWorldTime : Math.max(0, (len - 1) * stepMs);
+      for (let i = 0; i < len; i++) {
+        historyBuf[i].relMs = Math.max(0, endMs - (len - 1 - i) * stepMs);
+      }
+    }
+  }
   bucketAccum = null;
   const spark = api.storage.get(NS, 'upsSparkline');
   sparklineBuckets = Array.isArray(spark) ? spark.filter(b => b && Number.isFinite(b.avg)) : [];
@@ -3408,6 +5292,10 @@ const loadHistoryFromSave = () => {
 const flushHistoryToSave = () => {
   api.storage.set(NS, 'upsHistory', historyBuf);
   api.storage.set(NS, 'upsSparkline', sparklineBuckets);
+  if (!pendingHeatmapRestore) {
+    const snap = getSparseHeatmapSnapshot();
+    if (heatmapSnapshotHasData(snap)) api.storage.set(NS, 'heatmapSnapshot', snap);
+  }
 };
 
 const resetHistory = () => {
@@ -3415,21 +5303,47 @@ const resetHistory = () => {
   sparklineAccum = null;
   bucketAccum = null;
   historyBuf = [];
+  highResBuffer = [];
   lastHistorySample = null;
+  lastHistorySumGrid.fill(0);
+  rawSyncInitialized = false;
+  totalBallisticBlocks = 0;
+  totalBallisticMoves = 0;
+  totalAllBlocks = 0;
+  totalAllMoves = 0;
   api.storage.set(NS, 'upsHistory', []);
   api.storage.set(NS, 'upsSparkline', []);
+  api.storage.set(NS, 'heatmapSnapshot', null);
+  requestHeatmapReset();
 };
 
 const finalizeSparklineBucket = accum => ({
   min: Math.round(accum.min * 10) / 10,
   max: Math.round(accum.max * 10) / 10,
   avg: Math.round((accum.sum / accum.n) * 10) / 10,
+  blocks: accum.blocks || 0,
+  moves: accum.moves || 0,
+  awake: Math.round((accum.awakeMax !== undefined ? accum.awakeMax : ((accum.awakeSum || 0) / accum.n)) * 10) / 10,
+  live: Math.round(accum.liveMax !== undefined ? accum.liveMax : ((accum.liveSum || 0) / accum.n)),
+  simMs: Math.round((accum.simMsMax !== undefined ? accum.simMsMax : ((accum.simMsSum || 0) / accum.n)) * 10) / 10,
 });
 
 const sparklineColumns = () => {
   const out = sparklineBuckets.slice();
   if (sparklineAccum && sparklineAccum.n > 0) out.push(finalizeSparklineBucket(sparklineAccum));
   return out;
+};
+
+const mergeHits = (h1, h2) => {
+  if (!h1 && !h2) return null;
+  if (!h1) return h2;
+  if (!h2) return h1;
+  const m = new Map(h1);
+  for (let j = 0; j < h2.length; j++) {
+    const [gi, ms] = h2[j];
+    m.set(gi, (m.get(gi) || 0) + ms);
+  }
+  return Array.from(m.entries());
 };
 
 // DE: Haelt sehr lange Laeufe im Rahmen: benachbarte Eimer paarweise
@@ -3441,10 +5355,26 @@ const downsampleHistory = () => {
   for (let i = 0; i < historyBuf.length - 1; i += 2) {
     const a = historyBuf[i];
     const b = historyBuf[i + 1];
+    const aHasAll = a.allBlocks !== null && a.allBlocks !== undefined;
+    const bHasAll = b.allBlocks !== null && b.allBlocks !== undefined;
     merged.push({
+      relMs: a.relMs !== undefined ? a.relMs : (b.relMs !== undefined ? b.relMs : 0),
+      spanMs: (a.spanMs || 1000) + (b.spanMs || 1000),
+      ticks: (a.ticks || 0) + (b.ticks || 0),
       min: Math.min(a.min, b.min),
       max: Math.max(a.max, b.max),
       avg: Math.round(((a.avg + b.avg) / 2) * 10) / 10,
+      blocks: (a.blocks || 0) + (b.blocks || 0),
+      moves: (a.moves || 0) + (b.moves || 0),
+      allBlocks: (aHasAll && bHasAll) ? (a.allBlocks + b.allBlocks) : null,
+      allMoves: (aHasAll && bHasAll) ? (a.allMoves + b.allMoves) : null,
+      allBlocksSettled: (aHasAll && bHasAll) ? ((a.allBlocksSettled || 0) + (b.allBlocksSettled || 0)) : null,
+      allBlocksActive: (aHasAll && bHasAll) ? ((a.allBlocksActive || 0) + (b.allBlocksActive || 0)) : null,
+      awake: Math.max(a.awake || 0, b.awake || 0),
+      live: Math.max(a.live || 0, b.live || 0),
+      simMs: Math.max(a.simMs || 0, b.simMs || 0),
+      ...mergeCausePreferHotter(a, b),
+      hits: mergeHits(a.hits, b.hits),
     });
   }
   if (historyBuf.length % 2 === 1) merged.push(historyBuf[historyBuf.length - 1]);
@@ -3452,28 +5382,118 @@ const downsampleHistory = () => {
 };
 
 const sampleHistoryTick = () => {
-  if (!isRunning() || gamePaused() || !tickSourceReady()) { lastHistorySample = null; return; }
-  const wantSparkline = liveSparklineEnabled();
-  const wantHistory = trackHistoryEnabled();
-  if (!wantSparkline && !wantHistory) { lastHistorySample = null; return; }
+  if (!benchState.running) syncAllMatterCaptureControl();
+  retryHeatmapRestoreIfNeeded();
+  if (gamePaused() || !rawTickSourceReady()) {
+    if (benchState.running) cancelMetricBenchmark();
+    lastHistorySample = null;
+    return;
+  }
+  if (!monitoringEnabled() && !benchState.running) {
+    lastHistorySample = null;
+    return;
+  }
 
   const atMs = performance.now();
   const tick = rawTick();
+  const awake = rawAwakeChunks();
+  const currBlocks = rawBallisticBlocks();
+  const currMoves = rawBallisticMoves();
+  const live = rawLiveElements();
+  const simMs = rawSimTimeMs();
+  const metricMask = activeMetricMask();
+  const allBlocksActive = Boolean(metricMask & METRIC_ALL_BLOCKS);
+  const allMovesActive = Boolean(metricMask & METRIC_ALL_MOVES);
+  const currAllBlocks = rawAllMatterBlocks();
+  const currAllMoves = rawAllMatterMoves();
+  const currAllBlocksSettled = rawAllMatterBlocksSettled();
+  const currAllBlocksActive = rawAllMatterBlocksActive();
+  const phase = readPhaseSnapshot();
+  const cause = causeFieldsFromPhase(phase);
 
   if (lastHistorySample) {
     const dtMs = atMs - lastHistorySample.atMs;
-    const dTick = tick - lastHistorySample.tick;
-    if (dtMs > 0 && dTick >= 0) {
-      const ups = Math.min(120, (dTick / dtMs) * 1000);
+    const dTick = Math.max(0, tick - lastHistorySample.tick);
+    const dBlocks = Math.max(0, currBlocks - (lastHistorySample.blocks || 0));
+    const dMoves = Math.max(0, currMoves - (lastHistorySample.moves || 0));
+    const dAllBlocks = allBlocksActive && lastHistorySample.allBlocks !== undefined
+      ? Math.max(0, currAllBlocks - (lastHistorySample.allBlocks || 0))
+      : null;
+    const dAllMoves = allMovesActive && lastHistorySample.allMoves !== undefined
+      ? Math.max(0, currAllMoves - (lastHistorySample.allMoves || 0))
+      : null;
+    const dAllBlocksSettled = allBlocksActive && lastHistorySample.allBlocksSettled !== undefined
+      ? Math.max(0, currAllBlocksSettled - (lastHistorySample.allBlocksSettled || 0))
+      : null;
+    const dAllBlocksActive = allBlocksActive && lastHistorySample.allBlocksActive !== undefined
+      ? Math.max(0, currAllBlocksActive - (lastHistorySample.allBlocksActive || 0))
+      : null;
 
+    if (dtMs > 0 && dTick >= 0) {
+      const ups = (dTick / dtMs) * 1000;
+
+      // DE: Die Diagnose-Achse folgt streng der Weltzeit (api.time.getTimeMs /
+      // DE: store.meta.time), nicht der Speedrun-Uhr. Nach Laufende, Speichern
+      // DE: und Laden laeuft sie genau dort weiter, wo die Welt steht.
+      // EN: The diagnostic x-axis follows world time strictly (api.time.getTimeMs /
+      // EN: store.meta.time), not the speedrun clock. After the goal, a save, and
+      // EN: a reload it continues at the world's play-clock, not at finishedAt.
+      const relMs = now();
+
+      highResBuffer.push({
+        timeMs: atMs,
+        relMs,
+        spanMs: Math.round(dtMs),
+        ticks: dTick,
+        ups: Math.round(ups * 10) / 10,
+        min: Math.round(ups * 10) / 10,
+        max: Math.round(ups * 10) / 10,
+        avg: Math.round(ups * 10) / 10,
+        blocks: dBlocks,
+        moves: dMoves,
+        allBlocks: dAllBlocks,
+        allMoves: dAllMoves,
+        allBlocksSettled: dAllBlocksSettled,
+        allBlocksActive: dAllBlocksActive,
+        awake,
+        live,
+        simMs,
+        ...cause,
+      });
+      while (highResBuffer.length > HIGHRES_MAX_SAMPLES) highResBuffer.shift();
+      const benchmarkWasRunning = benchState.running;
+      tickMetricBenchmark(highResBuffer[highResBuffer.length - 1]);
+      if (benchmarkWasRunning) {
+        lastHistorySample = {
+          tick,
+          atMs,
+          blocks: currBlocks,
+          moves: currMoves,
+          allBlocks: currAllBlocks,
+          allMoves: currAllMoves,
+          allBlocksSettled: currAllBlocksSettled,
+          allBlocksActive: currAllBlocksActive,
+        };
+        return;
+      }
+
+      const wantSparkline = liveSparklineEnabled();
       if (wantSparkline) {
         if (!sparklineAccum) {
-          sparklineAccum = { startMs: atMs, min: ups, max: ups, sum: ups, n: 1 };
+          sparklineAccum = { startMs: atMs, min: ups, max: ups, sum: ups, n: 1, blocks: dBlocks, moves: dMoves, awakeSum: awake, awakeMax: awake, liveSum: live, liveMax: live, simMsSum: simMs, simMsMax: simMs };
         } else {
           if (ups < sparklineAccum.min) sparklineAccum.min = ups;
           if (ups > sparklineAccum.max) sparklineAccum.max = ups;
           sparklineAccum.sum += ups;
           sparklineAccum.n += 1;
+          sparklineAccum.blocks += dBlocks;
+          sparklineAccum.moves += dMoves;
+          sparklineAccum.awakeSum += awake;
+          if (awake > (sparklineAccum.awakeMax || 0)) sparklineAccum.awakeMax = awake;
+          sparklineAccum.liveSum += live;
+          if (live > (sparklineAccum.liveMax || 0)) sparklineAccum.liveMax = live;
+          sparklineAccum.simMsSum += simMs;
+          if (simMs > (sparklineAccum.simMsMax || 0)) sparklineAccum.simMsMax = simMs;
         }
         if (atMs - sparklineAccum.startMs >= HISTORY_BUCKET_MS) {
           sparklineBuckets.push(finalizeSparklineBucket(sparklineAccum));
@@ -3482,28 +5502,120 @@ const sampleHistoryTick = () => {
         }
       }
 
-      if (wantHistory) {
-        if (!bucketAccum) {
-          bucketAccum = { startMs: atMs, min: ups, max: ups, sum: ups, n: 1 };
-        } else {
-          if (ups < bucketAccum.min) bucketAccum.min = ups;
-          if (ups > bucketAccum.max) bucketAccum.max = ups;
-          bucketAccum.sum += ups;
-          bucketAccum.n += 1;
+      // DE: 1-Hz-Verlauf immer sammeln, solange die Welt simuliert - auch nach dem Ziel.
+      // EN: Always collect 1 Hz history while the world is simulating, including after the goal.
+      if (!bucketAccum) {
+        bucketAccum = {
+          startMs: atMs,
+          spanMs: dtMs,
+          ticks: dTick,
+          min: ups,
+          max: ups,
+          sum: ups,
+          n: 1,
+          blocks: dBlocks,
+          moves: dMoves,
+          hasAllMatter: dAllBlocks !== null,
+          allBlocks: dAllBlocks || 0,
+          allMoves: dAllMoves || 0,
+          allBlocksSettled: dAllBlocksSettled || 0,
+          allBlocksActive: dAllBlocksActive || 0,
+          awakeSum: awake,
+          awakeMax: awake,
+          liveSum: live,
+          liveMax: live,
+          simMsSum: simMs,
+          simMsMax: simMs,
+          computeMs: cause.computeMs,
+          waitMs: cause.waitMs,
+          postMs: cause.postMs,
+          slowestMs: cause.slowestMs,
+          slowestX: cause.slowestX,
+          slowestY: cause.slowestY,
+        };
+      } else {
+        if (ups < bucketAccum.min) bucketAccum.min = ups;
+        if (ups > bucketAccum.max) bucketAccum.max = ups;
+        bucketAccum.sum += ups;
+        bucketAccum.n += 1;
+        bucketAccum.spanMs = (bucketAccum.spanMs || 0) + dtMs;
+        bucketAccum.ticks = (bucketAccum.ticks || 0) + dTick;
+        bucketAccum.blocks += dBlocks;
+        bucketAccum.moves += dMoves;
+        if (dAllBlocks !== null) {
+          bucketAccum.hasAllMatter = true;
+          bucketAccum.allBlocks = (bucketAccum.allBlocks || 0) + dAllBlocks;
+          bucketAccum.allMoves = (bucketAccum.allMoves || 0) + (dAllMoves || 0);
+          bucketAccum.allBlocksSettled = (bucketAccum.allBlocksSettled || 0) + (dAllBlocksSettled || 0);
+          bucketAccum.allBlocksActive = (bucketAccum.allBlocksActive || 0) + (dAllBlocksActive || 0);
         }
-        if (atMs - bucketAccum.startMs >= HISTORY_BUCKET_MS) {
-          historyBuf.push({
-            min: Math.round(bucketAccum.min * 10) / 10,
-            max: Math.round(bucketAccum.max * 10) / 10,
-            avg: Math.round((bucketAccum.sum / bucketAccum.n) * 10) / 10,
-          });
-          bucketAccum = null;
-          if (historyBuf.length > HISTORY_MAX_BUCKETS) downsampleHistory();
+        bucketAccum.awakeSum += awake;
+        if (awake > (bucketAccum.awakeMax || 0)) bucketAccum.awakeMax = awake;
+        bucketAccum.liveSum += live;
+        if (live > (bucketAccum.liveMax || 0)) bucketAccum.liveMax = live;
+        bucketAccum.simMsSum += simMs;
+        if (simMs > (bucketAccum.simMsMax || 0)) bucketAccum.simMsMax = simMs;
+        const hotter = mergeCausePreferHotter(bucketAccum, cause);
+        bucketAccum.computeMs = hotter.computeMs;
+        bucketAccum.waitMs = hotter.waitMs;
+        bucketAccum.postMs = hotter.postMs;
+        bucketAccum.slowestMs = hotter.slowestMs;
+        bucketAccum.slowestX = hotter.slowestX;
+        bucketAccum.slowestY = hotter.slowestY;
+      }
+      if (atMs - bucketAccum.startMs >= HISTORY_BUCKET_MS) {
+        const chunkHits = [];
+        if (heatmapBuf) {
+          for (let i = 0; i < HEATMAP_CELLS; i++) {
+            const cur = heatmapBuf[HEATMAP_SUM_OFF + i] | 0;
+            const prev = lastHistorySumGrid[i] | 0;
+            if (cur > prev) {
+              chunkHits.push([i, cur - prev]);
+              lastHistorySumGrid[i] = cur;
+            } else if (cur < prev) {
+              lastHistorySumGrid[i] = cur;
+            }
+          }
         }
+        historyBuf.push({
+          relMs,
+          spanMs: Math.round(bucketAccum.spanMs || (atMs - bucketAccum.startMs)),
+          ticks: bucketAccum.ticks || 0,
+          min: Math.round(bucketAccum.min * 10) / 10,
+          max: Math.round(bucketAccum.max * 10) / 10,
+          avg: Math.round((bucketAccum.sum / bucketAccum.n) * 10) / 10,
+          blocks: bucketAccum.blocks || 0,
+          moves: bucketAccum.moves || 0,
+          allBlocks: bucketAccum.hasAllMatter ? (bucketAccum.allBlocks || 0) : null,
+          allMoves: bucketAccum.hasAllMatter ? (bucketAccum.allMoves || 0) : null,
+          allBlocksSettled: bucketAccum.hasAllMatter ? (bucketAccum.allBlocksSettled || 0) : null,
+          allBlocksActive: bucketAccum.hasAllMatter ? (bucketAccum.allBlocksActive || 0) : null,
+          awake: Math.round((bucketAccum.awakeMax !== undefined ? bucketAccum.awakeMax : (bucketAccum.awakeSum / bucketAccum.n)) * 10) / 10,
+          live: Math.round(bucketAccum.liveMax !== undefined ? bucketAccum.liveMax : (bucketAccum.liveSum / bucketAccum.n)),
+          simMs: Math.round((bucketAccum.simMsMax !== undefined ? bucketAccum.simMsMax : (bucketAccum.simMsSum / bucketAccum.n)) * 10) / 10,
+          computeMs: roundMs2(bucketAccum.computeMs),
+          waitMs: roundMs2(bucketAccum.waitMs),
+          postMs: roundMs2(bucketAccum.postMs),
+          slowestMs: roundMs2(bucketAccum.slowestMs),
+          slowestX: bucketAccum.slowestX,
+          slowestY: bucketAccum.slowestY,
+          hits: chunkHits.length > 0 ? chunkHits : null,
+        });
+        bucketAccum = null;
+        if (historyBuf.length > HISTORY_MAX_BUCKETS) downsampleHistory();
       }
     }
   }
-  lastHistorySample = { tick, atMs };
+  lastHistorySample = {
+    tick,
+    atMs,
+    blocks: currBlocks,
+    moves: currMoves,
+    allBlocks: currAllBlocks,
+    allMoves: currAllMoves,
+    allBlocksSettled: currAllBlocksSettled,
+    allBlocksActive: currAllBlocksActive,
+  };
 };
 
 setInterval(sampleHistoryTick, HISTORY_SAMPLE_MS);
@@ -3513,8 +5625,8 @@ const maybeFlushHistory = () => {
   const stamp = Date.now();
   if (stamp - lastHistoryFlush < 1000) return;
   lastHistoryFlush = stamp;
-  if (trackHistoryEnabled()) flushHistoryToSave();
-  else if (liveSparklineEnabled()) api.storage.set(NS, 'upsSparkline', sparklineBuckets);
+  retryHeatmapRestoreIfNeeded();
+  flushHistoryToSave();
 };
 
 // DE: Reduziert eine Punktreihe auf eine feste Spaltenzahl fuer die Grafik - jede
@@ -3525,33 +5637,79 @@ const maybeFlushHistory = () => {
 // EN: brief outliers (stutters) don't vanish inside an average.
 const downsampleToColumns = (items, cols, toStats) => {
   if (!items || items.length === 0) return [];
+  if (items.length <= cols) {
+    return items.map(toStats);
+  }
   const per = items.length / cols;
   const out = [];
   for (let c = 0; c < cols; c++) {
     const start = Math.floor(c * per);
     const end = Math.max(start + 1, Math.floor((c + 1) * per));
     let min = Infinity, max = -Infinity, sum = 0, n = 0;
+    let blocksSum = 0, movesSum = 0, awakeSum = 0, liveSum = 0, simMsSum = 0;
     for (let i = start; i < end && i < items.length; i++) {
       const v = toStats(items[i]);
       if (v.min < min) min = v.min;
       if (v.max > max) max = v.max;
-      sum += v.avg;
+      sum += v.avg !== undefined ? v.avg : (v.ups !== undefined ? v.ups : 0);
+      blocksSum += v.blocks || 0;
+      movesSum += v.moves || 0;
+      awakeSum += v.awake || 0;
+      liveSum += v.live || 0;
+      simMsSum += v.simMs || 0;
       n++;
     }
     if (n === 0) continue;
-    out.push({ min, max, avg: sum / n });
+    const midItem = items[Math.floor((start + end) / 2)] || {};
+    out.push({
+      min: Math.round(min * 10) / 10,
+      max: Math.round(max * 10) / 10,
+      avg: Math.round((sum / n) * 10) / 10,
+      ups: Math.round((sum / n) * 10) / 10,
+      blocks: blocksSum,
+      moves: movesSum,
+      awake: Math.round((awakeSum / n) * 10) / 10,
+      live: Math.round(liveSum / n),
+      simMs: Math.round((simMsSum / n) * 10) / 10,
+      relMs: midItem.relMs !== undefined ? midItem.relMs : 0,
+    });
   }
   return out;
 };
 
-const bucketStats = b => b;
+const bucketStats = b => ({
+  min: b.min !== undefined ? b.min : (b.ups !== undefined ? b.ups : 0),
+  max: b.max !== undefined ? b.max : (b.ups !== undefined ? b.ups : 0),
+  avg: b.avg !== undefined ? b.avg : (b.ups !== undefined ? b.ups : 0),
+  ups: b.ups !== undefined ? b.ups : (b.avg !== undefined ? b.avg : 0),
+  blocks: b.blocks || 0,
+  moves: b.moves || 0,
+  awake: b.awake || 0,
+  live: b.live || 0,
+  simMs: b.simMs || 0,
+  relMs: b.relMs || 0,
+});
 
-// DE: Min/Max-Umschlag ueber UPS 0-60 mit gestrichelter 60er-Referenzlinie. Divs
+let metricsOverlayOpen = false;
+const metricsListeners = new Set();
+const notifyMetrics = () => {
+  metricsListeners.forEach(fn => {
+    try { fn(); } catch (e) {}
+  });
+  if (typeof notifyPanel === 'function') notifyPanel();
+};
+
+const setMetricsOverlayOpen = v => {
+  metricsOverlayOpen = !!v;
+  notifyMetrics();
+};
+
+// DE: Dynamischer Min/Max-Umschlag mit gestrichelter 60er-Referenzlinie. Divs
 // DE: statt Canvas/SVG - genuegt fuer ein paar Dutzend bis anderthalbhundert
-// DE: Spalten und braucht keine zusaetzliche Zeichenflaeche.
-// EN: Min/max envelope over UPS 0-60 with a dashed reference line at 60.
+// DE: Spalten und braucht keine zusaetzliche Zeichenflaeche. Klick oeffnet Vollbild.
+// EN: Dynamic min/max envelope with a dashed reference line at 60.
 // EN: Divs instead of Canvas/SVG - good enough for a few dozen up to about a
-// EN: hundred and fifty columns, and needs no extra drawing surface.
+// EN: hundred and fifty columns, and needs no extra drawing surface. Click opens fullscreen.
 function UpsEnvelopeGraph({ columns, height }) {
   const H = height || 90;
   if (!columns || columns.length === 0) {
@@ -3559,15 +5717,25 @@ function UpsEnvelopeGraph({ columns, height }) {
       style: {
         height: `${H}px`, display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: COLORS.dim, fontSize: '11px', textAlign: 'center', padding: '0 12px',
+        cursor: 'pointer',
       },
-    }, t(api.settings.get('trackUpsHistory') === true
+      title: t('mods|goldSpeedrun|metrics|openBtn'),
+      onClick: e => {
+        e.stopPropagation();
+        setMetricsOverlayOpen(true);
+      },
+    }, t(trackHistoryEnabled()
       ? 'mods|goldSpeedrun|graph|emptyRun'
       : 'mods|goldSpeedrun|graph|empty'));
   }
+  const UPS_GRAPH_MAX = 90;
+  const clampUps = v => Math.max(0, Math.min(UPS_GRAPH_MAX, Number.isFinite(v) ? v : 0));
+  const scaleMax = UPS_GRAPH_MAX;
+  const refTop = Math.max(0, Math.min(100, 100 - (TICK_HZ / scaleMax) * 100));
   const wPct = 100 / columns.length;
   const bars = columns.map((c, i) => {
-    const minPct = Math.max(0, Math.min(100, (c.min / TICK_HZ) * 100));
-    const maxPct = Math.max(minPct + 0.6, Math.min(100, (c.max / TICK_HZ) * 100));
+    const minPct = Math.max(0, Math.min(100, (clampUps(c.min) / scaleMax) * 100));
+    const maxPct = Math.max(minPct + 0.6, Math.min(100, (clampUps(c.max) / scaleMax) * 100));
     const color = c.avg >= TICK_HZ - 1 ? COLORS.green : c.avg >= TICK_HZ * 0.85 ? COLORS.gold : COLORS.red;
     return h('div', {
       key: i,
@@ -3582,16 +5750,22 @@ function UpsEnvelopeGraph({ columns, height }) {
     style: {
       position: 'relative', height: `${H}px`,
       background: 'rgba(255,255,255,0.03)', borderRadius: '4px', overflow: 'hidden',
+      cursor: 'pointer',
+    },
+    title: t('mods|goldSpeedrun|metrics|openBtn'),
+    onClick: e => {
+      e.stopPropagation();
+      setMetricsOverlayOpen(true);
     },
   }, [
     ...bars,
     h('div', {
       key: 'ref',
-      style: { position: 'absolute', left: 0, right: 0, top: 0, borderTop: `1px dashed ${COLORS.dim}`, opacity: 0.5 },
+      style: { position: 'absolute', left: 0, right: 0, top: `${refTop}%`, borderTop: `1px dashed ${COLORS.dim}`, opacity: 0.5 },
     }),
     h('div', {
       key: 'refLabel',
-      style: { position: 'absolute', right: '3px', top: '1px', fontSize: '9px', color: COLORS.dim },
+      style: { position: 'absolute', right: '3px', top: `calc(${refTop}% + 1px)`, fontSize: '9px', color: COLORS.dim },
     }, String(TICK_HZ)),
   ]);
 }
@@ -3614,6 +5788,7 @@ function MetricLine({ label, value, color, fontSize }) {
 
 const RulesBadge = ({ rules, fontSize }) => {
   if (!rules) return null;
+  const invalid = !rules.ok && !rules.broken;
   return h('span', {
     style: {
       padding: '2px 6px',
@@ -3621,11 +5796,45 @@ const RulesBadge = ({ rules, fontSize }) => {
       fontSize: fontSize || '10px',
       whiteSpace: 'nowrap',
       flexShrink: 0,
-      background: rules.ok ? 'rgba(74, 222, 128, 0.2)' : rules.broken ? 'rgba(248, 113, 113, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-      color: rules.ok ? '#4ade80' : rules.broken ? '#f87171' : COLORS.dim,
+      background: rules.ok ? 'rgba(74, 222, 128, 0.2)' : 'rgba(248, 113, 113, 0.2)',
+      color: rules.ok ? '#4ade80' : '#f87171',
+      fontWeight: invalid || rules.broken ? 800 : 700,
     },
-    title: rules.ok ? t('mods|goldSpeedrun|rules|ok') : rules.broken ? t('mods|goldSpeedrun|rules|brokenDesc') : t('mods|goldSpeedrun|rules|bad')
-  }, rules.ok ? `✓ ${t('mods|goldSpeedrun|rules|badge')}` : rules.broken ? t('mods|goldSpeedrun|rules|broken') : t('mods|goldSpeedrun|rules|custom'));
+    title: rules.ok
+      ? t('mods|goldSpeedrun|rules|ok')
+      : rules.broken
+        ? t('mods|goldSpeedrun|rules|brokenDesc')
+        : t('mods|goldSpeedrun|rules|bad')
+  }, rules.ok
+    ? `✓ ${t('mods|goldSpeedrun|rules|badge')}`
+    : rules.broken
+      ? t('mods|goldSpeedrun|rules|broken')
+      : t('mods|goldSpeedrun|rules|invalid'));
+};
+
+const InvalidRunBanner = ({ view, fontSize }) => {
+  if (!view || view.ok || view.broken) return null;
+  const items = Array.isArray(view.items) ? view.items.filter(i => !i.ok) : [];
+  return h('div', {
+    style: {
+      marginTop: '4px',
+      padding: '4px 6px',
+      borderRadius: '4px',
+      background: 'rgba(224, 82, 82, 0.22)',
+      border: '1px solid rgba(224, 82, 82, 0.55)',
+      color: COLORS.red,
+      fontSize: fontSize || '11px',
+      fontWeight: 800,
+      letterSpacing: '0.02em',
+      lineHeight: 1.25,
+    },
+  }, [
+    h('div', { key: 'h' }, t('mods|goldSpeedrun|rules|invalidBanner')),
+    ...items.map(i => h('div', {
+      key: i.id,
+      style: { fontWeight: 600, fontSize: '10px', color: '#ffc0c0', marginTop: '2px' },
+    }, `${i.label} — ${t('mods|goldSpeedrun|rules|need', { value: i.value })}`)),
+  ]);
 };
 
 const ModsBadge = ({ extraCount, extra, fontSize }) => {
@@ -3645,6 +5854,22 @@ const ModsBadge = ({ extraCount, extra, fontSize }) => {
   }, clean
     ? `✓ ${t('mods|goldSpeedrun|mods|clean')}`
     : t('mods|goldSpeedrun|mods|count', { count: extraCount }));
+};
+
+const BlueprintBadge = ({ fontSize }) => {
+  return h('span', {
+    style: {
+      padding: '2px 6px',
+      borderRadius: '4px',
+      fontSize: fontSize || '10px',
+      whiteSpace: 'nowrap',
+      flexShrink: 0,
+      background: 'rgba(74, 158, 255, 0.2)',
+      color: COLORS.blue,
+      fontWeight: 700,
+    },
+    title: t('mods|goldSpeedrun|dash|bpUsed'),
+  }, `[${t('mods|goldSpeedrun|category|blueprints').toUpperCase()}]`);
 };
 
 function SpeedrunHud() {
@@ -3680,7 +5905,6 @@ function SpeedrunHud() {
   const best = readBest();
   const tainted = cheatsUsed();
   const rulesLive = rulesetView();
-  const rules = showRuleset() ? rulesLive : null;
   const modsInfo = rulesetStatus();
 
   const allSplits = readSplits();
@@ -3725,10 +5949,14 @@ function SpeedrunHud() {
     },
   }, children);
 
-  const stateStr = rules && rules.broken ? '[RULES BROKEN]' : done ? '[Finished]' : waiting ? '[Waiting]' : '[Running]';
+  const stateStr = rulesLive.broken ? '[RULES BROKEN]' : done ? '[Finished]' : waiting ? '[Waiting]' : '[Running]';
   const seedStr = getMapSeed();
   const pauseCount = readClock('pauseCount');
   const reloadCount = readClock('reloadCount');
+  const jamLoadVal = jamLoadPerUpdate();
+  const jamShareVal = jamSharePercent();
+  const jamText = waiting || !ready ? '—' : `${jamLoadVal.toFixed(2)}/u (${jamShareVal.toFixed(1)}%)`;
+  const jamColor = waiting || !ready ? COLORS.dim : jamShareVal >= 10 || jamLoadVal >= 1.0 ? COLORS.red : jamShareVal >= 2 || jamLoadVal >= 0.2 ? COLORS.gold : COLORS.green;
 
   if (streamerModeOn()) {
     const splitPx = spx('split');
@@ -3783,7 +6011,7 @@ function SpeedrunHud() {
           fontVariantNumeric: 'tabular-nums',
           whiteSpace: 'nowrap',
         },
-      }, `${t('mods|goldSpeedrun|metric|slowdown')} ${slowVal}`),
+      }, `${t('mods|goldSpeedrun|metric|slowdown')} ${slowVal} · ${t('mods|goldSpeedrun|metric|jamLoad')} ${jamText}`),
     ];
 
     const splitBlock = showSplits
@@ -3804,16 +6032,22 @@ function SpeedrunHud() {
         ])
       : null;
 
-    const graphBlock = sparkline && !waiting
-      ? h('div', { key: 'spark', style: { marginTop: '4px', minWidth: '120px' } },
-          h(UpsEnvelopeGraph, { columns: sparklineColumns(), height: 26 }))
-      : null;
-
     const btnStyle = {
       background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.dim}`, color: COLORS.text,
       padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', pointerEvents: 'auto',
       fontSize: footPx, marginTop: '6px', width: '100%',
     };
+
+    const graphBlock = sparkline && !waiting
+      ? h('div', { key: 'spark', style: { marginTop: '4px', minWidth: '120px' } }, [
+          h(UpsEnvelopeGraph, { key: 'g', columns: sparklineColumns(), height: 26 }),
+          h('button', {
+            key: 'metricsBtn',
+            style: { ...btnStyle, marginTop: '3px', padding: '1px 6px', fontSize: '10px' },
+            onClick: () => setMetricsOverlayOpen(true),
+          }, t('mods|goldSpeedrun|metrics|openBtn')),
+        ])
+      : null;
 
     const miscBlock = [
       h('div', {
@@ -3827,7 +6061,7 @@ function SpeedrunHud() {
           flexWrap: 'wrap',
         },
       }, [
-        h('span', { key: 'state', style: { color: rules && rules.broken ? COLORS.red : done ? COLORS.gold : COLORS.text, fontWeight: 'bold' } }, stateStr),
+        h('span', { key: 'state', style: { color: rulesLive.broken ? COLORS.red : done ? COLORS.gold : COLORS.text, fontWeight: 'bold' } }, stateStr),
         h('span', { key: 'seed' }, `Seed: ${seedStr}`),
         h('span', { key: 'pauses' }, `Pauses: ${pauseCount}`),
         h('span', { key: 'reloads' }, `Reloads: ${reloadCount}`),
@@ -3846,13 +6080,7 @@ function SpeedrunHud() {
         key: 'goal',
         style: { marginTop: '4px', opacity: 0.85, font: nfont('meta', 500, 1.3) },
       }, waiting
-        ? t(startMode() === 'move'
-            ? 'mods|goldSpeedrun|waitingMove'
-            : startMode() === 'any'
-              ? 'mods|goldSpeedrun|waiting'
-              : startMode() === 'click'
-                ? 'mods|goldSpeedrun|waitingClick'
-                : 'mods|goldSpeedrun|waitingMouse')
+        ? t('mods|goldSpeedrun|waiting')
         : progressText),
       h('div', {
         key: 'bar',
@@ -3868,8 +6096,10 @@ function SpeedrunHud() {
         style: { marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' },
       }, [
         h(ModsBadge, { key: 'mods', fontSize: badgePx, extraCount: modsInfo.extraCount, extra: modsExtra }),
-        rules ? h(RulesBadge, { key: 'rules', rules, fontSize: badgePx }) : null,
+        (showRuleset() || !rulesLive.ok) ? h(RulesBadge, { key: 'rules', rules: rulesLive, fontSize: badgePx }) : null,
+        runUsesBlueprints() ? h(BlueprintBadge, { key: 'bp', fontSize: badgePx }) : null,
       ]),
+      h(InvalidRunBanner, { key: 'invalid', view: rulesLive, fontSize: badgePx }),
       h('div', {
         key: 'always',
         style: { marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '1px' },
@@ -3882,6 +6112,13 @@ function SpeedrunHud() {
             ? '—'
             : `${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s)`,
           color: waiting || !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green,
+        }),
+        h(MetricLine, {
+          key: 'jam',
+          fontSize: defPx,
+          label: t('mods|goldSpeedrun|metric|jamLoad'),
+          value: jamText,
+          color: jamColor,
         }),
       ]),
       advanced && !waiting
@@ -3932,7 +6169,7 @@ function SpeedrunHud() {
       minWidth: horizontal ? undefined : Math.max(220, spx('bigTime') * 7) + 'px',
       padding: horizontal ? '8px 10px' : '10px 12px',
       borderRadius: '6px',
-      border: `1px solid ${tainted ? COLORS.red : done ? COLORS.gold : waiting ? COLORS.border : '#5a6472'}`,
+      border: `1px solid ${tainted || !rulesLive.ok ? COLORS.red : done ? COLORS.gold : waiting ? COLORS.border : '#5a6472'}`,
       opacity: waiting ? 0.75 : 1,
       background: COLORS.box,
       color: COLORS.text,
@@ -3968,7 +6205,7 @@ function SpeedrunHud() {
         marginBottom: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap'
       }
     }, [
-      h('span', { key: 'state', style: { color: rules && rules.broken ? COLORS.red : done ? COLORS.gold : COLORS.text, fontWeight: 'bold' } }, stateStr),
+      h('span', { key: 'state', style: { color: rulesLive.broken ? COLORS.red : done ? COLORS.gold : COLORS.text, fontWeight: 'bold' } }, stateStr),
       h('span', { key: 'seed' }, `Seed: ${seedStr}`),
       h('span', { key: 'pauses' }, `Pauses: ${pauseCount}`),
       h('span', { key: 'reloads' }, `Reloads: ${reloadCount}`),
@@ -4012,6 +6249,12 @@ function SpeedrunHud() {
           : `${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s)`,
         color: waiting || !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green,
       }),
+      h(MetricLine, {
+        key: 'jam',
+        label: t('mods|goldSpeedrun|metric|jamLoad'),
+        value: jamText,
+        color: jamColor,
+      }),
     ]),
     advanced && !waiting
       ? h('div', {
@@ -4033,19 +6276,15 @@ function SpeedrunHud() {
   const progressBlock = [
     h('div', { key: 'goal', style: { marginTop: horizontal ? 0 : '4px', opacity: 0.85, display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' } }, [
       h('span', {}, waiting
-        ? t(startMode() === 'move'
-            ? 'mods|goldSpeedrun|waitingMove'
-            : startMode() === 'any'
-              ? 'mods|goldSpeedrun|waiting'
-              : startMode() === 'click'
-                ? 'mods|goldSpeedrun|waitingClick'
-                : 'mods|goldSpeedrun|waitingMouse')
+        ? t('mods|goldSpeedrun|waiting')
         : progressText),
       h('span', { key: 'badges', style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' } }, [
         h(ModsBadge, { key: 'mods', extraCount: modsInfo.extraCount, extra: modsInfo.items && modsInfo.items.find(i => i.id === 'mods') ? modsInfo.items.find(i => i.id === 'mods').extra : [] }),
-        rules ? h(RulesBadge, { key: 'rules', rules }) : null,
+        (showRuleset() || !rulesLive.ok) ? h(RulesBadge, { key: 'rules', rules: rulesLive }) : null,
+        runUsesBlueprints() ? h(BlueprintBadge, { key: 'bp' }) : null,
       ])
     ]),
+    h(InvalidRunBanner, { key: 'invalid', view: rulesLive }),
     h('div', {
       key: 'bar',
       style: {
@@ -4078,19 +6317,26 @@ function SpeedrunHud() {
       : null,
   ];
 
-  const graphBlock = sparkline && !waiting
-    ? h('div', { key: 'spark', style: { marginTop: horizontal ? 0 : '5px', minWidth: horizontal ? '180px' : undefined } },
-        h(UpsEnvelopeGraph, {
-          columns: sparklineColumns(),
-          height: horizontal ? 52 : 26,
-        }))
-    : null;
-
   const btnStyle = {
     background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.dim}`, color: COLORS.text,
     padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', pointerEvents: 'auto',
     fontSize: '11px', marginTop: '6px', width: '100%',
   };
+
+  const graphBlock = sparkline && !waiting
+    ? h('div', { key: 'spark', style: { marginTop: horizontal ? 0 : '5px', minWidth: horizontal ? '180px' : undefined } }, [
+        h(UpsEnvelopeGraph, {
+          key: 'g',
+          columns: sparklineColumns(),
+          height: horizontal ? 46 : 26,
+        }),
+        h('button', {
+          key: 'metricsBtn',
+          style: { ...btnStyle, marginTop: '3px', padding: '1px 6px', fontSize: '10px' },
+          onClick: () => setMetricsOverlayOpen(true),
+        }, t('mods|goldSpeedrun|metrics|openBtn')),
+      ])
+    : null;
 
   const infoBlock = [
     h('div', {
@@ -4128,7 +6374,7 @@ function SpeedrunHud() {
     minWidth: horizontal ? undefined : (fmt === 'seconds' ? '210px' : '235px'),
     padding: horizontal ? '6px 8px' : '8px 10px',
     borderRadius: '6px',
-    border: `1px solid ${tainted ? COLORS.red : done ? COLORS.gold : waiting ? COLORS.border : '#5a6472'}`,
+    border: `1px solid ${tainted || !rulesLive.ok ? COLORS.red : done ? COLORS.gold : waiting ? COLORS.border : '#5a6472'}`,
     opacity: waiting ? 0.75 : 1,
     background: COLORS.box,
     color: COLORS.text,
@@ -4319,7 +6565,18 @@ const csvToSplits = text => {
 
 const downloadTextFile = (content, filename) => {
   if (typeof document === 'undefined' || typeof URL === 'undefined' || typeof Blob === 'undefined') return;
-  const blob = new Blob([content], { type: 'text/csv' });
+  downloadBlob(new Blob([content], { type: 'text/csv' }), filename);
+};
+
+const sanitizeFilename = name => String(name == null ? '' : name)
+  .replace(/[:/\\?*"<>|]/g, '-')
+  .replace(/\s+/g, '-')
+  .replace(/-+/g, '-')
+  .replace(/^-|-$/g, '')
+  .slice(0, 80) || 'run';
+
+const downloadBlob = (blob, filename) => {
+  if (typeof document === 'undefined' || typeof URL === 'undefined' || !blob) return;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -4333,6 +6590,578 @@ const downloadTextFile = (content, filename) => {
     a.click();
   }
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+const copyPngToClipboard = blob => {
+  if (!blob) return Promise.resolve(false);
+  if (typeof ClipboardItem === 'undefined' || typeof navigator === 'undefined'
+    || !navigator.clipboard || typeof navigator.clipboard.write !== 'function') {
+    return Promise.resolve(false);
+  }
+  try {
+    return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      .then(() => true)
+      .catch(() => false);
+  } catch (e) {
+    return Promise.resolve(false);
+  }
+};
+
+// DE: PNG-Ergebniskarte fuer Social-Media. Zeichnet den Lauf-Tab auf Canvas 2D,
+// DE: ohne UI-Leisten, mit undurchsichtigem Hintergrund, und laedt die Datei herunter.
+// EN: PNG share card for social posts. Paints the Run tab onto Canvas 2D,
+// EN: without UI chrome, on an opaque background, then downloads the file.
+const canvasToPngBlob = canvas => new Promise(resolve => {
+  const fromDataUrl = () => {
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+      const comma = dataUrl.indexOf(',');
+      const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : '';
+      const bin = atob(b64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      resolve(new Blob([arr], { type: 'image/png' }));
+    } catch (e) {
+      resolve(null);
+    }
+  };
+  if (typeof canvas.toBlob === 'function') {
+    try {
+      canvas.toBlob(blob => { blob ? resolve(blob) : fromDataUrl(); }, 'image/png');
+      return;
+    } catch (e) { /* fall through to data URL */ }
+  }
+  fromDataUrl();
+});
+
+const SHARE_CARD_W = 1120;
+const SHARE_CARD_MIN_H = 760;
+const SHARE_CARD_MAX_H = 4096;
+const SHARE_CARD_DPR = 2;
+const SHARE_CARD_BG = '#0f141c';
+const SHARE_FONT = 'system-ui, "Segoe UI", sans-serif';
+
+const fitText = (ctx, text, maxW) => {
+  const s = String(text == null ? '' : text);
+  if (!(maxW > 0)) return '';
+  if (ctx.measureText(s).width <= maxW) return s;
+  const ell = '…';
+  let i = s.length;
+  while (i > 0 && ctx.measureText(s.slice(0, i) + ell).width > maxW) i--;
+  return i > 0 ? s.slice(0, i) + ell : ell;
+};
+
+const roundRectPath = (ctx, x, y, w, h, r) => {
+  const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, rr);
+    return;
+  }
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+};
+
+const fillRoundRect = (ctx, x, y, w, h, r, fill) => {
+  roundRectPath(ctx, x, y, w, h, r);
+  ctx.fillStyle = fill;
+  ctx.fill();
+};
+
+const strokeRoundRect = (ctx, x, y, w, h, r, stroke, lw) => {
+  roundRectPath(ctx, x, y, w, h, r);
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = lw || 1;
+  ctx.stroke();
+};
+
+const shareChipPalette = (tone, isLive, isBroken, isDone) => {
+  if (tone === 'green') return { bg: 'rgba(74, 222, 128, 0.12)', fg: COLORS.green, bd: 'rgba(74, 222, 128, 0.4)' };
+  if (tone === 'red') return { bg: 'rgba(224, 82, 82, 0.12)', fg: COLORS.red, bd: 'rgba(224, 82, 82, 0.4)' };
+  if (tone === 'blue') return { bg: 'rgba(74, 158, 255, 0.12)', fg: COLORS.blue, bd: 'rgba(74, 158, 255, 0.4)' };
+  if (isLive) {
+    return {
+      bg: 'rgba(240, 192, 64, 0.12)',
+      fg: isBroken ? COLORS.red : isDone ? COLORS.gold : COLORS.green,
+      bd: isBroken ? 'rgba(224, 82, 82, 0.4)' : isDone ? 'rgba(240, 192, 64, 0.4)' : 'rgba(74, 222, 128, 0.4)',
+    };
+  }
+  return { bg: 'rgba(255, 255, 255, 0.045)', fg: COLORS.dim, bd: 'rgba(255, 255, 255, 0.18)' };
+};
+
+const shareCardData = () => {
+  const run = readRun();
+  const fmt = timeFormat();
+  const total = elapsed();
+  const totalSim = elapsedSim();
+  const totalPlay = elapsedPlay();
+  const slowdown = slowdownPercent();
+  const deficit = tickDeficit();
+  const ready = tickSourceReady();
+  const splits = readSplits();
+  const best = readBest();
+  const tainted = cheatsUsed();
+  const delta = best !== null ? totalPlay - best : null;
+  const rulesLive = rulesetView();
+  const modsInfo = rulesetStatus();
+  const isBroken = !!rulesLive.broken;
+  const isWait = typeof run.startedAt !== 'number';
+  const isDone = typeof run.finishedAt === 'number';
+  const stStr = isBroken ? 'RULES BROKEN' : (isWait ? 'Waiting' : (isDone ? 'Finished' : 'Running'));
+  const pbSplits = readComparisonSplits();
+  const columns = downsampleToColumns(historyBuf, 120, bucketStats);
+  const deltaText = best !== null ? (delta <= 0 ? '-' : '+') + formatShort(Math.abs(delta), fmt) : '—';
+  const deltaColor = best === null ? COLORS.dim : delta <= 0 ? COLORS.green : COLORS.red;
+
+  const chips = [
+    { text: stStr, tone: null, isLive: true },
+    { text: `Seed: ${getMapSeed()}`, tone: null, isLive: false },
+    {
+      text: modsInfo.extraCount > 0
+        ? t('mods|goldSpeedrun|mods|count', { count: modsInfo.extraCount })
+        : t('mods|goldSpeedrun|mods|clean'),
+      tone: modsInfo.extraCount > 0 ? null : 'green',
+      isLive: false,
+    },
+    {
+      text: runUsesBlueprints()
+        ? t('mods|goldSpeedrun|dash|bpUsed')
+        : t('mods|goldSpeedrun|dash|noBp'),
+      tone: runUsesBlueprints() ? 'blue' : 'green',
+      isLive: runUsesBlueprints(),
+    },
+  ];
+  if (showRuleset() || !rulesLive.ok) {
+    chips.push({
+      text: rulesLive.ok
+        ? t('mods|goldSpeedrun|rules|badge')
+        : rulesLive.broken
+          ? t('mods|goldSpeedrun|rules|broken')
+          : t('mods|goldSpeedrun|rules|invalid'),
+      tone: rulesLive.ok ? 'green' : 'red',
+      isLive: true,
+    });
+  }
+  chips.push(
+    { text: `Pauses: ${readClock('pauseCount')}`, tone: null, isLive: false },
+    { text: `Reloads: ${readClock('reloadCount')}`, tone: null, isLive: false },
+  );
+
+  const splitRows = splits.map((s, i) => {
+    const previous = i > 0 ? splits[i - 1] : null;
+    const liveMs = splitMs(s);
+    const live = Number.isFinite(liveMs);
+    const prevMs = previous ? splitMs(previous) : 0;
+    const prevOk = Number.isFinite(prevMs) ? prevMs : 0;
+    const segment = live ? liveMs - prevOk : 0;
+    const pb = findPbSplit(s, pbSplits);
+    const routeMs = pb ? splitMs(pb) : NaN;
+    const routeOk = Number.isFinite(routeMs);
+    const dlt = live && routeOk ? liveMs - routeMs : null;
+    return {
+      kind: s.kind,
+      label: displaySplitLabel(s, splits),
+      upcoming: s.upcoming === true,
+      segment: live && segment >= 0 ? formatShort(segment, fmt) : '—',
+      time: live ? formatTime(liveMs, fmt) : (routeOk ? formatTime(routeMs, fmt) : '—'),
+      delta: dlt !== null ? (dlt >= 0 ? '+' : '-') + formatShort(Math.abs(dlt), fmt) : '—',
+      deltaColor: dlt === null ? COLORS.dim : dlt <= 0 ? COLORS.green : COLORS.red,
+      gold: live ? formatGold(s.gold) : '',
+      color: s.upcoming ? COLORS.dim : (KIND_COLOR[s.kind] || COLORS.text),
+    };
+  });
+
+  return {
+    category: categoryLabel(),
+    fmt,
+    tainted,
+    isBroken,
+    invalid: !rulesLive.ok,
+    isWait,
+    isDone,
+    chips,
+    columns,
+    graphEmpty: t(trackHistoryEnabled()
+      ? 'mods|goldSpeedrun|graph|emptyRun'
+      : 'mods|goldSpeedrun|graph|empty'),
+    hero: [
+      {
+        title: t('mods|goldSpeedrun|result|total'),
+        value: isWait ? dashTime(fmt) : formatTime(totalPlay, fmt),
+        valueColor: isDone ? '#ffd56a' : '#ffffff',
+        sub: isDone ? 'in-game time (W) · official' : 'in-game time (W)',
+        subColor: COLORS.dim,
+        fr: 1.15,
+      },
+      {
+        title: t('mods|goldSpeedrun|result|best'),
+        value: best === null ? t('mods|goldSpeedrun|result|noBest') : formatTime(best, fmt),
+        valueColor: '#ffffff',
+        sub: best !== null ? `${deltaText} vs PB/Target` : '—',
+        subColor: deltaColor,
+        fr: 1,
+      },
+      {
+        title: t('mods|goldSpeedrun|metric|slowdown'),
+        value: ready ? `${fmtSigned(slowdown, 2)}%` : '—',
+        valueColor: !ready ? COLORS.dim : slowdown <= -5 ? '#ff8b8b' : slowdown <= -1 ? COLORS.gold : COLORS.green,
+        sub: ready
+          ? `${t('mods|goldSpeedrun|metric|deficit')}: ${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s) · ${t('mods|goldSpeedrun|metric|jamLoad')}: ${jamLoadPerUpdate().toFixed(2)}/u (${jamSharePercent().toFixed(1)}%)`
+          : '—',
+        subColor: !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green,
+        fr: 0.9,
+      },
+    ],
+    stats: [
+      [t('mods|goldSpeedrun|result|sim'), ready ? formatTime(totalSim, fmt) : '—'],
+      [t('mods|goldSpeedrun|result|real'), formatTime(total, fmt)],
+      [t('mods|goldSpeedrun|result|play'), formatTime(totalPlay, fmt)],
+      [t('mods|goldSpeedrun|metric|ticks'), ready ? api.i18n.formatNumber(Math.round(totalSim / TICK_MS)) : '—'],
+      [t('mods|goldSpeedrun|metric|avgUps'), ready && total > 0 ? ((totalSim / TICK_MS) / (total / 1000)).toFixed(1) : '—'],
+      [t('mods|goldSpeedrun|metric|idealTicks'), api.i18n.formatNumber(Math.round((total / 1000) * TICK_HZ))],
+      [t('mods|goldSpeedrun|metric|jamLoad'), ready ? `${jamLoadPerUpdate().toFixed(2)}/u (${jamSharePercent().toFixed(1)}%)` : '—'],
+      [t('mods|goldSpeedrun|metric|thinkMult'), ready && totalSim > 0 ? `${(total / totalSim).toFixed(2)}×` : '—'],
+      [t('mods|goldSpeedrun|metric|wrProbe'), `${fmtSigned(totalPlay - total, 0)} ms`],
+    ],
+    splits: splitRows,
+    totalPlay,
+    exportedAt: new Date().toLocaleString(),
+    versionLine: exportVersionLine(),
+    wallStart: formatWallClock(wallClockSummary().startedAtWall),
+    wallEnd: formatWallClock(wallClockSummary().finishedAtWall || (isDone ? null : Date.now())),
+    wallSpan: wallClockSummary().span !== null ? formatTime(wallClockSummary().span, 'seconds') : '—',
+  };
+};
+
+const layoutShareChips = (ctx, chips, x, maxX, y, chipH) => {
+  ctx.font = `800 12px ${SHARE_FONT}`;
+  let cx = x;
+  let cy = y;
+  const placed = [];
+  for (const chip of chips) {
+    const tw = Math.ceil(ctx.measureText(chip.text).width) + 18;
+    if (cx + tw > maxX && cx > x) {
+      cx = x;
+      cy += chipH + 6;
+    }
+    placed.push({ ...chip, x: cx, y: cy, w: tw, h: chipH });
+    cx += tw + 8;
+  }
+  return { chips: placed, bottom: cy + chipH };
+};
+
+const layoutShareCard = (ctx, data, w) => {
+  const padX = 24;
+  const innerL = padX;
+  const innerR = w - padX;
+  const innerW = innerR - innerL;
+  const titleBottom = 18 + 24;
+  const chips = layoutShareChips(ctx, data.chips, innerL, innerR, titleBottom + 12, 22);
+  const headerBottom = chips.bottom + 16;
+  const heroH = 96;
+  const heroTop = headerBottom;
+  const bodyTop = heroTop + heroH + 10;
+  const gap = 16;
+  const leftW = 380;
+  const rightW = Math.max(240, innerW - leftW - gap);
+  const leftX = innerL;
+  const rightX = innerL + leftW + gap;
+  let splitRowH = 32;
+  const splitHeadH = 28;
+  const leftMin = 12 + 20 + 8 + data.stats.length * 26 + 12 + 14 + 88 + 14;
+  const footerH = 28;
+  const chromeAfterBody = 10 + footerH + 12;
+  const maxBody = SHARE_CARD_MAX_H - bodyTop - chromeAfterBody;
+  const splitsHFor = rowH => 16 + 20 + 12 + splitHeadH + Math.max(data.splits.length, 1) * rowH + 16;
+  let bodyH = Math.max(leftMin, splitsHFor(splitRowH), 360);
+  if (bodyH > maxBody) {
+    const tableBudget = maxBody - (16 + 20 + 12 + splitHeadH + 16);
+    splitRowH = Math.max(16, tableBudget / Math.max(data.splits.length, 1));
+    bodyH = maxBody;
+  }
+  let bodyBottom = bodyTop + bodyH;
+  let footerTop = bodyBottom + 10;
+  const contentH = footerTop + footerH + 12;
+  const h = Math.max(SHARE_CARD_MIN_H, Math.min(SHARE_CARD_MAX_H, contentH));
+  const extra = h - contentH;
+  bodyH += extra;
+  bodyBottom += extra;
+  footerTop += extra;
+  return {
+    padX, innerL, innerR, innerW, chips, headerBottom, heroTop, heroH,
+    bodyTop, bodyH, bodyBottom, leftX, leftW, rightX, rightW, footerTop, footerH,
+    h, splitRowH, splitHeadH,
+  };
+};
+
+const paintShareCard = (ctx, data, w, h, layout) => {
+  const L = layout;
+  ctx.fillStyle = SHARE_CARD_BG;
+  ctx.fillRect(0, 0, w, h);
+  strokeRoundRect(ctx, 0.5, 0.5, w - 1, h - 1, 12, data.tainted || data.invalid ? COLORS.red : '#4a5564', 1);
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  ctx.font = `800 22px ${SHARE_FONT}`;
+  ctx.fillStyle = COLORS.gold;
+  ctx.fillText('Speedrun Dashboard', L.innerL, 18 + 20);
+  const titleW = ctx.measureText('Speedrun Dashboard').width;
+
+  ctx.font = `700 14px ${SHARE_FONT}`;
+  ctx.fillStyle = COLORS.blue;
+  const catX = L.innerL + titleW + 16;
+  ctx.fillText(fitText(ctx, data.category, L.innerR - catX), catX, 18 + 20);
+
+  for (const chip of L.chips.chips) {
+    const pal = shareChipPalette(chip.tone, chip.isLive, data.isBroken, data.isDone);
+    fillRoundRect(ctx, chip.x, chip.y, chip.w, chip.h, 6, pal.bg);
+    strokeRoundRect(ctx, chip.x + 0.5, chip.y + 0.5, chip.w - 1, chip.h - 1, 6, pal.bd, 1);
+    ctx.font = `800 12px ${SHARE_FONT}`;
+    ctx.fillStyle = pal.fg;
+    ctx.textAlign = 'left';
+    ctx.fillText(chip.text, chip.x + 9, chip.y + 15);
+  }
+
+  const heroGap = 10;
+  const frSum = data.hero.reduce((s, c) => s + c.fr, 0);
+  const heroUsable = L.innerW - heroGap * (data.hero.length - 1);
+  let hx = L.innerL;
+  for (const card of data.hero) {
+    const cw = heroUsable * (card.fr / frSum);
+    fillRoundRect(ctx, hx, L.heroTop, cw, L.heroH, 10, 'rgba(0, 0, 0, 0.25)');
+    strokeRoundRect(ctx, hx + 0.5, L.heroTop + 0.5, cw - 1, L.heroH - 1, 10, 'rgba(255, 255, 255, 0.04)', 1);
+    ctx.textAlign = 'left';
+    ctx.font = `800 12px ${SHARE_FONT}`;
+    ctx.fillStyle = COLORS.gold;
+    ctx.fillText(fitText(ctx, String(card.title).toUpperCase(), cw - 32), hx + 16, L.heroTop + 22);
+    ctx.font = `800 30px ${SHARE_FONT}`;
+    ctx.fillStyle = card.valueColor || '#ffffff';
+    ctx.fillText(fitText(ctx, card.value, cw - 32), hx + 16, L.heroTop + 58);
+    ctx.font = `700 12px ${SHARE_FONT}`;
+    ctx.fillStyle = card.subColor || COLORS.dim;
+    ctx.fillText(fitText(ctx, card.sub, cw - 32), hx + 16, L.heroTop + 80);
+    hx += cw + heroGap;
+  }
+
+  const cardBg = 'rgba(0, 0, 0, 0.25)';
+  const cardBd = 'rgba(255, 255, 255, 0.04)';
+  fillRoundRect(ctx, L.leftX, L.bodyTop, L.leftW, L.bodyH, 10, cardBg);
+  strokeRoundRect(ctx, L.leftX + 0.5, L.bodyTop + 0.5, L.leftW - 1, L.bodyH - 1, 10, cardBd, 1);
+  fillRoundRect(ctx, L.rightX, L.bodyTop, L.rightW, L.bodyH, 10, cardBg);
+  strokeRoundRect(ctx, L.rightX + 0.5, L.bodyTop + 0.5, L.rightW - 1, L.bodyH - 1, 10, cardBd, 1);
+
+  ctx.textAlign = 'left';
+  ctx.font = `800 14px ${SHARE_FONT}`;
+  ctx.fillStyle = COLORS.gold;
+  ctx.fillText(t('mods|goldSpeedrun|result|expand').toUpperCase(), L.leftX + 16, L.bodyTop + 28);
+
+  const statTop = L.bodyTop + 42;
+  data.stats.forEach((row, i) => {
+    const y = statTop + i * 26;
+    ctx.beginPath();
+    ctx.moveTo(L.leftX + 16, y + 18);
+    ctx.lineTo(L.leftX + L.leftW - 16, y + 18);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.font = `600 13px ${SHARE_FONT}`;
+    ctx.fillStyle = COLORS.dim;
+    ctx.textAlign = 'left';
+    ctx.fillText(fitText(ctx, row[0], L.leftW - 140), L.leftX + 16, y + 12);
+    ctx.font = `700 14px ${SHARE_FONT}`;
+    ctx.fillStyle = COLORS.text;
+    ctx.textAlign = 'right';
+    ctx.fillText(fitText(ctx, row[1], 110), L.leftX + L.leftW - 16, y + 12);
+  });
+
+  const graphH = 88;
+  const graphCaptionY = L.bodyBottom - 14 - graphH - 18;
+  const graphY = L.bodyBottom - 14 - graphH;
+  const graphX = L.leftX + 16;
+  const graphW = L.leftW - 32;
+  ctx.textAlign = 'left';
+  ctx.font = `700 12px ${SHARE_FONT}`;
+  ctx.fillStyle = COLORS.dim;
+  ctx.fillText(t('mods|goldSpeedrun|graph|title').toUpperCase(), graphX, graphCaptionY + 12);
+  fillRoundRect(ctx, graphX, graphY, graphW, graphH, 6, 'rgba(0, 0, 0, 0.32)');
+  ctx.save();
+  roundRectPath(ctx, graphX, graphY, graphW, graphH, 6);
+  ctx.clip();
+  const cols = data.columns || [];
+  if (!cols.length) {
+    ctx.font = `600 11px ${SHARE_FONT}`;
+    ctx.fillStyle = COLORS.dim;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    wrapCanvasText(ctx, data.graphEmpty, graphX + graphW / 2, graphY + graphH / 2, graphW - 24, 14);
+  } else {
+    const UPS_GRAPH_MAX = 90;
+    const clampUps = v => Math.max(0, Math.min(UPS_GRAPH_MAX, Number.isFinite(v) ? v : 0));
+    const scaleMax = UPS_GRAPH_MAX;
+    const refTop = Math.max(0, Math.min(100, 100 - (TICK_HZ / scaleMax) * 100));
+    const wPct = graphW / cols.length;
+    cols.forEach((c, i) => {
+      const minPct = Math.max(0, Math.min(100, (clampUps(c.min) / scaleMax) * 100));
+      const maxPct = Math.max(minPct + 0.6, Math.min(100, (clampUps(c.max) / scaleMax) * 100));
+      const color = c.avg >= TICK_HZ - 1 ? COLORS.green : c.avg >= TICK_HZ * 0.85 ? COLORS.gold : COLORS.red;
+      const bh = graphH * (maxPct - minPct) / 100;
+      const by = graphY + graphH - graphH * maxPct / 100;
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(graphX + i * wPct, by, Math.max(wPct, 0.6), bh);
+    });
+    ctx.globalAlpha = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = COLORS.dim;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(graphX, graphY + graphH * refTop / 100);
+    ctx.lineTo(graphX + graphW, graphY + graphH * refTop / 100);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    ctx.font = `600 9px ${SHARE_FONT}`;
+    ctx.fillStyle = COLORS.dim;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(String(TICK_HZ), graphX + graphW - 4, graphY + graphH * refTop / 100 + 2);
+  }
+  ctx.restore();
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  ctx.font = `800 14px ${SHARE_FONT}`;
+  ctx.fillStyle = COLORS.gold;
+  ctx.fillText(`SPLITS (${data.splits.length})`, L.rightX + 18, L.bodyTop + 28);
+
+  const tableX = L.rightX + 18;
+  const tableW = L.rightW - 36;
+  const numW = [110, 110, 110, 92];
+  const labelW = Math.max(80, tableW - numW.reduce((s, n) => s + n, 0));
+  const colX = [
+    tableX,
+    tableX + labelW + numW[0],
+    tableX + labelW + numW[0] + numW[1],
+    tableX + labelW + numW[0] + numW[1] + numW[2],
+    tableX + labelW + numW[0] + numW[1] + numW[2] + numW[3],
+  ];
+  const headY = L.bodyTop + 48;
+  ctx.font = `800 12px ${SHARE_FONT}`;
+  ctx.fillStyle = COLORS.dim;
+  ctx.textAlign = 'left';
+  ctx.fillText(fitText(ctx, t('mods|goldSpeedrun|result|colSplit').toUpperCase(), labelW - 8), colX[0], headY);
+  ctx.textAlign = 'right';
+  ctx.fillText(fitText(ctx, t('mods|goldSpeedrun|result|colSegment').toUpperCase(), numW[0] - 8), colX[1], headY);
+  ctx.fillText(fitText(ctx, t('mods|goldSpeedrun|result|colTime').toUpperCase(), numW[1] - 8), colX[2], headY);
+  ctx.fillText(fitText(ctx, t('mods|goldSpeedrun|result|colDelta').toUpperCase(), numW[2] - 8), colX[3], headY);
+  ctx.fillText(fitText(ctx, t('mods|goldSpeedrun|result|colGold').toUpperCase(), numW[3] - 8), colX[4], headY);
+  ctx.beginPath();
+  ctx.moveTo(tableX, headY + 8);
+  ctx.lineTo(tableX + tableW, headY + 8);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+  ctx.stroke();
+
+  if (data.splits.length === 0) {
+    ctx.font = `600 13px ${SHARE_FONT}`;
+    ctx.fillStyle = COLORS.dim;
+    ctx.textAlign = 'center';
+    ctx.fillText(t('mods|goldSpeedrun|result|noSplits'), L.rightX + L.rightW / 2, headY + 40);
+  } else {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(L.rightX + 8, headY + 10, L.rightW - 16, Math.max(0, L.bodyBottom - 8 - (headY + 10)));
+    ctx.clip();
+    data.splits.forEach((row, i) => {
+      const y = headY + 12 + i * L.splitRowH + 18;
+      ctx.beginPath();
+      ctx.moveTo(tableX, y + 10);
+      ctx.lineTo(tableX + tableW, y + 10);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.stroke();
+      ctx.font = `600 15px ${SHARE_FONT}`;
+      ctx.fillStyle = row.color;
+      ctx.textAlign = 'left';
+      ctx.fillText(fitText(ctx, row.label, labelW - 8), colX[0], y);
+      ctx.font = `600 14px ${SHARE_FONT}`;
+      ctx.fillStyle = COLORS.dim;
+      ctx.textAlign = 'right';
+      ctx.fillText(row.segment, colX[1], y);
+      ctx.fillStyle = row.upcoming ? COLORS.dim : '#ffffff';
+      ctx.fillText(row.time, colX[2], y);
+      ctx.font = `700 14px ${SHARE_FONT}`;
+      ctx.fillStyle = row.deltaColor;
+      ctx.fillText(row.delta, colX[3], y);
+      ctx.font = `600 14px ${SHARE_FONT}`;
+      ctx.fillStyle = COLORS.gold;
+      ctx.fillText(row.gold, colX[4], y);
+    });
+    ctx.restore();
+  }
+
+  ctx.textAlign = 'left';
+  ctx.font = `600 12px ${SHARE_FONT}`;
+  ctx.fillStyle = COLORS.dim;
+  ctx.fillText(fitText(ctx, data.versionLine || `Sandustry Gold Speedrun Challenge v${MOD_VERSION}`, L.innerW * 0.52), L.innerL, L.footerTop + 16);
+  ctx.textAlign = 'right';
+  const wallEndStr = (data.wallEnd && data.wallEnd !== '—') ? data.wallEnd : (data.exportedAt || '');
+  const wallLine = (data.wallStart && data.wallStart !== '—')
+    ? `${data.wallStart} → ${wallEndStr}${data.wallSpan && data.wallSpan !== '—' ? ` · ${data.wallSpan}` : ''}`
+    : (data.exportedAt || '');
+  ctx.fillText(fitText(ctx, wallLine, L.innerW * 0.46), L.innerR, L.footerTop + 16);
+  ctx.textAlign = 'left';
+};
+
+const wrapCanvasText = (ctx, text, cx, cy, maxW, lineH) => {
+  const words = String(text || '').split(/\s+/);
+  const lines = [];
+  let cur = '';
+  for (const word of words) {
+    const next = cur ? cur + ' ' + word : word;
+    if (ctx.measureText(next).width > maxW && cur) {
+      lines.push(cur);
+      cur = word;
+    } else {
+      cur = next;
+    }
+  }
+  if (cur) lines.push(cur);
+  const top = cy - ((lines.length - 1) * lineH) / 2;
+  lines.forEach((line, i) => ctx.fillText(line, cx, top + i * lineH));
+};
+
+const exportDashboardPng = () => {
+  try {
+    if (typeof document === 'undefined') return;
+    const measure = document.createElement('canvas').getContext('2d');
+    if (!measure) return;
+    const data = shareCardData();
+    const layout = layoutShareCard(measure, data, SHARE_CARD_W);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(SHARE_CARD_W * SHARE_CARD_DPR);
+    canvas.height = Math.round(layout.h * SHARE_CARD_DPR);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(SHARE_CARD_DPR, SHARE_CARD_DPR);
+    paintShareCard(ctx, data, SHARE_CARD_W, layout.h, layout);
+    const timePart = formatTime(Number.isFinite(data.totalPlay) ? data.totalPlay : 0, 'millis');
+    const filename = `sandustry-speedrun-${sanitizeFilename(data.category)}-${sanitizeFilename(timePart)}.png`;
+    canvasToPngBlob(canvas).then(blob => {
+      if (!blob) return;
+      downloadBlob(blob, filename);
+      copyPngToClipboard(blob).then(copied => {
+        try {
+          api.ui.toast({ key: copied ? 'mods|goldSpeedrun|toast|pngCopied' : 'mods|goldSpeedrun|toast|pngSaved' });
+        } catch (e) { /* toast optional */ }
+      });
+    });
+  } catch (e) {
+    log('PNG export failed: ' + e);
+  }
 };
 
 const pickCsvFile = onText => {
@@ -5138,10 +7967,9 @@ function ResultScreen() {
     const tainted = cheatsUsed();
     const delta = best !== null ? totalPlay - best : null;
     const rulesLive = rulesetView();
-    const rules = showRuleset() ? rulesLive : null;
     const modsInfo = rulesetStatus();
 
-    const isBroken = rules && rules.broken;
+    const isBroken = !!rulesLive.broken;
     const isWait = typeof run.startedAt !== 'number';
     const isDone = typeof run.finishedAt === 'number';
     const stStr = isBroken ? 'RULES BROKEN' : (isWait ? 'Waiting' : (isDone ? 'Finished' : 'Running'));
@@ -5151,6 +7979,8 @@ function ResultScreen() {
         ? { bg: 'rgba(74, 222, 128, 0.12)', fg: COLORS.green, bd: 'rgba(74, 222, 128, 0.4)' }
         : tone === 'red'
           ? { bg: 'rgba(224, 82, 82, 0.12)', fg: COLORS.red, bd: 'rgba(224, 82, 82, 0.4)' }
+          : tone === 'blue'
+            ? { bg: 'rgba(74, 158, 255, 0.12)', fg: COLORS.blue, bd: 'rgba(74, 158, 255, 0.4)' }
           : isLive
             ? {
               bg: 'rgba(240, 192, 64, 0.12)',
@@ -5285,7 +8115,7 @@ function ResultScreen() {
         t('mods|goldSpeedrun|metric|slowdown'),
         ready ? `${fmtSigned(slowdown, 2)}%` : '—',
         !ready ? COLORS.dim : slowdown <= -5 ? '#ff8b8b' : slowdown <= -1 ? COLORS.gold : COLORS.green,
-        ready ? `${t('mods|goldSpeedrun|metric|deficit')}: ${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s)` : '—',
+        ready ? `${t('mods|goldSpeedrun|metric|deficit')}: ${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s) · ${t('mods|goldSpeedrun|metric|jamLoad')}: ${jamLoadPerUpdate().toFixed(2)}/u (${jamSharePercent().toFixed(1)}%)` : '—',
         !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green
       ),
     ]);
@@ -5316,11 +8146,12 @@ function ResultScreen() {
       }, t('mods|goldSpeedrun|result|expand')),
       h('div', { key: 'metrics-list', style: { display: 'flex', flexDirection: 'column', flexShrink: 1, minHeight: 0 } }, [
         statRow(t('mods|goldSpeedrun|result|sim'), ready ? formatTime(totalSim, fmt) : '—'),
-        statRow(t('mods|goldSpeedrun|clock|realShort').toUpperCase() + ' · ' + t('mods|goldSpeedrun|cfg|clockMode|real'), formatTime(total, fmt)),
+        statRow(t('mods|goldSpeedrun|result|real'), formatTime(total, fmt)),
         statRow(t('mods|goldSpeedrun|result|play'), formatTime(totalPlay, fmt)),
         statRow(t('mods|goldSpeedrun|metric|ticks'), ready ? api.i18n.formatNumber(Math.round(totalSim / TICK_MS)) : '—'),
         statRow(t('mods|goldSpeedrun|metric|avgUps'), ready && total > 0 ? ((totalSim / TICK_MS) / (total / 1000)).toFixed(1) : '—'),
         statRow(t('mods|goldSpeedrun|metric|idealTicks'), api.i18n.formatNumber(Math.round((total / 1000) * TICK_HZ))),
+        statRow(t('mods|goldSpeedrun|metric|jamLoad'), ready ? `${jamLoadPerUpdate().toFixed(2)}/u (${jamSharePercent().toFixed(1)}%)` : '—'),
         statRow(t('mods|goldSpeedrun|metric|thinkMult'), ready && totalSim > 0 ? `${(total / totalSim).toFixed(2)}×` : '—'),
         statRow(t('mods|goldSpeedrun|metric|wrProbe'), `${fmtSigned(totalPlay - total, 0)} ms`),
       ]),
@@ -5453,6 +8284,7 @@ function ResultScreen() {
             `Final Time: ${time}`,
             `Seed: ${seed}`,
             `Pauses: ${pauses}  |  Reloads: ${reloads}`,
+            `Wall: ${wallClockSummary().startedAtWall ? `${formatWallClock(wallClockSummary().startedAtWall)} → ${formatWallClock(wallClockSummary().finishedAtWall || Date.now())} (${wallClockSummary().span !== null ? formatTime(wallClockSummary().span, 'seconds') : '—'})` : '—'}`,
             '',
             `Splits:`
           ];
@@ -5464,8 +8296,24 @@ function ResultScreen() {
           });
           navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
         }),
+        dashboardTab !== 'categories'
+          ? actionBtn('btn-png', 'PNG', t('mods|goldSpeedrun|dash|exportPng'), () => { exportDashboardPng(); })
+          : null,
+        actionBtn('btn-f7', 'F7', t('mods|goldSpeedrun|metrics|openBtn'), () => { setMetricsOverlayOpen(true); }),
       ]),
-      h('span', { key: 'hint', style: { color: COLORS.dim, font: '600 13px/1 system-ui, sans-serif' } }, t('mods|goldSpeedrun|result|hint')),
+      h('div', {
+        key: 'hint',
+        style: { color: COLORS.dim, font: '600 12px/1.35 system-ui, sans-serif', textAlign: 'center', minWidth: 0 },
+      }, [
+        h('div', { key: 'wall' }, (() => {
+          const wall = wallClockSummary();
+          const startTxt = formatWallClock(wall.startedAtWall);
+          const endTxt = wall.finishedAtWall ? formatWallClock(wall.finishedAtWall) : (wall.startedAtWall ? t('mods|goldSpeedrun|result|wallNow') : '—');
+          const spanTxt = wall.span !== null ? formatTime(wall.span, 'seconds') : '—';
+          return `${t('mods|goldSpeedrun|result|wallStart')}: ${startTxt}  →  ${t('mods|goldSpeedrun|result|wallEnd')}: ${endTxt}  ·  ${t('mods|goldSpeedrun|result|wallSpan')}: ${spanTxt}`;
+        })()),
+        h('div', { key: 'f10', style: { marginTop: '2px', fontSize: '11px' } }, t('mods|goldSpeedrun|result|hint')),
+      ]),
       h('button', {
         key: 'close',
         onClick: () => setResultDismissed(true),
@@ -5509,7 +8357,7 @@ function ResultScreen() {
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '12px',
-          border: `1px solid ${tainted ? COLORS.red : '#4a5564'}`,
+          border: `1px solid ${tainted || !rulesLive.ok ? COLORS.red : '#4a5564'}`,
           background: COLORS.box,
           boxShadow: '0 24px 70px rgba(0,0,0,0.65)',
           color: COLORS.text,
@@ -5585,20 +8433,32 @@ function ResultScreen() {
               false,
               modsInfo.extraCount > 0 ? null : 'green'
             ),
-            rules ? chip(
+            chip(
+              'bp',
+              runUsesBlueprints()
+                ? t('mods|goldSpeedrun|dash|bpUsed')
+                : t('mods|goldSpeedrun|dash|noBp'),
+              runUsesBlueprints(),
+              runUsesBlueprints() ? 'blue' : 'green'
+            ),
+            (showRuleset() || !rulesLive.ok) ? chip(
               'rules',
-              rules.ok
+              rulesLive.ok
                 ? t('mods|goldSpeedrun|rules|badge')
-                : rules.broken
+                : rulesLive.broken
                   ? t('mods|goldSpeedrun|rules|broken')
-                  : t('mods|goldSpeedrun|rules|custom'),
-              rules.ok || rules.broken,
-              rules.ok ? 'green' : rules.broken ? 'red' : null
+                  : t('mods|goldSpeedrun|rules|invalid'),
+              true,
+              rulesLive.ok ? 'green' : 'red'
             ) : null,
             chip('ps', `Pauses: ${readClock('pauseCount')}`, false),
             chip('rl', `Reloads: ${readClock('reloadCount')}`, false),
           ])
         ]),
+        h('div', {
+          key: 'invalidWrap',
+          style: { padding: '0 24px', flexShrink: 0 },
+        }, h(InvalidRunBanner, { view: rulesLive, fontSize: '13px' })),
         dashboardTab === 'categories'
           ? h(CategoriesPanel, { key: 'cats', fmt })
           : h('div', { key: 'run', style: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: '4px' } }, [heroBlock, bodyGrid]),
@@ -5945,6 +8805,2414 @@ function TriggerPanel() {
   ]);
 }
 
+const METRIC_MOVES_COLOR = '#2dd4bf';
+const METRIC_JAM_SHARE_COLOR = '#e879f9';
+const METRIC_JAM_LOAD_COLOR = '#f97316';
+const METRIC_SETTLED_COLOR = '#fbbf24';
+const METRIC_ACTIVE_COLOR = '#fb7185';
+const METRIC_DEFICIT_COLOR = '#f43f5e';
+
+function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scaleMode = 'linear', smoothMode = 'off', lookback = 0, eventScope = 'ballistic', pinnedRelMs = null }) {
+  const svgRef = react.useRef(null);
+  const wrapRef = react.useRef(null);
+  const [size, setSize] = react.useState({ w: 1000, h: 420 });
+  const src = data || [];
+  const padCount = Math.max(0, Math.min(lookback || 0, src.length));
+  const visible = src.length > padCount ? src.slice(padCount) : src;
+  const isEmptyChart = visible.length < 2;
+  react.useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return undefined;
+    const apply = () => {
+      const r = el.getBoundingClientRect();
+      const w = Math.max(400, Math.round(r.width));
+      const h = Math.max(180, Math.round(r.height));
+      setSize(prev => (Math.abs(prev.w - w) < 2 && Math.abs(prev.h - h) < 2) ? prev : { w, h });
+    };
+    apply();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', apply);
+      return () => window.removeEventListener('resize', apply);
+    }
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isEmptyChart]);
+  const jamWanted = enabledLayers.jamLoad || enabledLayers.jamIntensity;
+  const deficitWanted = Boolean(enabledLayers.deficit);
+  const fallbackMs = rangeType === 'full' ? 1000 : 100;
+  const eventOf = (c, kind) => sampleEventCount(c, kind, eventScope);
+  const deficit = annotateDeficitSeries(src);
+
+  if (visible.length < 2) {
+    return h('div', {
+      ref: wrapRef,
+      style: {
+        width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: COLORS.dim, fontSize: '14px', textAlign: 'center', padding: '16px',
+      },
+    }, t(trackHistoryEnabled() ? 'mods|goldSpeedrun|graph|emptyRun' : 'mods|goldSpeedrun|graph|empty'));
+  }
+
+  try {
+  const W = size.w;
+  const H = size.h;
+  const padLeft = 55;
+  const padTop = 32;
+  const padBottom = 35;
+
+  const formatCount = n => {
+    if (!Number.isFinite(n)) return '—';
+    if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    if (Math.abs(n) >= 10) return String(Math.round(n));
+    return String(Math.round(n * 100) / 100);
+  };
+
+  const isLog = scaleMode === 'log';
+  const niceMax = (raw, floor) => {
+    const v = Math.max(floor || 10, raw || 0);
+    const mag = Math.pow(10, Math.floor(Math.log10(v)));
+    const norm = v / mag;
+    if (norm <= 1) return mag;
+    if (norm <= 2) return 2 * mag;
+    if (norm <= 5) return 5 * mag;
+    return 10 * mag;
+  };
+
+  // 1. Particle Counts Scale (Moves & Collisions) — visible range only
+  let maxParticles = 0;
+  for (let i = 0; i < visible.length; i++) {
+    const c = visible[i];
+    let sum = 0;
+    const mv = eventOf(c, 'moves');
+    const bl = eventOf(c, 'blocks');
+    if (enabledLayers.moves && mv !== null) sum += mv;
+    if (enabledLayers.blocks && bl !== null) sum += bl;
+    if (sum > maxParticles) maxParticles = sum;
+  }
+  maxParticles = niceMax(maxParticles, 10);
+
+  const logMaxP = Math.log10(Math.max(10, maxParticles) + 1);
+
+  // 2. Awake Chunks Scale
+  let maxAwake = 0;
+  if (visible.length > 0) {
+    const nonZeroAwake = visible.map(c => c.awake || 0).filter(v => v > 0).sort((a, b) => a - b);
+    if (nonZeroAwake.length > 0) {
+      const p98Idx = Math.floor(nonZeroAwake.length * 0.98);
+      const p98 = nonZeroAwake[Math.min(p98Idx, nonZeroAwake.length - 1)];
+      const rawMax = nonZeroAwake[nonZeroAwake.length - 1];
+      if (rawMax > p98 * 2.5 && p98 >= 10) {
+        maxAwake = Math.ceil(p98 * 1.35);
+      } else {
+        maxAwake = rawMax;
+      }
+    }
+  }
+  maxAwake = Math.max(10, Math.ceil((maxAwake || 10) / 20) * 20);
+
+  // 3. Jam Load Scale (blocked attempts per simulation update) — rolling 5s sums
+  let maxJamLoad = 0;
+  if (jamWanted) {
+    for (let i = 0; i < visible.length; i++) {
+      const win = trailingJamWindow(src, padCount + i, eventScope, fallbackMs, JAM_WINDOW_MS);
+      const inst = sampleJamInstant(visible[i], eventScope, fallbackMs);
+      const v = win ? win.jamLoad : (inst ? inst.jamLoad : 0);
+      if (Number.isFinite(v) && v > maxJamLoad) maxJamLoad = v;
+    }
+  }
+  maxJamLoad = niceMax(Math.max(maxJamLoad, 0.1), 0.1);
+
+  // 4. Live Elements Scale
+  let maxLive = 0;
+  if (enabledLayers.live) {
+    for (let i = 0; i < visible.length; i++) {
+      if ((visible[i].live || 0) > maxLive) maxLive = visible[i].live;
+    }
+  }
+  maxLive = niceMax(maxLive, 1000);
+
+  // 5. UPS Scale — keep 60 as a reference, but retain catch-up phases above it.
+  let maxUps = TICK_HZ;
+  if (enabledLayers.ups) {
+    for (let i = 0; i < visible.length; i++) {
+      const c = visible[i];
+      const candidate = Math.max(
+        Number.isFinite(c.max) ? c.max : 0,
+        Number.isFinite(c.avg) ? c.avg : 0,
+        Number.isFinite(c.ups) ? c.ups : 0
+      );
+      if (candidate > maxUps) maxUps = candidate;
+    }
+  }
+  if (maxUps > TICK_HZ) {
+    const step = maxUps <= 120 ? 15 : (maxUps <= 240 ? 30 : Math.max(50, niceMax(maxUps / 4, 50)));
+    maxUps = Math.ceil(maxUps / step) * step;
+  }
+
+  // 6. Signed lost-time scale (seconds) — always includes 0; may go negative (over-run).
+  let minDeficitSec = 0;
+  let maxDeficitSec = 0;
+  if (deficitWanted && deficit.d.length > 0) {
+    for (let i = padCount; i < deficit.d.length; i++) {
+      const a = deficit.d[i] / TICK_HZ;
+      const b = deficit.dPerm[i] / TICK_HZ;
+      if (Number.isFinite(a)) {
+        if (a < minDeficitSec) minDeficitSec = a;
+        if (a > maxDeficitSec) maxDeficitSec = a;
+      }
+      if (Number.isFinite(b)) {
+        if (b < minDeficitSec) minDeficitSec = b;
+        if (b > maxDeficitSec) maxDeficitSec = b;
+      }
+    }
+  }
+  if (minDeficitSec === 0 && maxDeficitSec === 0) {
+    maxDeficitSec = 1;
+  } else {
+    const pad = Math.max(0.05, (maxDeficitSec - minDeficitSec) * 0.08);
+    minDeficitSec -= pad;
+    maxDeficitSec += pad;
+  }
+
+  const rightRails = [];
+  if (enabledLayers.moves || enabledLayers.blocks) rightRails.push('counts');
+  if (enabledLayers.awake) rightRails.push('awake');
+  if (enabledLayers.live) rightRails.push('live');
+  if (jamWanted) rightRails.push('jamLoad');
+  if (enabledLayers.jamRate) rightRails.push('jamShare');
+  if (deficitWanted) rightRails.push('deficit');
+  const padRight = 12 + rightRails.length * 52;
+  const plotW = W - padLeft - padRight;
+  const plotH = H - padTop - padBottom;
+  const yBottom = padTop + plotH;
+
+  const getYForParticle = v => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return NaN;
+    if (n <= 0) return yBottom;
+    if (isLog) {
+      const ratio = Math.log10(n + 1) / logMaxP;
+      return yBottom - Math.max(0, Math.min(1, ratio)) * plotH;
+    }
+    return yBottom - (Math.min(maxParticles, n) / maxParticles) * plotH;
+  };
+  const getYForAwake = v => yBottom - (Math.max(0, Math.min(maxAwake, v)) / maxAwake) * plotH;
+  const getYForLive = v => yBottom - (Math.max(0, Math.min(maxLive, v)) / maxLive) * plotH;
+  const getYForJamLoad = v => yBottom - (Math.max(0, Math.min(maxJamLoad, v)) / maxJamLoad) * plotH;
+  const getYForJamShare = v => yBottom - Math.max(0, Math.min(1, v)) * plotH;
+  const deficitRange = maxDeficitSec - minDeficitSec;
+  const getYForDeficit = v => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || !(deficitRange > 0)) return yBottom - plotH / 2;
+    return yBottom - ((n - minDeficitSec) / deficitRange) * plotH;
+  };
+
+  const colW = plotW / Math.max(1, visible.length);
+  const barW = Math.max(1, colW * 0.88);
+
+  // 5-second causal window (50 samples at 10 Hz, 5 buckets at 1 Hz)
+  const windowSamples = rangeType === 'full' ? 5 : 50;
+  const groupDelay = Math.floor((windowSamples - 1) / 2);
+
+  // Causal trailing stats on the full src (includes off-screen lookback)
+  const computeCausalStats = (getVal, getMin, getMax) => {
+    const len = src.length;
+    const avg = new Array(len);
+    const min = new Array(len);
+    const max = new Array(len);
+    const raw = new Array(len);
+    if (len === 0) return { raw, avg, min, max };
+
+    for (let i = 0; i < len; i++) {
+      raw[i] = getVal(src[i]);
+      let sum = 0;
+      let mn = Infinity;
+      let mx = -Infinity;
+      let count = 0;
+      const start = Math.max(0, i - windowSamples + 1);
+      for (let j = start; j <= i; j++) {
+        const item = src[j];
+        const v = getVal(item);
+        const vMin = getMin ? getMin(item) : v;
+        const vMax = getMax ? getMax(item) : v;
+        if (Number.isFinite(v)) {
+          sum += v;
+          count++;
+        }
+        if (Number.isFinite(vMin) && vMin < mn) mn = vMin;
+        if (Number.isFinite(vMax) && vMax > mx) mx = vMax;
+      }
+      avg[i] = count > 0 ? sum / count : raw[i];
+      min[i] = mn !== Infinity ? mn : avg[i];
+      max[i] = mx !== -Infinity ? mx : avg[i];
+    }
+    return { raw, avg, min, max };
+  };
+
+  const makeRawPoints = (vals, getY) => {
+    const pts = [];
+    for (let i = padCount; i < vals.length; i++) {
+      const y = getY(vals[i]);
+      if (!Number.isFinite(y)) continue;
+      const visIdx = i - padCount;
+      const x = padLeft + (visIdx + 0.5) * colW;
+      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    return pts;
+  };
+
+  // Group-delay aligned smooth: at visible x[k] draw avg[pad + k + delay]
+  // so the left edge has a full window from off-screen samples and does not jump.
+  const makeAlignedSmoothPoints = (vals, getY) => {
+    const pts = [];
+    for (let k = 0; k < visible.length; k++) {
+      const srcIdx = padCount + k + groupDelay;
+      if (srcIdx >= vals.length) break;
+      const y = getY(vals[srcIdx]);
+      if (!Number.isFinite(y)) continue;
+      const x = padLeft + (k + 0.5) * colW;
+      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    return pts;
+  };
+
+  const makeAlignedEnvelopePath = (minVals, maxVals, getY) => {
+    if (!minVals || !maxVals || visible.length < 2) return null;
+    const topPts = [];
+    const btmPts = [];
+    for (let k = 0; k < visible.length; k++) {
+      const srcIdx = padCount + k + groupDelay;
+      if (srcIdx >= minVals.length) break;
+      const yMaxVal = getY(maxVals[srcIdx]);
+      const yMinVal = getY(minVals[srcIdx]);
+      if (!Number.isFinite(yMaxVal) || !Number.isFinite(yMinVal)) continue;
+      const x = (padLeft + (k + 0.5) * colW).toFixed(1);
+      topPts.push(`${x},${yMaxVal.toFixed(1)}`);
+      btmPts.push(`${x},${yMinVal.toFixed(1)}`);
+    }
+    if (topPts.length < 2) return null;
+    return `M ${topPts.join(' L ')} L ${btmPts.reverse().join(' L ')} Z`;
+  };
+
+  const makeEnvelopePath = (minVals, maxVals, getY) => {
+    if (!minVals || !maxVals || minVals.length < padCount + 2) return null;
+    const topPts = [];
+    const btmPts = [];
+    for (let i = padCount; i < minVals.length; i++) {
+      const yMaxVal = getY(maxVals[i]);
+      const yMinVal = getY(minVals[i]);
+      if (!Number.isFinite(yMaxVal) || !Number.isFinite(yMinVal)) continue;
+      const visIdx = i - padCount;
+      const x = (padLeft + (visIdx + 0.5) * colW).toFixed(1);
+      topPts.push(`${x},${yMaxVal.toFixed(1)}`);
+      btmPts.push(`${x},${yMinVal.toFixed(1)}`);
+    }
+    if (topPts.length < 2) return null;
+    return `M ${topPts.join(' L ')} L ${btmPts.reverse().join(' L ')} Z`;
+  };
+
+  const makeGappedRawPoints = (vals, getY) => {
+    const segs = [];
+    let cur = [];
+    for (let i = padCount; i < vals.length; i++) {
+      const v = vals[i];
+      const y = Number.isFinite(v) ? getY(v) : NaN;
+      if (!Number.isFinite(y)) {
+        if (cur.length > 1) segs.push(cur);
+        cur = [];
+        continue;
+      }
+      const visIdx = i - padCount;
+      const x = padLeft + (visIdx + 0.5) * colW;
+      cur.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    if (cur.length > 1) segs.push(cur);
+    return segs;
+  };
+
+  const pushPolylines = (target, keyPrefix, segments, attrs) => {
+    segments.forEach((pts, i) => {
+      if (pts.length > 1) target.push(h('polyline', { key: `${keyPrefix}-${i}`, points: pts.join(' '), fill: 'none', ...attrs }));
+    });
+  };
+
+  // Particle Elements (Moves & Blocks)
+  const particleElements = [];
+  if (enabledLayers.moves || enabledLayers.blocks) {
+    const getY = getYForParticle;
+    const movesStats = enabledLayers.moves ? computeCausalStats(c => {
+      const v = eventOf(c, 'moves');
+      return v === null ? NaN : v;
+    }) : null;
+    const blocksStats = enabledLayers.blocks ? computeCausalStats(c => {
+      const v = eventOf(c, 'blocks');
+      return v === null ? NaN : v;
+    }) : null;
+
+    if (smoothMode === 'off') {
+      if (rangeType === '60s' && visible.length <= 600) {
+        // Discrete stacked bars for 60s
+        visible.forEach((c, i) => {
+          const x = padLeft + i * colW + (colW - barW) / 2;
+          const movesVal = enabledLayers.moves ? (eventOf(c, 'moves') || 0) : 0;
+          const blocksVal = enabledLayers.blocks ? (eventOf(c, 'blocks') || 0) : 0;
+          const yMoves = getY(movesVal);
+          const yTotal = getY(movesVal + blocksVal);
+          if (movesVal > 0) {
+            const bh = Math.max(0.5, yBottom - yMoves);
+            particleElements.push(h('rect', {
+              key: `moves-${i}`,
+              x, y: yBottom - bh, width: barW, height: bh,
+              fill: METRIC_MOVES_COLOR, opacity: 0.85,
+            }));
+          }
+          if (blocksVal > 0) {
+            const baseH = yBottom - yMoves;
+            const totalH = yBottom - yTotal;
+            const bh = Math.max(0.5, totalH - baseH);
+            particleElements.push(h('rect', {
+              key: `blocks-${i}`,
+              x, y: yMoves - bh, width: barW, height: bh,
+              fill: '#f87171', opacity: 0.95,
+            }));
+          }
+        });
+      } else {
+        if (movesStats) {
+          const pts = makeRawPoints(movesStats.raw, getY);
+          if (pts.length > 1) {
+            particleElements.push(h('polyline', { key: 'moves-raw', points: pts.join(' '), fill: 'none', stroke: METRIC_MOVES_COLOR, strokeWidth: 1.0 }));
+          }
+        }
+        if (blocksStats) {
+          const pts = makeRawPoints(blocksStats.raw, getY);
+          if (pts.length > 1) {
+            particleElements.push(h('polyline', { key: 'blocks-raw', points: pts.join(' '), fill: 'none', stroke: '#f87171', strokeWidth: 1.0 }));
+          }
+        }
+      }
+    } else if (smoothMode === 'rolling') {
+      if (movesStats) {
+        const rawPts = makeRawPoints(movesStats.raw, getY);
+        const avgPts = makeAlignedSmoothPoints(movesStats.avg, getY);
+        if (rawPts.length > 1) {
+          particleElements.push(h('polyline', { key: 'moves-raw', points: rawPts.join(' '), fill: 'none', stroke: METRIC_MOVES_COLOR, strokeWidth: 1.0, opacity: 0.28 }));
+        }
+        if (avgPts.length > 1) {
+          particleElements.push(h('polyline', { key: 'moves-avg', points: avgPts.join(' '), fill: 'none', stroke: METRIC_MOVES_COLOR, strokeWidth: 1.0 }));
+        }
+      }
+      if (blocksStats) {
+        const rawPts = makeRawPoints(blocksStats.raw, getY);
+        const avgPts = makeAlignedSmoothPoints(blocksStats.avg, getY);
+        if (rawPts.length > 1) {
+          particleElements.push(h('polyline', { key: 'blocks-raw', points: rawPts.join(' '), fill: 'none', stroke: '#f87171', strokeWidth: 1.0, opacity: 0.28 }));
+        }
+        if (avgPts.length > 1) {
+          particleElements.push(h('polyline', { key: 'blocks-avg', points: avgPts.join(' '), fill: 'none', stroke: '#f87171', strokeWidth: 1.0 }));
+        }
+      }
+    } else if (smoothMode === 'bands') {
+      if (movesStats) {
+        const envPath = makeAlignedEnvelopePath(movesStats.min, movesStats.max, getY);
+        const avgPts = makeAlignedSmoothPoints(movesStats.avg, getY);
+        if (envPath) particleElements.push(h('path', { key: 'moves-band', d: envPath, fill: METRIC_MOVES_COLOR, opacity: 0.14 }));
+        if (avgPts.length > 1) particleElements.push(h('polyline', { key: 'moves-avg', points: avgPts.join(' '), fill: 'none', stroke: METRIC_MOVES_COLOR, strokeWidth: 1.0 }));
+      }
+      if (blocksStats) {
+        const envPath = makeAlignedEnvelopePath(blocksStats.min, blocksStats.max, getY);
+        const avgPts = makeAlignedSmoothPoints(blocksStats.avg, getY);
+        if (envPath) particleElements.push(h('path', { key: 'blocks-band', d: envPath, fill: '#f87171', opacity: 0.20 }));
+        if (avgPts.length > 1) particleElements.push(h('polyline', { key: 'blocks-avg', points: avgPts.join(' '), fill: 'none', stroke: '#f87171', strokeWidth: 1.0 }));
+      }
+    }
+  }
+
+  const splitElements = [];
+  if (eventScope === 'allMatter') {
+    const addSplitSeries = (key, color, kind, enabled) => {
+      if (!enabled) return;
+      const stats = computeCausalStats(c => {
+        const v = eventOf(c, kind);
+        return v === null ? NaN : v;
+      });
+      if (!stats) return;
+      const getY = getYForParticle;
+      const rawPts = makeRawPoints(stats.raw, getY);
+      const avgPts = makeAlignedSmoothPoints(stats.avg, getY);
+      if (smoothMode === 'rolling') {
+        if (rawPts.length > 1) splitElements.push(h('polyline', { key: `${key}-raw`, points: rawPts.join(' '), fill: 'none', stroke: color, strokeWidth: 1.0, opacity: 0.28, strokeDasharray: '4 3' }));
+        if (avgPts.length > 1) splitElements.push(h('polyline', { key: `${key}-avg`, points: avgPts.join(' '), fill: 'none', stroke: color, strokeWidth: 1.2, strokeDasharray: '4 3' }));
+      } else if (rawPts.length > 1) {
+        splitElements.push(h('polyline', { key: `${key}-raw`, points: rawPts.join(' '), fill: 'none', stroke: color, strokeWidth: 1.0, strokeDasharray: '4 3' }));
+      }
+    };
+    addSplitSeries('settled', METRIC_SETTLED_COLOR, 'settled', enabledLayers.blocksSettled);
+    addSplitSeries('active', METRIC_ACTIVE_COLOR, 'active', enabledLayers.blocksActive);
+  }
+
+  // Jam Share (%) — rolling sum(blocks)/sum(blocks+moves)
+  const jamElements = [];
+  if (enabledLayers.jamRate && src.length > 0) {
+    const getY = getYForJamShare;
+    const raw = new Array(src.length);
+    const avg = new Array(src.length);
+    const min = new Array(src.length);
+    const max = new Array(src.length);
+    for (let i = 0; i < src.length; i++) {
+      const inst = sampleJamInstant(src[i], eventScope, fallbackMs);
+      const win = trailingJamWindow(src, i, eventScope, fallbackMs, JAM_WINDOW_MS);
+      raw[i] = inst ? inst.jamShare : NaN;
+      avg[i] = win ? win.jamShare : NaN;
+      min[i] = win ? win.minShare : NaN;
+      max[i] = win ? win.maxShare : NaN;
+    }
+    const rawPts = makeRawPoints(raw, getY);
+    const avgPts = makeAlignedSmoothPoints(avg, getY);
+    if (smoothMode === 'off') {
+      if (rawPts.length > 1) jamElements.push(h('polyline', { key: 'jam-line', points: rawPts.join(' '), fill: 'none', stroke: METRIC_JAM_SHARE_COLOR, strokeWidth: 1.0 }));
+    } else if (smoothMode === 'rolling') {
+      if (rawPts.length > 1) jamElements.push(h('polyline', { key: 'jam-raw', points: rawPts.join(' '), fill: 'none', stroke: METRIC_JAM_SHARE_COLOR, strokeWidth: 1.0, opacity: 0.28 }));
+      if (avgPts.length > 1) jamElements.push(h('polyline', { key: 'jam-avg', points: avgPts.join(' '), fill: 'none', stroke: METRIC_JAM_SHARE_COLOR, strokeWidth: 1.0 }));
+    } else if (smoothMode === 'bands') {
+      const envPath = makeAlignedEnvelopePath(min, max, getY);
+      if (envPath) jamElements.push(h('path', { key: 'jam-band', d: envPath, fill: METRIC_JAM_SHARE_COLOR, opacity: 0.15 }));
+      if (avgPts.length > 1) jamElements.push(h('polyline', { key: 'jam-avg', points: avgPts.join(' '), fill: 'none', stroke: METRIC_JAM_SHARE_COLOR, strokeWidth: 1.0 }));
+    }
+  }
+
+  // Jam Load (blocked attempts per simulation update)
+  const jamIntElements = [];
+  if (jamWanted && src.length > 0) {
+    const getY = getYForJamLoad;
+    const raw = new Array(src.length);
+    const avg = new Array(src.length);
+    const min = new Array(src.length);
+    const max = new Array(src.length);
+    for (let i = 0; i < src.length; i++) {
+      const inst = sampleJamInstant(src[i], eventScope, fallbackMs);
+      const win = trailingJamWindow(src, i, eventScope, fallbackMs, JAM_WINDOW_MS);
+      raw[i] = inst ? inst.jamLoad : NaN;
+      avg[i] = win ? win.jamLoad : NaN;
+      min[i] = win ? win.minLoad : NaN;
+      max[i] = win ? win.maxLoad : NaN;
+    }
+    const rawSegs = makeGappedRawPoints(raw, getY);
+    const avgPts = makeAlignedSmoothPoints(avg, getY);
+    if (smoothMode === 'off') {
+      pushPolylines(jamIntElements, 'jam-load', rawSegs, { stroke: METRIC_JAM_LOAD_COLOR, strokeWidth: 1.0 });
+    } else if (smoothMode === 'rolling') {
+      pushPolylines(jamIntElements, 'jam-load-raw', rawSegs, { stroke: METRIC_JAM_LOAD_COLOR, strokeWidth: 1.0, opacity: 0.28 });
+      if (avgPts.length > 1) jamIntElements.push(h('polyline', { key: 'jam-load-avg', points: avgPts.join(' '), fill: 'none', stroke: METRIC_JAM_LOAD_COLOR, strokeWidth: 1.0 }));
+    } else if (smoothMode === 'bands') {
+      const envPath = makeAlignedEnvelopePath(min, max, getY);
+      if (envPath) jamIntElements.push(h('path', { key: 'jam-load-band', d: envPath, fill: METRIC_JAM_LOAD_COLOR, opacity: 0.15 }));
+      if (avgPts.length > 1) jamIntElements.push(h('polyline', { key: 'jam-load-avg', points: avgPts.join(' '), fill: 'none', stroke: METRIC_JAM_LOAD_COLOR, strokeWidth: 1.0 }));
+    }
+  }
+
+  // Awake Chunks Series (Cyan #38bdf8)
+  const awakeElements = [];
+  if (enabledLayers.awake && data.length > 0) {
+    const getY = getYForAwake;
+    const stats = computeCausalStats(c => Math.max(0, Math.min(maxAwake, c.awake || 0)));
+    const rawPts = makeRawPoints(stats.raw, getY);
+    const avgPts = makeAlignedSmoothPoints(stats.avg, getY);
+    if (smoothMode === 'off') {
+      if (rawPts.length > 1) {
+        const firstX = (padLeft + 0.5 * colW).toFixed(1);
+        const lastX = (padLeft + (visible.length - 0.5) * colW).toFixed(1);
+        const areaPath = `M ${firstX},${yBottom} L ${rawPts.join(' L ')} L ${lastX},${yBottom} Z`;
+        awakeElements.push(h('path', { key: 'awake-area', d: areaPath, fill: '#38bdf8', opacity: 0.08 }));
+        awakeElements.push(h('polyline', { key: 'awake-line', points: rawPts.join(' '), fill: 'none', stroke: '#38bdf8', strokeWidth: 1.0 }));
+      }
+    } else if (smoothMode === 'rolling') {
+      if (rawPts.length > 1) {
+        awakeElements.push(h('polyline', { key: 'awake-raw', points: rawPts.join(' '), fill: 'none', stroke: '#38bdf8', strokeWidth: 1.0, opacity: 0.28 }));
+      }
+      if (avgPts.length > 1) {
+        awakeElements.push(h('polyline', { key: 'awake-avg', points: avgPts.join(' '), fill: 'none', stroke: '#38bdf8', strokeWidth: 1.0 }));
+      }
+    } else if (smoothMode === 'bands') {
+      const envPath = makeAlignedEnvelopePath(stats.min, stats.max, getY);
+      if (envPath) awakeElements.push(h('path', { key: 'awake-band', d: envPath, fill: '#38bdf8', opacity: 0.12 }));
+      if (avgPts.length > 1) {
+        awakeElements.push(h('polyline', { key: 'awake-avg', points: avgPts.join(' '), fill: 'none', stroke: '#38bdf8', strokeWidth: 1.0 }));
+      }
+    }
+  }
+
+  // Live Elements (Dynamic) Series (Slate #94a3b8 - Solid line, no dash crawl)
+  const liveElements = [];
+  if (enabledLayers.live && data.length > 0) {
+    const getY = getYForLive;
+    const stats = computeCausalStats(c => Math.max(0, Math.min(maxLive, c.live || 0)));
+    const rawPts = makeRawPoints(stats.raw, getY);
+    const avgPts = makeAlignedSmoothPoints(stats.avg, getY);
+    if (smoothMode === 'off') {
+      if (rawPts.length > 1) {
+        liveElements.push(h('polyline', { key: 'live-line', points: rawPts.join(' '), fill: 'none', stroke: '#94a3b8', strokeWidth: 1.0 }));
+      }
+    } else if (smoothMode === 'rolling') {
+      if (rawPts.length > 1) {
+        liveElements.push(h('polyline', { key: 'live-raw', points: rawPts.join(' '), fill: 'none', stroke: '#94a3b8', strokeWidth: 1.0, opacity: 0.28 }));
+      }
+      if (avgPts.length > 1) {
+        liveElements.push(h('polyline', { key: 'live-avg', points: avgPts.join(' '), fill: 'none', stroke: '#94a3b8', strokeWidth: 1.0 }));
+      }
+    } else if (smoothMode === 'bands') {
+      const envPath = makeAlignedEnvelopePath(stats.min, stats.max, getY);
+      if (envPath) liveElements.push(h('path', { key: 'live-band', d: envPath, fill: '#94a3b8', opacity: 0.12 }));
+      if (avgPts.length > 1) {
+        liveElements.push(h('polyline', { key: 'live-avg', points: avgPts.join(' '), fill: 'none', stroke: '#94a3b8', strokeWidth: 1.0 }));
+      }
+    }
+  }
+
+  // Sim Compute Time Series (Purple #c084fc - Solid line, no dash crawl)
+  const simElements = [];
+  if (enabledLayers.simTime && data.length > 0) {
+    const getY = v => yBottom - (Math.max(0, Math.min(33.3, v)) / 33.3) * plotH;
+    const stats = computeCausalStats(c => Math.max(0, Math.min(33.3, c.simMs || 0)));
+    const rawPts = makeRawPoints(stats.raw, getY);
+    const avgPts = makeAlignedSmoothPoints(stats.avg, getY);
+    if (smoothMode === 'off') {
+      if (rawPts.length > 1) {
+        simElements.push(h('polyline', { key: 'sim-line', points: rawPts.join(' '), fill: 'none', stroke: '#c084fc', strokeWidth: 1.0 }));
+      }
+    } else if (smoothMode === 'rolling') {
+      if (rawPts.length > 1) {
+        simElements.push(h('polyline', { key: 'sim-raw', points: rawPts.join(' '), fill: 'none', stroke: '#c084fc', strokeWidth: 1.0, opacity: 0.28 }));
+      }
+      if (avgPts.length > 1) {
+        simElements.push(h('polyline', { key: 'sim-avg', points: avgPts.join(' '), fill: 'none', stroke: '#c084fc', strokeWidth: 1.0 }));
+      }
+    } else if (smoothMode === 'bands') {
+      const envPath = makeAlignedEnvelopePath(stats.min, stats.max, getY);
+      if (envPath) simElements.push(h('path', { key: 'sim-band', d: envPath, fill: '#c084fc', opacity: 0.15 }));
+      if (avgPts.length > 1) {
+        simElements.push(h('polyline', { key: 'sim-avg', points: avgPts.join(' '), fill: 'none', stroke: '#c084fc', strokeWidth: 1.0 }));
+      }
+    }
+  }
+
+  // UPS Series (Green #4ade80)
+  const upsElements = [];
+  if (enabledLayers.ups && data.length > 0) {
+    const getY = v => yBottom - (Math.max(0, Math.min(maxUps, v)) / maxUps) * plotH;
+    const stats = computeCausalStats(
+      c => c.avg !== undefined ? c.avg : (c.ups !== undefined ? c.ups : 0),
+      c => c.min !== undefined ? c.min : (c.avg !== undefined ? c.avg : (c.ups !== undefined ? c.ups : 0)),
+      c => c.max !== undefined ? c.max : (c.avg !== undefined ? c.avg : (c.ups !== undefined ? c.ups : 0))
+    );
+    const rawPts = makeRawPoints(stats.raw, getY);
+    const avgPts = makeAlignedSmoothPoints(stats.avg, getY);
+    if (smoothMode === 'off') {
+      const hasPerBucketMinMax = src.some(c => c.min !== undefined && c.max !== undefined && c.min !== c.max);
+      if (hasPerBucketMinMax) {
+        const minVals = src.map(c => c.min !== undefined ? c.min : (c.avg !== undefined ? c.avg : c.ups));
+        const maxVals = src.map(c => c.max !== undefined ? c.max : (c.avg !== undefined ? c.avg : c.ups));
+        const envPath = makeEnvelopePath(minVals, maxVals, getY);
+        if (envPath) upsElements.push(h('path', { key: 'ups-env', d: envPath, fill: '#4ade80', opacity: 0.18 }));
+      }
+      if (rawPts.length > 1) {
+        upsElements.push(h('polyline', { key: 'ups-line', points: rawPts.join(' '), fill: 'none', stroke: '#4ade80', strokeWidth: 1.0 }));
+      }
+    } else if (smoothMode === 'rolling') {
+      if (rawPts.length > 1) {
+        upsElements.push(h('polyline', { key: 'ups-raw', points: rawPts.join(' '), fill: 'none', stroke: '#4ade80', strokeWidth: 1.0, opacity: 0.28 }));
+      }
+      if (avgPts.length > 1) {
+        upsElements.push(h('polyline', { key: 'ups-avg', points: avgPts.join(' '), fill: 'none', stroke: '#4ade80', strokeWidth: 1.0 }));
+      }
+    } else if (smoothMode === 'bands') {
+      const envPath = makeAlignedEnvelopePath(stats.min, stats.max, getY);
+      if (envPath) upsElements.push(h('path', { key: 'ups-band', d: envPath, fill: '#4ade80', opacity: 0.18 }));
+      if (avgPts.length > 1) {
+        upsElements.push(h('polyline', { key: 'ups-avg', points: avgPts.join(' '), fill: 'none', stroke: '#4ade80', strokeWidth: 1.0 }));
+      }
+    }
+  }
+
+  // Grid lines (Solid lines, no dashed shimmer)
+  const gridLines = [];
+  const upsTickStep = maxUps <= 120 ? 15 : (maxUps <= 240 ? 30 : Math.max(50, niceMax(maxUps / 4, 50)));
+  const leftTickSet = new Set([0, TICK_HZ, maxUps]);
+  for (let val = upsTickStep; val < maxUps; val += upsTickStep) leftTickSet.add(val);
+  const leftTicks = Array.from(leftTickSet).sort((a, b) => a - b);
+  leftTicks.forEach(val => {
+    const y = yBottom - (val / maxUps) * plotH;
+    gridLines.push(h('line', {
+      key: `grid-${val}`,
+      x1: padLeft, y1: y, x2: padLeft + plotW, y2: y,
+      stroke: val === TICK_HZ ? 'rgba(74, 222, 128, 0.45)' : 'rgba(255,255,255,0.08)',
+      strokeWidth: val === TICK_HZ ? 1.5 : 1,
+    }));
+    gridLines.push(h('text', {
+      key: `lbl-left-${val}`,
+      x: padLeft - 8, y: y + 4,
+      fill: val === TICK_HZ ? '#4ade80' : COLORS.dim,
+      fontSize: '11px', textAnchor: 'end', fontFamily: 'ui-monospace, monospace',
+      fontWeight: val === TICK_HZ ? 'bold' : 'normal',
+    }, String(val)));
+  });
+
+  const railDefs = {
+    counts: {
+      color: METRIC_MOVES_COLOR,
+      title: isLog ? 'Counts (Log)' : 'Counts',
+      ticks: isLog
+        ? (() => {
+          const powers = [1, 10, 100, 1000, 10000, 100000, 1000000].filter(p => p <= maxParticles);
+          if (powers.length === 0 || powers[0] !== 0) powers.unshift(0);
+          if (maxParticles > powers[powers.length - 1] * 2) powers.push(maxParticles);
+          return powers;
+        })()
+        : [0, Math.round(maxParticles / 2), maxParticles],
+      getY: getYForParticle,
+      fmt: formatCount,
+    },
+    awake: {
+      color: '#38bdf8',
+      title: 'Chunks',
+      ticks: [0, Math.round(maxAwake / 2), maxAwake],
+      getY: getYForAwake,
+      fmt: formatCount,
+    },
+    live: {
+      color: '#94a3b8',
+      title: 'Live pop',
+      ticks: [0, Math.round(maxLive / 2), maxLive],
+      getY: getYForLive,
+      fmt: formatCount,
+    },
+    jamLoad: {
+      color: METRIC_JAM_LOAD_COLOR,
+      title: 'Jam load',
+      ticks: [0, maxJamLoad / 2, maxJamLoad],
+      getY: getYForJamLoad,
+      fmt: v => (v >= 10 ? formatCount(v) : (Math.round(v * 100) / 100).toFixed(2)),
+    },
+    jamShare: {
+      color: METRIC_JAM_SHARE_COLOR,
+      title: 'Jam %',
+      ticks: [0, 0.25, 0.5, 0.75, 1],
+      getY: getYForJamShare,
+      fmt: v => `${Math.round(v * 100)}%`,
+    },
+    deficit: {
+      color: METRIC_DEFICIT_COLOR,
+      title: 'Lost s',
+      ticks: (() => {
+        const ticks = [minDeficitSec, maxDeficitSec];
+        if (minDeficitSec < 0 && maxDeficitSec > 0) ticks.splice(1, 0, 0);
+        return ticks;
+      })(),
+      getY: getYForDeficit,
+      fmt: v => formatSecSigned(v).replace(' s', ''),
+    },
+  };
+
+  rightRails.forEach((id, railIdx) => {
+    const rail = railDefs[id];
+    if (!rail) return;
+    const xRail = padLeft + plotW + 8 + railIdx * 52;
+    gridLines.push(h('line', {
+      key: `rail-${id}`,
+      x1: xRail, y1: padTop, x2: xRail, y2: yBottom,
+      stroke: rail.color, strokeWidth: 1.5, opacity: 0.55,
+    }));
+    rail.ticks.forEach(val => {
+      const y = rail.getY(val);
+      gridLines.push(h('text', {
+        key: `lbl-rail-${id}-${val}`,
+        x: xRail + 4, y: y + 4,
+        fill: rail.color,
+        fontSize: '10px', textAnchor: 'start', fontFamily: 'ui-monospace, monospace',
+      }, rail.fmt(val)));
+    });
+    const titleY = padTop + (yBottom - padTop) / 2;
+    const titleX = xRail - 3;
+    gridLines.push(h('text', {
+      key: `title-rail-${id}`,
+      x: titleX,
+      y: titleY,
+      fill: rail.color, fontSize: '10px', textAnchor: 'middle', fontWeight: 'bold',
+      fontFamily: 'ui-monospace, monospace',
+      transform: `rotate(-90 ${titleX} ${titleY})`,
+    }, rail.title));
+  });
+
+  if (enabledLayers.jamRate) {
+    [0.25, 0.5, 0.75].forEach(frac => {
+      const y = getYForJamShare(frac);
+      gridLines.push(h('line', {
+        key: `jam-guide-${frac}`,
+        x1: padLeft, y1: y, x2: padLeft + plotW, y2: y,
+        stroke: 'rgba(232, 121, 249, 0.18)', strokeWidth: 1,
+      }));
+    });
+  }
+
+  // 16.6 ms sim compute budget reference line
+  if (enabledLayers.simTime) {
+    const y16 = yBottom - (16.66 / 33.3) * plotH;
+    gridLines.push(h('line', {
+      key: 'sim-budget',
+      x1: padLeft, y1: y16, x2: padLeft + plotW, y2: y16,
+      stroke: 'rgba(192, 132, 252, 0.35)', strokeWidth: 1,
+    }));
+    gridLines.push(h('text', {
+      key: 'lbl-sim-budget',
+      x: padLeft + plotW - 4, y: y16 - 4,
+      fill: '#c084fc', fontSize: '10px', textAnchor: 'end', fontFamily: 'system-ui, sans-serif',
+    }, '16.6ms (60 UPS Step Budget)'));
+  }
+
+  if (deficitWanted && minDeficitSec < 0 && maxDeficitSec > 0) {
+    const y0 = getYForDeficit(0);
+    gridLines.push(h('line', {
+      key: 'deficit-zero',
+      x1: padLeft, y1: y0, x2: padLeft + plotW, y2: y0,
+      stroke: 'rgba(244, 63, 94, 0.35)', strokeWidth: 1,
+    }));
+  }
+
+  // Slowdown phase bands (always, even if the deficit curve is off)
+  const slowdownBandEls = [];
+  if (deficit.phases && deficit.phases.length > 0 && visible.length > 0) {
+    for (let p = 0; p < deficit.phases.length; p++) {
+      const ph = deficit.phases[p];
+      const visStart = Math.max(0, ph.startIdx - padCount);
+      const visEnd = Math.min(visible.length - 1, ph.endIdx - padCount);
+      if (visEnd < visStart) continue;
+      if (ph.endIdx < padCount || ph.startIdx >= src.length) continue;
+      const x = padLeft + visStart * colW;
+      const w = Math.max(1, (visEnd - visStart + 1) * colW);
+      slowdownBandEls.push(h('rect', {
+        key: `sd-band-${ph.startIdx}-${ph.endIdx}`,
+        x, y: padTop, width: w, height: plotH,
+        fill: 'rgba(239, 68, 68, 0.12)',
+      }));
+    }
+  }
+
+  // Lost-time series (signed seconds). D faint, D_perm solid.
+  const deficitElements = [];
+  if (deficitWanted && deficit.d.length > 0) {
+    const getY = getYForDeficit;
+    const rawSec = deficit.d.map(v => v / TICK_HZ);
+    const permSec = deficit.dPerm.map(v => v / TICK_HZ);
+    const rawPts = makeRawPoints(rawSec, getY);
+    const permPts = makeRawPoints(permSec, getY);
+    if (rawPts.length > 1) {
+      deficitElements.push(h('polyline', {
+        key: 'deficit-d', points: rawPts.join(' '), fill: 'none',
+        stroke: METRIC_DEFICIT_COLOR, strokeWidth: 1.0, opacity: 0.28,
+      }));
+    }
+    if (permPts.length > 1) {
+      deficitElements.push(h('polyline', {
+        key: 'deficit-perm', points: permPts.join(' '), fill: 'none',
+        stroke: METRIC_DEFICIT_COLOR, strokeWidth: 1.5,
+      }));
+    }
+  }
+
+  // X Axis time labels: evenly spaced with -m:ss format
+  const xLabels = [];
+  const labelCount = 5;
+  for (let s = 0; s < labelCount; s++) {
+    const frac = s / (labelCount - 1);
+    const idx = Math.min(visible.length - 1, Math.floor(frac * (visible.length - 1)));
+    const x = padLeft + frac * plotW;
+    let label = '';
+    if (rangeType === '60s') {
+      const sec = Math.round((1 - frac) * 60);
+      label = sec === 0 ? 'Now' : `-${sec}s`;
+    } else if (rangeType === '180s') {
+      const sec = Math.round((1 - frac) * 180);
+      if (sec === 0) {
+        label = 'Now';
+      } else {
+        const m = Math.floor(sec / 60);
+        const remS = sec % 60;
+        label = `-${m}:${String(remS).padStart(2, '0')}`;
+      }
+    } else {
+      const curWorldTime = now();
+      const d = visible[idx];
+      let rel = (d && Number.isFinite(d.relMs) && d.relMs > 0) ? d.relMs : 0;
+      if (!(rel > 0) && curWorldTime > 0) {
+        rel = (idx / Math.max(1, visible.length - 1)) * curWorldTime;
+      }
+      label = rel > 0 ? formatShort(rel, 'seconds') : String(idx + 1);
+    }
+    xLabels.push(h('text', {
+      key: `lbl-x-${s}`,
+      x, y: H - 12,
+      fill: COLORS.dim, fontSize: '11px', textAnchor: s === 0 ? 'start' : s === labelCount - 1 ? 'end' : 'middle',
+      fontFamily: 'system-ui, sans-serif',
+    }, label));
+  }
+
+  // Mouse move handler
+  const handleMouseMove = e => {
+    if (!svgRef.current || visible.length === 0) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseSvgX = ((e.clientX - rect.left) / rect.width) * W;
+    if (mouseSvgX < padLeft || mouseSvgX > padLeft + plotW) {
+      if (onHover) onHover(null);
+      return;
+    }
+    const idx = Math.min(visible.length - 1, Math.max(0, Math.floor((mouseSvgX - padLeft) / colW)));
+    if (onHover) onHover({ index: idx, item: visible[idx], clientX: e.clientX, clientY: e.clientY });
+  };
+
+  const handleMouseLeave = () => {
+    if (onHover) onHover(null);
+  };
+
+  // Crosshair (Solid 45% white line for hover, or dashed gold line for pinned scrub)
+  let crosshair = null;
+  if (hoverIdx !== null && hoverIdx >= 0 && hoverIdx < visible.length) {
+    const crossX = padLeft + (hoverIdx + 0.5) * colW;
+    crosshair = h('g', { key: 'crosshair' }, [
+      h('line', {
+        x1: crossX, y1: padTop, x2: crossX, y2: yBottom,
+        stroke: 'rgba(255, 255, 255, 0.45)', strokeWidth: 1.5,
+      }),
+    ]);
+  } else if (pinnedRelMs !== null && visible.length > 0) {
+    let closestIdx = 0;
+    let minDiff = Infinity;
+    for (let i = 0; i < visible.length; i++) {
+      const r = visible[i].relMs || 0;
+      const d = Math.abs(r - pinnedRelMs);
+      if (d < minDiff) { minDiff = d; closestIdx = i; }
+    }
+    const crossX = padLeft + (closestIdx + 0.5) * colW;
+    crosshair = h('g', { key: 'pinned-crosshair' }, [
+      h('line', {
+        x1: crossX, y1: padTop, x2: crossX, y2: yBottom,
+        stroke: '#fbbf24', strokeWidth: 1.5, strokeDasharray: '4 3',
+      }),
+    ]);
+  }
+
+  return h('div', {
+    ref: wrapRef,
+    style: { position: 'relative', width: '100%', height: '100%' },
+    onMouseMove: handleMouseMove,
+    onMouseLeave: handleMouseLeave,
+  }, [
+    h('svg', {
+      ref: svgRef,
+      viewBox: `0 0 ${W} ${H}`,
+      preserveAspectRatio: 'none',
+      style: { width: '100%', height: '100%', display: 'block', overflow: 'visible' },
+    }, [
+      // Axes & grid
+      ...gridLines,
+      ...slowdownBandEls,
+      // Left axis title
+      h('text', {
+        key: 'axis-title-left',
+        x: padLeft - 20, y: padTop - 12,
+        fill: '#4ade80', fontSize: '11px', textAnchor: 'middle', fontWeight: 'bold',
+        fontFamily: 'ui-monospace, monospace',
+      }, 'UPS'),
+
+      // Particle series (Stacked bars, Lines, or Bands)
+      ...particleElements,
+      ...splitElements,
+
+      // Jam Rate series
+      ...jamElements,
+
+      // Jam Load series
+      ...jamIntElements,
+
+      // Awake Chunks series
+      ...awakeElements,
+
+      // Dynamic elements series
+      ...liveElements,
+
+      // Sim Time series
+      ...simElements,
+
+      // UPS series
+      ...upsElements,
+
+      // Lost-time series
+      ...deficitElements,
+
+      // X labels
+      ...xLabels,
+      // Hover crosshair
+      crosshair,
+    ]),
+  ]);
+  } catch (err) {
+    log('[DEBUG] DualAxisChart crashed: ' + err);
+    return h('div', {
+      style: {
+        width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: COLORS.dim, fontSize: '14px', textAlign: 'center', padding: '16px',
+      },
+    }, 'Graph failed to render. Switch range or close with F7 / ESC.');
+  }
+}
+
+const CAUSE_COMPUTE_COLOR = '#c084fc';
+const CAUSE_WAIT_COLOR = '#fbbf24';
+const CAUSE_POST_COLOR = '#64748b';
+
+function formatSlowestRegion(x, y) {
+  if (!Number.isFinite(x) || x < 0) return '—';
+  const xi = Math.round(x);
+  if (!Number.isFinite(y) || y < 0) return t('mods|goldSpeedrun|metrics|causeColumn', { x: xi });
+  return t('mods|goldSpeedrun|metrics|causeChunk', { x: xi, y: Math.round(y) });
+}
+
+function heatMsColor(t) {
+  const u = Math.max(0, Math.min(1, t));
+  if (u <= 0.25) {
+    const k = u / 0.25;
+    return [
+      Math.round(8 + (30 - 8) * k),
+      Math.round(12 + (41 - 12) * k),
+      Math.round(22 + (59 - 22) * k),
+    ];
+  }
+  if (u <= 0.5) {
+    const k = (u - 0.25) / 0.25;
+    return [
+      Math.round(30 + (245 - 30) * k),
+      Math.round(41 + (158 - 41) * k),
+      Math.round(59 + (11 - 59) * k),
+    ];
+  }
+  if (u <= 0.75) {
+    const k = (u - 0.5) / 0.25;
+    return [
+      Math.round(245 + (239 - 245) * k),
+      Math.round(158 + (68 - 158) * k),
+      Math.round(11 + (68 - 11) * k),
+    ];
+  }
+  const k = (u - 0.75) / 0.25;
+  return [
+    Math.round(239 + (254 - 239) * k),
+    Math.round(68 + (240 - 68) * k),
+    Math.round(68 + (138 - 68) * k),
+  ];
+}
+
+function ChunkHeatmap({ mode = 'sum', onMode, scrubRelMs = null, onScrub, maxRelMs = 0, slowestX = -1, slowestY = -1, rangeType = '60s' }) {
+  const wrapperRef = react.useRef(null);
+  const canvasRef = react.useRef(null);
+  const [zoom, setZoom] = react.useState(1);
+  const [pan, setPan] = react.useState({ x: 0, y: 0 });
+  const [hoverCell, setHoverCell] = react.useState(null);
+  const [decayFloor, setDecayFloor] = react.useState(0.06);
+  const [decayHalfLife, setDecayHalfLife] = react.useState(30000);
+  const [linearWindow, setLinearWindow] = react.useState(60000);
+  const dragRef = react.useRef({ isDragging: false, startX: 0, startY: 0, initialPanX: 0, initialPanY: 0 });
+
+  const boundSample = causeBoundOfSample(sampleAtRelMs(scrubRelMs));
+  const boundTone = !boundSample ? COLORS.dim
+    : boundSample.bound === 'wait' ? CAUSE_WAIT_COLOR
+    : CAUSE_COMPUTE_COLOR;
+  const boundText = !boundSample
+    ? t('mods|goldSpeedrun|metrics|heatmapBoundEmpty')
+    : boundSample.bound === 'wait'
+      ? t('mods|goldSpeedrun|metrics|heatmapBoundWait')
+      : t('mods|goldSpeedrun|metrics|heatmapBoundCompute');
+  const boundDetail = boundSample
+    ? `  ${roundMs2(boundSample.computeMs)} ms ${t('mods|goldSpeedrun|metrics|causeCompute')} / ${roundMs2(boundSample.waitMs)} ms ${t('mods|goldSpeedrun|metrics|causeWait')}`
+    : '';
+  const data = getHeatmapData(mode, scrubRelMs, rangeType, maxRelMs, decayFloor, decayHalfLife, linearWindow);
+  const meta = data && data.meta;
+  const cells = data && data.cells;
+  const isMs100 = Boolean(data && data.isMs100);
+  const viewPeak = data ? data.maxVal : 0;
+  const scaleMs = isMs100 ? (viewPeak / 100) : viewPeak;
+
+  const world = worldCellSize();
+  const gridW = meta ? meta.gridW : HEATMAP_MAX;
+  const gridH = meta ? meta.gridH : HEATMAP_MAX;
+  const aspectW = world.width > 0 ? world.width : (meta ? meta.chunkWidth : 1);
+  const aspectH = world.height > 0 ? world.height : (meta ? meta.chunkHeight : 1);
+
+  // Wheel zoom centered on cursor
+  react.useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const onWheel = e => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const factor = e.deltaY < 0 ? 1.25 : 0.8;
+      setZoom(currZoom => {
+        const nextZoom = Math.max(1, Math.min(16, currZoom * factor));
+        if (nextZoom === currZoom) return currZoom;
+        if (nextZoom === 1) {
+          setPan({ x: 0, y: 0 });
+          return 1;
+        }
+        const scaleChange = nextZoom / currZoom;
+        setPan(currPan => ({
+          x: mouseX - (mouseX - currPan.x) * scaleChange,
+          y: mouseY - (mouseY - currPan.y) * scaleChange,
+        }));
+        return nextZoom;
+      });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  const onMouseDown = e => {
+    if (e.button !== 0) return;
+    dragRef.current = {
+      isDragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialPanX: pan.x,
+      initialPanY: pan.y,
+    };
+  };
+
+  const onMouseMove = e => {
+    if (dragRef.current.isDragging) {
+      const dx = e.clientX - dragRef.current.startX;
+      const dy = e.clientY - dragRef.current.startY;
+      setPan({
+        x: dragRef.current.initialPanX + dx,
+        y: dragRef.current.initialPanY + dy,
+      });
+    }
+    if (!wrapperRef.current || !meta) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const canvasX = (e.clientX - rect.left - pan.x) / zoom;
+    const canvasY = (e.clientY - rect.top - pan.y) / zoom;
+    const gx = Math.floor((canvasX / rect.width) * gridW);
+    const gy = Math.floor((canvasY / rect.height) * gridH);
+    if (gx >= 0 && gx < gridW && gy >= 0 && gy < gridH) {
+      const gi = gy * HEATMAP_MAX + gx;
+      const rawVal = cells ? (cells[gi] | 0) : 0;
+      const cellMs = isMs100 ? (rawVal / 100) : rawVal;
+      const cx = Math.min(meta.chunkWidth - 1, Math.floor((gx * meta.chunkWidth) / gridW));
+      const cy = Math.min(meta.chunkHeight - 1, Math.floor((gy * meta.chunkHeight) / gridH));
+      const recentMs = (data && data.recentHeat) ? (data.recentHeat[gi] || 0) : null;
+      const cumulMs = (data && data.cumulSource) ? (data.cumulSource[gi] | 0) : null;
+      setHoverCell({ x: cx, y: cy, gx, gy, ms: cellMs, recentMs, cumulMs });
+    } else {
+      setHoverCell(null);
+    }
+  };
+
+  const onMouseUp = () => {
+    dragRef.current.isDragging = false;
+  };
+
+  const onDoubleClick = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  react.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    canvas.width = gridW;
+    canvas.height = gridH;
+    ctx.fillStyle = '#080c16';
+    ctx.fillRect(0, 0, gridW, gridH);
+    if (!cells) return;
+    const img = ctx.createImageData(gridW, gridH);
+    const dataImg = img.data;
+    const peak = Math.max(1, viewPeak);
+    for (let gy = 0; gy < gridH; gy++) {
+      const srcRow = gy * HEATMAP_MAX;
+      for (let gx = 0; gx < gridW; gx++) {
+        const v = cells[srcRow + gx] | 0;
+        const o = (gy * gridW + gx) * 4;
+        if (v <= 0) {
+          dataImg[o] = 8;
+          dataImg[o + 1] = 12;
+          dataImg[o + 2] = 22;
+          dataImg[o + 3] = 255;
+          continue;
+        }
+        const rgb = heatMsColor(Math.sqrt(v / peak));
+        dataImg[o] = rgb[0];
+        dataImg[o + 1] = rgb[1];
+        dataImg[o + 2] = rgb[2];
+        dataImg[o + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+
+    // Draw slowest region (only in live mode without scrub)
+    if (mode === 'live' && scrubRelMs === null && meta && Number.isFinite(slowestX) && slowestX >= 0) {
+      const px = Math.floor(((slowestX + 0.5) / meta.chunkWidth) * gridW);
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 1;
+      if (!Number.isFinite(slowestY) || slowestY < 0) {
+        ctx.beginPath();
+        ctx.moveTo(px + 0.5, 0);
+        ctx.lineTo(px + 0.5, gridH);
+        ctx.stroke();
+      } else {
+        const py = Math.floor(((slowestY + 0.5) / meta.chunkHeight) * gridH);
+        ctx.strokeRect(px - 1.5, py - 1.5, 3, 3);
+      }
+    }
+
+    // Draw hovered cell indicator
+    if (hoverCell) {
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(hoverCell.gx - 0.5, hoverCell.gy - 0.5, 2, 2);
+    }
+  });
+
+  const btn = (id, label) => h('button', {
+    key: id,
+    onClick: () => onMode(id),
+    style: {
+      background: mode === id ? COLORS.blue : 'transparent',
+      border: 'none', color: COLORS.text, borderRadius: '3px',
+      padding: '2px 8px', cursor: 'pointer', fontSize: '10px',
+      fontWeight: mode === id ? 'bold' : 'normal',
+    },
+  }, label);
+
+  const legend = h('div', {
+    key: 'hm-legend',
+    style: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '10px', color: COLORS.dim },
+  }, [
+    h('span', {}, '0 ms'),
+    h('div', {
+      style: {
+        flex: 1, height: '8px', borderRadius: '4px',
+        background: 'linear-gradient(90deg, #080c16 0%, #1e293b 25%, #f59e0b 50%, #ef4444 75%, #fef08a 100%)',
+      },
+    }),
+    h('span', { style: { color: '#fbbf24', fontWeight: 'bold' } }, formatMsOrSec(scaleMs)),
+  ]);
+
+  const timelineBar = onScrub ? h('div', {
+    key: 'hm-timeline',
+    style: {
+      display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px',
+      background: 'rgba(0,0,0,0.3)', borderRadius: '4px',
+      border: '1px solid rgba(255,255,255,0.06)', fontSize: '11px',
+    },
+  }, [
+    h('span', { style: { color: COLORS.dim, whiteSpace: 'nowrap', fontWeight: 'bold', fontSize: '10px' } },
+      t('mods|goldSpeedrun|metrics|heatmapTimeline') + ':'),
+    h('span', { style: { color: scrubRelMs !== null ? '#fbbf24' : '#4ade80', fontWeight: 'bold', minWidth: '38px', fontSize: '10px' } },
+      scrubRelMs !== null ? formatShort(scrubRelMs, 'seconds') : t('mods|goldSpeedrun|metrics|heatmapLiveBtn')),
+    h('input', {
+      type: 'range',
+      min: 0,
+      max: Math.max(1, Math.round(maxRelMs / 1000)),
+      value: scrubRelMs !== null ? Math.round(scrubRelMs / 1000) : Math.max(1, Math.round(maxRelMs / 1000)),
+      onChange: e => onScrub(Number(e.target.value) * 1000),
+      style: { flex: 1, accentColor: scrubRelMs !== null ? '#fbbf24' : '#4ade80', cursor: 'pointer' },
+    }),
+    h('span', { style: { color: COLORS.dim, fontSize: '10px', minWidth: '38px', textAlign: 'right' } },
+      formatShort(maxRelMs, 'seconds')),
+    h('button', {
+      onClick: () => onScrub(null),
+      style: {
+        background: scrubRelMs === null ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255,255,255,0.06)',
+        border: `1px solid ${scrubRelMs === null ? '#4ade80' : COLORS.border}`,
+        color: scrubRelMs === null ? '#4ade80' : COLORS.dim,
+        borderRadius: '3px', padding: '2px 8px', cursor: 'pointer',
+        fontSize: '10px', fontWeight: scrubRelMs === null ? 'bold' : 'normal',
+        display: 'flex', alignItems: 'center', gap: '4px',
+      },
+    }, [
+      h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: scrubRelMs === null ? '#4ade80' : COLORS.dim } }),
+      t('mods|goldSpeedrun|metrics|heatmapLiveBtn'),
+    ]),
+  ]) : null;
+
+  return h('div', {
+    style: {
+      width: '100%', height: '100%', minHeight: 0,
+      display: 'flex', flexDirection: 'column', gap: '8px',
+      background: 'rgba(0,0,0,0.25)', border: `1px solid ${COLORS.border}`,
+      borderRadius: '6px', padding: '10px 12px',
+    },
+  }, [
+    h('div', {
+      key: 'hm-head',
+      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' },
+    }, [
+      h('span', { style: { fontSize: '13px', fontWeight: 'bold', color: COLORS.text } }, t('mods|goldSpeedrun|metrics|heatmapTitle')),
+      h('span', {
+        style: {
+          flex: 1, minWidth: '160px', fontSize: '10px', lineHeight: 1.35, color: boundTone,
+          background: !boundSample
+            ? 'rgba(255,255,255,0.04)'
+            : boundSample.bound === 'wait' ? 'rgba(251, 191, 36, 0.10)' : 'rgba(192, 132, 252, 0.08)',
+          border: `1px solid ${!boundSample
+            ? COLORS.border
+            : boundSample.bound === 'wait' ? 'rgba(251, 191, 36, 0.35)' : 'rgba(192, 132, 252, 0.25)'}`,
+          borderRadius: '4px', padding: '3px 8px',
+        },
+      }, boundText + boundDetail),
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
+        // Zoom controls
+        h('div', {
+          style: {
+            display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.4)',
+            borderRadius: '4px', padding: '2px', border: `1px solid ${COLORS.border}`, gap: '2px',
+          },
+        }, [
+          h('button', {
+            onClick: () => setZoom(z => Math.min(16, z * 1.35)),
+            title: 'Zoom In (+)',
+            style: {
+              background: 'transparent', border: 'none', color: COLORS.text,
+              padding: '2px 6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold',
+            },
+          }, '+'),
+          h('button', {
+            onClick: () => setZoom(z => { const next = Math.max(1, z / 1.35); if (next === 1) setPan({ x: 0, y: 0 }); return next; }),
+            title: 'Zoom Out (-)',
+            style: {
+              background: 'transparent', border: 'none', color: COLORS.text,
+              padding: '2px 6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold',
+            },
+          }, '-'),
+          h('button', {
+            onClick: () => { setZoom(1); setPan({ x: 0, y: 0 }); },
+            title: 'Reset Zoom (Double click map)',
+            style: {
+              background: zoom > 1 ? COLORS.blue : 'transparent', border: 'none',
+              color: COLORS.text, padding: '2px 6px', cursor: 'pointer',
+              fontSize: '10px', borderRadius: '2px',
+            },
+          }, zoom > 1 ? `${zoom.toFixed(1)}x` : t('mods|goldSpeedrun|metrics|heatmapZoomReset')),
+        ]),
+        // Mode buttons
+        h('div', {
+          style: {
+            display: 'flex', background: 'rgba(0,0,0,0.4)', borderRadius: '4px',
+            padding: '2px', border: `1px solid ${COLORS.border}`, gap: '2px',
+          },
+        }, [
+          btn('sum', t('mods|goldSpeedrun|metrics|heatmapSum')),
+          btn('exp', t('mods|goldSpeedrun|metrics|heatmapExp')),
+          btn('linear', t('mods|goldSpeedrun|metrics|heatmapLinear')),
+          btn('peak', t('mods|goldSpeedrun|metrics|heatmapPeak')),
+          btn('live', t('mods|goldSpeedrun|metrics|heatmapLive')),
+        ]),
+      ]),
+    ]),
+    (mode === 'exp' || mode === 'linear') ? h('div', {
+      key: 'hm-sub-bar',
+      style: {
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'rgba(0,0,0,0.3)', borderRadius: '4px', padding: '3px 8px',
+        border: '1px solid rgba(255,255,255,0.06)', fontSize: '10px', gap: '8px', flexWrap: 'wrap',
+      },
+    }, [
+      // Floor selector
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } }, [
+        h('span', { style: { color: COLORS.dim, marginRight: '3px', fontWeight: 'bold' } },
+          t('mods|goldSpeedrun|metrics|heatmapFloor') + ':'),
+        [0.00, 0.03, 0.06, 0.12].map(fl => h('button', {
+          key: fl,
+          onClick: () => setDecayFloor(fl),
+          style: {
+            background: decayFloor === fl ? COLORS.blue : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${decayFloor === fl ? COLORS.blue : 'rgba(255,255,255,0.08)'}`,
+            color: decayFloor === fl ? '#ffffff' : COLORS.dim,
+            borderRadius: '2px', padding: '1px 5px', cursor: 'pointer', fontSize: '9px',
+            fontWeight: decayFloor === fl ? 'bold' : 'normal',
+          },
+        }, fl === 0 ? '0% (flat)' : `${Math.round(fl * 100)}%`)),
+      ]),
+      // Speed / Window selector
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } }, [
+        h('span', { style: { color: COLORS.dim, marginRight: '3px', fontWeight: 'bold' } },
+          mode === 'exp' ? (t('mods|goldSpeedrun|metrics|heatmapHalfLife') + ':') : (t('mods|goldSpeedrun|metrics|heatmapWindow') + ':')),
+        (mode === 'exp' ? [15000, 30000, 60000] : [30000, 60000, 120000]).map(dur => h('button', {
+          key: dur,
+          onClick: () => mode === 'exp' ? setDecayHalfLife(dur) : setLinearWindow(dur),
+          style: {
+            background: (mode === 'exp' ? decayHalfLife === dur : linearWindow === dur) ? COLORS.blue : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${(mode === 'exp' ? decayHalfLife === dur : linearWindow === dur) ? COLORS.blue : 'rgba(255,255,255,0.08)'}`,
+            color: (mode === 'exp' ? decayHalfLife === dur : linearWindow === dur) ? '#ffffff' : COLORS.dim,
+            borderRadius: '2px', padding: '1px 5px', cursor: 'pointer', fontSize: '9px',
+            fontWeight: (mode === 'exp' ? decayHalfLife === dur : linearWindow === dur) ? 'bold' : 'normal',
+          },
+        }, `${dur / 1000}s`)),
+      ]),
+    ]) : null,
+    h('div', {
+      key: 'hm-map',
+      style: {
+        flex: 1, minHeight: 0, width: '100%',
+        background: '#040711', borderRadius: '4px', overflow: 'hidden',
+        border: '1px solid rgba(255,255,255,0.06)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'relative',
+      },
+    }, data
+      ? h('div', {
+        ref: wrapperRef,
+        onMouseDown,
+        onMouseMove,
+        onMouseUp,
+        onMouseLeave: () => {
+          dragRef.current.isDragging = false;
+          setHoverCell(null);
+        },
+        onDoubleClick,
+        style: {
+          maxHeight: '100%',
+          maxWidth: '100%',
+          height: '100%',
+          aspectRatio: `${aspectW} / ${aspectH}`,
+          position: 'relative',
+          overflow: 'hidden',
+          cursor: zoom > 1 ? (dragRef.current.isDragging ? 'grabbing' : 'grab') : 'crosshair',
+        },
+      }, [
+        h('canvas', {
+          ref: canvasRef,
+          width: gridW,
+          height: gridH,
+          style: {
+            width: '100%',
+            height: '100%',
+            display: 'block',
+            imageRendering: 'pixelated',
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: '0 0',
+            pointerEvents: 'none',
+          },
+        }),
+      ])
+      : h('div', {
+        style: {
+          width: '100%', height: '100%', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', color: COLORS.dim, fontSize: '12px', padding: '8px',
+          textAlign: 'center',
+        },
+      }, t('mods|goldSpeedrun|metrics|heatmapEmpty'))),
+    hoverCell
+      ? h('div', {
+        key: 'hm-hover',
+        style: { fontSize: '11px', color: COLORS.text, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' },
+      }, [
+        h('span', { style: { color: '#38bdf8' } }, `chunk (${hoverCell.x}, ${hoverCell.y})`),
+        h('span', { style: { color: COLORS.dim } }, '·'),
+        h('span', { style: { color: '#fbbf24' } },
+          (mode === 'exp' || mode === 'linear')
+            ? `Heat: ${formatMsOrSec(hoverCell.recentMs || 0)}`
+            : mode === 'peak' ? `Peak: ${formatMsOrSec(hoverCell.ms)}`
+            : mode === 'live' ? `This tick: ${formatMsOrSec(hoverCell.ms)}`
+            : `Total: ${formatMsOrSec(hoverCell.ms)}`),
+        (mode === 'exp' || mode === 'linear') && hoverCell.cumulMs !== null && hoverCell.cumulMs !== undefined
+          ? h('span', { style: { color: COLORS.dim, fontSize: '10px' } }, `(Total: ${formatMsOrSec(hoverCell.cumulMs)})`)
+          : null,
+        scrubRelMs !== null
+          ? h('span', { style: { color: COLORS.dim, fontSize: '10px', marginLeft: 'auto' } }, `(at ${formatShort(scrubRelMs, 'seconds')})`)
+          : null,
+      ])
+      : legend,
+    timelineBar,
+    h('div', {
+      key: 'hm-hint',
+      style: { fontSize: '10px', color: COLORS.dim, lineHeight: 1.35 },
+    }, t('mods|goldSpeedrun|metrics|heatmapHint')),
+    h('div', {
+      key: 'hm-disclaimer',
+      style: {
+        fontSize: '10px', color: '#fbbf24', lineHeight: 1.4,
+        background: 'rgba(251, 191, 36, 0.08)', border: '1px solid rgba(251, 191, 36, 0.22)',
+        borderRadius: '4px', padding: '6px 8px',
+      },
+    }, t('mods|goldSpeedrun|metrics|heatmapDisclaimer')),
+  ]);
+}
+
+function MetricsOverlayModal() {
+  const [, bump] = react.useState(0);
+  const [range, setRange] = react.useState('60s'); // '60s' | '180s' | 'full'
+  const [scaleMode, setScaleMode] = react.useState('linear'); // 'linear' | 'log'
+  const [smoothMode, setSmoothMode] = react.useState('rolling'); // 'off' | 'rolling' | 'bands'
+  const [layers, setLayers] = react.useState({
+    ups: true,
+    blocks: true,
+    moves: true,
+    jamRate: false,
+    jamLoad: true,
+    jamIntensity: false,
+    awake: true,
+    simTime: false,
+    live: false,
+    blocksSettled: false,
+    blocksActive: true,
+    deficit: true,
+  });
+  const [hoverInfo, setHoverInfo] = react.useState(null);
+  const [benchCopied, setBenchCopied] = react.useState(false);
+  const [heatmapMode, setHeatmapMode] = react.useState('sum');
+  const [scrubRelMs, setScrubRelMs] = react.useState(null);
+  const [benchConfirmOpen, setBenchConfirmOpen] = react.useState(false);
+  const benchConfirmOpenRef = react.useRef(false);
+  react.useEffect(() => { benchConfirmOpenRef.current = benchConfirmOpen; }, [benchConfirmOpen]);
+
+  react.useEffect(() => {
+    const fn = () => bump(n => (n + 1) % 100000);
+    panelListeners.add(fn);
+    metricsListeners.add(fn);
+    return () => {
+      panelListeners.delete(fn);
+      metricsListeners.delete(fn);
+    };
+  }, []);
+
+  // Continuous refresh while modal is open
+  react.useEffect(() => {
+    if (!metricsOverlayOpen) return;
+    const timer = setInterval(() => bump(n => (n + 1) % 100000), 100);
+    return () => clearInterval(timer);
+  }, [metricsOverlayOpen]);
+
+  // Escape closes locally. F7 is handled only by the debounced global binding.
+  react.useEffect(() => {
+    if (!metricsOverlayOpen) return;
+    const onKey = e => {
+      if (e.key === 'Escape') {
+        if (benchConfirmOpenRef.current) {
+          e.preventDefault();
+          setBenchConfirmOpen(false);
+          return;
+        }
+        setMetricsOverlayOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [metricsOverlayOpen]);
+
+  if (!modEnabled() || !metricsOverlayOpen) return null;
+
+  try {
+  // Process data for the selected range - smooth rolling without compacting flicker
+  let chartData = [];
+  let chartLookback = 0;
+  try {
+    const clean = arr => arr.filter(c => c && typeof c === 'object' && (Number.isFinite(c.avg) || Number.isFinite(c.ups)));
+    // 5s window + 5s extra off-screen pad at 10 Hz so the left edge has a full average
+    const lookback10Hz = 100;
+    if (range === '60s') {
+      const src = clean(highResBuffer);
+      const visibleLen = Math.min(src.length, 600);
+      chartLookback = Math.min(Math.max(0, src.length - visibleLen), lookback10Hz);
+      chartData = src.slice(src.length - visibleLen - chartLookback);
+    } else if (range === '180s') {
+      const src = clean(highResBuffer);
+      const visibleLen = Math.min(src.length, 1800);
+      chartLookback = Math.min(Math.max(0, src.length - visibleLen), lookback10Hz);
+      chartData = src.slice(src.length - visibleLen - chartLookback);
+    } else {
+      chartLookback = 0;
+      chartData = historyBuf.length > 0 ? clean(historyBuf) : clean(highResBuffer);
+    }
+  } catch (e) {
+    log('[DEBUG] MetricsOverlay chartData failed: ' + e);
+    chartData = [];
+    chartLookback = 0;
+  }
+
+  const eventScope = allMatterCaptureWanted() ? 'allMatter' : 'ballistic';
+  const benchProgress = benchmarkProgress();
+  const fallbackMs = range === 'full' ? 1000 : 100;
+  const latest = highResBuffer.length > 0
+    ? highResBuffer[highResBuffer.length - 1]
+    : { ups: rawTickSourceReady() ? 60 : 0, blocks: 0, moves: 0, ticks: 0, awake: rawAwakeChunks(), live: rawLiveElements(), simMs: rawSimTimeMs(), allBlocks: null, allMoves: null };
+
+  const latestWin = trailingJamWindow(highResBuffer, highResBuffer.length - 1, eventScope, 100, JAM_WINDOW_MS)
+    || sampleJamInstant(latest, eventScope, 100);
+  const jamShareTxt = latestWin ? `${(latestWin.jamShare * 100).toFixed(1)}%` : '—';
+  const jamLoadTxt = latestWin ? `${latestWin.jamLoad.toFixed(2)}/u` : '—';
+  const flightTxt = latestWin ? latestWin.flight.toFixed(2) : '—';
+
+  const toggleLayer = key => {
+    setLayers(prev => {
+      if (key === 'jamLoad') return { ...prev, jamLoad: !prev.jamLoad, jamIntensity: !prev.jamLoad };
+      return { ...prev, [key]: !prev[key] };
+    });
+  };
+
+  const toggleCaptureScope = () => {
+    if (benchState.running) return;
+    const next = !allMatterCaptureWanted();
+    allMatterRuntimeOverride = next;
+    writeSetting('monitoringMode', next ? 'full' : 'standard');
+    applyMonitoringMask();
+    refreshSettingsUi();
+    notifyMetrics();
+  };
+
+  const enableStandardMonitoring = () => {
+    allMatterRuntimeOverride = null;
+    writeSetting('monitoringMode', 'standard');
+    applyMonitoringMask();
+    refreshSettingsUi();
+    notifyMetrics();
+  };
+
+  const enabledLayers = {
+    ...layers,
+    jamLoad: layers.jamLoad || layers.jamIntensity,
+  };
+  const deficitInfo = annotateDeficitSeries(chartData);
+
+  const activeHoverItem = hoverInfo ? hoverInfo.item : null;
+  const hoverWin = activeHoverItem
+    ? (sampleJamInstant(activeHoverItem, eventScope, fallbackMs))
+    : null;
+  const hoverScopeMissing = eventScope === 'allMatter' && activeHoverItem && (
+    activeHoverItem.allBlocks === null || activeHoverItem.allBlocks === undefined
+  );
+
+  return h('div', {
+    style: {
+      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+      background: 'rgba(10, 12, 18, 0.88)',
+      backdropFilter: 'blur(6px)',
+      pointerEvents: 'auto',
+      zIndex: 10035,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    },
+    onClick: e => {
+      if (e.target === e.currentTarget) setMetricsOverlayOpen(false);
+    },
+  }, [
+    h('div', {
+      key: 'modal-body',
+      style: {
+        position: 'relative',
+        width: '98vw', maxWidth: '1760px', height: '92vh',
+        display: 'flex', flexDirection: 'column',
+        padding: '18px 24px',
+        borderRadius: '10px',
+        border: `1px solid ${COLORS.border}`,
+        background: 'rgba(17, 21, 28, 0.98)',
+        boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
+        color: COLORS.text,
+        font: '500 13px/1.4 system-ui, sans-serif',
+      },
+      onClick: e => e.stopPropagation(),
+    }, [
+      // Top header
+      h('div', {
+        key: 'header',
+        style: {
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          paddingBottom: '12px', borderBottom: `1px solid ${COLORS.border}`, gap: '16px', flexWrap: 'wrap',
+        },
+      }, [
+        h('div', { key: 'title-block', style: { display: 'flex', alignItems: 'center', gap: '12px' } }, [
+          h('span', { style: { fontSize: '18px', fontWeight: 'bold', color: COLORS.text } }, t('mods|goldSpeedrun|metrics|title')),
+          h('span', { style: { fontSize: '12px', color: COLORS.dim } }, `(F7 / ESC)`),
+        ]),
+        // Real-time stat badges
+        h('div', { key: 'stats-strip', style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } }, [
+          h('div', {
+            style: {
+              background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px',
+              fontSize: '11px', border: `1px solid ${COLORS.border}`,
+            },
+          }, [
+            h('span', { style: { color: COLORS.dim, marginRight: '4px' } }, `${t('mods|goldSpeedrun|metrics|curUps')}:`),
+            h('span', { style: { color: latest.ups >= 55 ? COLORS.green : latest.ups >= 45 ? COLORS.gold : COLORS.red, fontWeight: 'bold' } }, `${latest.ups || 0}`),
+          ]),
+          h('div', {
+            style: {
+              background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px',
+              fontSize: '11px', border: `1px solid ${COLORS.border}`,
+            },
+          }, [
+            h('span', { style: { color: COLORS.dim, marginRight: '4px' } }, `${t('mods|goldSpeedrun|metrics|activeChunks')}:`),
+            h('span', { style: { color: '#38bdf8', fontWeight: 'bold' } }, `${latest.awake || 0}`),
+          ]),
+          h('div', {
+            style: {
+              background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px',
+              fontSize: '11px', border: `1px solid ${COLORS.border}`,
+            },
+          }, [
+            h('span', { style: { color: COLORS.dim, marginRight: '4px' } }, `${t('mods|goldSpeedrun|metrics|jamShare')}:`),
+            h('span', { style: { color: METRIC_JAM_SHARE_COLOR, fontWeight: 'bold' } }, jamShareTxt),
+          ]),
+          h('div', {
+            style: {
+              background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px',
+              fontSize: '11px', border: `1px solid ${COLORS.border}`,
+            },
+          }, [
+            h('span', { style: { color: COLORS.dim, marginRight: '4px' } }, `${t('mods|goldSpeedrun|metrics|flightActivity')}:`),
+            h('span', { style: { color: '#38bdf8', fontWeight: 'bold' } }, flightTxt),
+          ]),
+          h('div', {
+            style: {
+              background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px',
+              fontSize: '11px', border: `1px solid ${COLORS.border}`,
+            },
+          }, [
+            h('span', { style: { color: COLORS.dim, marginRight: '4px' } }, `${t('mods|goldSpeedrun|metrics|jamLoad')}:`),
+            h('span', { style: { color: METRIC_JAM_LOAD_COLOR, fontWeight: 'bold' } }, jamLoadTxt),
+          ]),
+          h('div', {
+            style: {
+              background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px',
+              fontSize: '11px', border: `1px solid ${COLORS.border}`,
+            },
+          }, [
+            h('span', { style: { color: COLORS.dim, marginRight: '4px' } }, `${t('mods|goldSpeedrun|metrics|simStep')}:`),
+            h('span', { style: { color: latest.simMs > 16.6 ? '#f87171' : '#c084fc', fontWeight: 'bold' } }, `${latest.simMs || 0} ms`),
+          ]),
+          h('div', {
+            style: {
+              background: deficitInfo.unrecoveredTicks > 0 ? 'rgba(244, 63, 94, 0.12)' : 'rgba(255,255,255,0.05)',
+              padding: '4px 8px', borderRadius: '4px',
+              fontSize: '11px', border: `1px solid ${deficitInfo.unrecoveredTicks > 0 ? METRIC_DEFICIT_COLOR : COLORS.border}`,
+            },
+          }, [
+            h('span', { style: { color: COLORS.dim, marginRight: '4px' } }, `${t('mods|goldSpeedrun|metrics|slowdownIn')}:`),
+            h('span', { style: { color: METRIC_DEFICIT_COLOR, fontWeight: 'bold' } },
+              deficitInfo.slowdownMs > 0 ? formatShort(deficitInfo.slowdownMs, 'seconds') : t('mods|goldSpeedrun|metrics|slowdownNone')),
+          ]),
+          h('div', {
+            style: {
+              background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px',
+              fontSize: '11px', border: `1px solid ${COLORS.border}`,
+            },
+          }, [
+            h('span', { style: { color: COLORS.dim, marginRight: '4px' } }, `${t('mods|goldSpeedrun|metrics|unrecovered')}:`),
+            h('span', { style: { color: METRIC_DEFICIT_COLOR, fontWeight: 'bold' } },
+              `${formatSecSigned(deficitInfo.unrecoveredSec)} (${fmtSigned(Math.round(deficitInfo.unrecoveredTicks), 0)})`),
+          ]),
+        ]),
+        // Range toggles & close
+        h('div', { key: 'actions', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+          h('div', {
+            style: { display: 'flex', background: 'rgba(0,0,0,0.4)', borderRadius: '4px', padding: '2px', border: `1px solid ${COLORS.border}` },
+          }, [
+            h('button', {
+              onClick: () => setRange('60s'),
+              style: {
+                background: range === '60s' ? COLORS.blue : 'transparent', border: 'none',
+                color: COLORS.text, padding: '4px 10px', borderRadius: '3px', cursor: 'pointer', fontSize: '11px',
+              },
+            }, t('mods|goldSpeedrun|metrics|range60s')),
+            h('button', {
+              onClick: () => setRange('180s'),
+              style: {
+                background: range === '180s' ? COLORS.blue : 'transparent', border: 'none',
+                color: COLORS.text, padding: '4px 10px', borderRadius: '3px', cursor: 'pointer', fontSize: '11px',
+              },
+            }, t('mods|goldSpeedrun|metrics|range180s')),
+            h('button', {
+              onClick: () => setRange('full'),
+              style: {
+                background: range === 'full' ? COLORS.blue : 'transparent', border: 'none',
+                color: COLORS.text, padding: '4px 10px', borderRadius: '3px', cursor: 'pointer', fontSize: '11px',
+              },
+            }, t('mods|goldSpeedrun|metrics|rangeFull')),
+          ]),
+          h('button', {
+            onClick: () => setMetricsOverlayOpen(false),
+            style: {
+              cursor: 'pointer', padding: '6px 14px', borderRadius: '4px',
+              border: `1px solid ${COLORS.border}`, background: 'rgba(255,255,255,0.06)', color: COLORS.text,
+              fontSize: '12px', fontWeight: 'bold',
+            },
+          }, t('mods|goldSpeedrun|metrics|close')),
+        ]),
+      ]),
+
+      !monitoringEnabled() ? h('div', {
+        key: 'mon-off',
+        style: {
+          marginTop: '10px', padding: '10px 12px', borderRadius: '6px',
+          background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.35)',
+          display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+        },
+      }, [
+        h('div', { style: { flex: 1, minWidth: '240px' } }, [
+          h('div', { style: { color: '#fbbf24', fontWeight: 'bold', marginBottom: '2px' } }, t('mods|goldSpeedrun|metrics|monitoringOffTitle')),
+          h('div', { style: { color: COLORS.dim, lineHeight: 1.4, fontSize: '11px' } }, t('mods|goldSpeedrun|metrics|monitoringOffBody')),
+        ]),
+        h('button', {
+          onClick: enableStandardMonitoring,
+          style: {
+            cursor: 'pointer', padding: '6px 12px', borderRadius: '4px',
+            border: '1px solid #fbbf24', background: 'rgba(251, 191, 36, 0.18)',
+            color: '#fbbf24', fontSize: '12px', fontWeight: 'bold',
+          },
+        }, t('mods|goldSpeedrun|metrics|monitoringOffEnable')),
+      ]) : null,
+
+      // Channel Toggles Toolbar + Scale Mode
+      h('div', {
+        key: 'toolbar',
+        style: {
+          display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', flexWrap: 'wrap',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        },
+      }, [
+        h('span', { style: { color: COLORS.dim, fontSize: '12px', fontWeight: 'bold' } }, 'Channels:'),
+        // UPS Line toggle
+        h('button', {
+          onClick: () => toggleLayer('ups'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: layers.ups ? 'rgba(74, 222, 128, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${layers.ups ? '#4ade80' : COLORS.border}`,
+            color: layers.ups ? '#4ade80' : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80' } }),
+          t('mods|goldSpeedrun|metrics|layerUps'),
+        ]),
+        // Collisions toggle
+        h('button', {
+          onClick: () => toggleLayer('blocks'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: layers.blocks ? 'rgba(248, 113, 113, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${layers.blocks ? '#f87171' : COLORS.border}`,
+            color: layers.blocks ? '#f87171' : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: '#f87171' } }),
+          t('mods|goldSpeedrun|metrics|layerBlocks'),
+        ]),
+        eventScope === 'allMatter' ? h('button', {
+          onClick: () => toggleLayer('blocksSettled'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: layers.blocksSettled ? 'rgba(251, 191, 36, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${layers.blocksSettled ? METRIC_SETTLED_COLOR : COLORS.border}`,
+            color: layers.blocksSettled ? METRIC_SETTLED_COLOR : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: METRIC_SETTLED_COLOR } }),
+          t('mods|goldSpeedrun|metrics|layerBlocksSettled'),
+        ]) : null,
+        eventScope === 'allMatter' ? h('button', {
+          onClick: () => toggleLayer('blocksActive'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: layers.blocksActive ? 'rgba(251, 113, 133, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${layers.blocksActive ? METRIC_ACTIVE_COLOR : COLORS.border}`,
+            color: layers.blocksActive ? METRIC_ACTIVE_COLOR : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: METRIC_ACTIVE_COLOR } }),
+          t('mods|goldSpeedrun|metrics|layerBlocksActive'),
+        ]) : null,
+        // Moves toggle
+        h('button', {
+          onClick: () => toggleLayer('moves'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: layers.moves ? 'rgba(45, 212, 191, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${layers.moves ? METRIC_MOVES_COLOR : COLORS.border}`,
+            color: layers.moves ? METRIC_MOVES_COLOR : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: METRIC_MOVES_COLOR } }),
+          t('mods|goldSpeedrun|metrics|layerMoves'),
+        ]),
+        // Jam Share (%) toggle
+        h('button', {
+          onClick: () => toggleLayer('jamRate'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: layers.jamRate ? 'rgba(232, 121, 249, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${layers.jamRate ? METRIC_JAM_SHARE_COLOR : COLORS.border}`,
+            color: layers.jamRate ? METRIC_JAM_SHARE_COLOR : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: METRIC_JAM_SHARE_COLOR } }),
+          t('mods|goldSpeedrun|metrics|layerJamShare'),
+        ]),
+        // Jam Load toggle
+        h('button', {
+          onClick: () => toggleLayer('jamLoad'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: enabledLayers.jamLoad ? 'rgba(249, 115, 22, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${enabledLayers.jamLoad ? METRIC_JAM_LOAD_COLOR : COLORS.border}`,
+            color: enabledLayers.jamLoad ? METRIC_JAM_LOAD_COLOR : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: METRIC_JAM_LOAD_COLOR } }),
+          t('mods|goldSpeedrun|metrics|layerJamLoad'),
+        ]),
+        // Awake Chunks toggle
+        h('button', {
+          onClick: () => toggleLayer('awake'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: layers.awake ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${layers.awake ? '#38bdf8' : COLORS.border}`,
+            color: layers.awake ? '#38bdf8' : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: '#38bdf8' } }),
+          t('mods|goldSpeedrun|metrics|layerAwake'),
+        ]),
+        // Sim Compute Time toggle
+        h('button', {
+          onClick: () => toggleLayer('simTime'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: layers.simTime ? 'rgba(192, 132, 252, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${layers.simTime ? '#c084fc' : COLORS.border}`,
+            color: layers.simTime ? '#c084fc' : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: '#c084fc' } }),
+          t('mods|goldSpeedrun|metrics|layerSimTime'),
+        ]),
+        // Live Elements toggle
+        h('button', {
+          onClick: () => toggleLayer('live'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: layers.live ? 'rgba(148, 163, 184, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${layers.live ? '#94a3b8' : COLORS.border}`,
+            color: layers.live ? '#94a3b8' : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: '#94a3b8' } }),
+          t('mods|goldSpeedrun|metrics|layerLive'),
+        ]),
+        h('button', {
+          onClick: () => toggleLayer('deficit'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: layers.deficit ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${layers.deficit ? METRIC_DEFICIT_COLOR : COLORS.border}`,
+            color: layers.deficit ? METRIC_DEFICIT_COLOR : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: METRIC_DEFICIT_COLOR } }),
+          t('mods|goldSpeedrun|metrics|layerDeficit'),
+        ]),
+
+        // Smoothing Mode Toggle (Off / Rolling / Bands)
+        h('div', {
+          style: {
+            display: 'flex', alignItems: 'center', marginLeft: 'auto',
+            background: 'rgba(0,0,0,0.4)', borderRadius: '4px', padding: '2px',
+            border: `1px solid ${COLORS.border}`, gap: '2px',
+          },
+        }, [
+          h('span', { style: { color: COLORS.dim, fontSize: '11px', padding: '0 6px' } }, t('mods|goldSpeedrun|metrics|smooth')),
+          h('button', {
+            onClick: () => setSmoothMode('off'),
+            style: {
+              background: smoothMode === 'off' ? COLORS.blue : 'transparent',
+              border: 'none', color: COLORS.text, padding: '3px 8px', borderRadius: '3px',
+              cursor: 'pointer', fontSize: '11px', fontWeight: smoothMode === 'off' ? 'bold' : 'normal',
+            },
+          }, t('mods|goldSpeedrun|metrics|smoothOff')),
+          h('button', {
+            onClick: () => setSmoothMode('rolling'),
+            style: {
+              background: smoothMode === 'rolling' ? COLORS.blue : 'transparent',
+              border: 'none', color: COLORS.text, padding: '3px 8px', borderRadius: '3px',
+              cursor: 'pointer', fontSize: '11px', fontWeight: smoothMode === 'rolling' ? 'bold' : 'normal',
+            },
+          }, t('mods|goldSpeedrun|metrics|smoothRolling')),
+          h('button', {
+            onClick: () => setSmoothMode('bands'),
+            style: {
+              background: smoothMode === 'bands' ? COLORS.blue : 'transparent',
+              border: 'none', color: COLORS.text, padding: '3px 8px', borderRadius: '3px',
+              cursor: 'pointer', fontSize: '11px', fontWeight: smoothMode === 'bands' ? 'bold' : 'normal',
+            },
+          }, t('mods|goldSpeedrun|metrics|smoothBands')),
+        ]),
+
+        // Scale Toggle (Linear / Logarithmic)
+        h('div', {
+          style: {
+            display: 'flex', alignItems: 'center',
+            background: 'rgba(0,0,0,0.4)', borderRadius: '4px', padding: '2px',
+            border: `1px solid ${COLORS.border}`, gap: '2px',
+          },
+        }, [
+          h('span', { style: { color: COLORS.dim, fontSize: '11px', padding: '0 6px' } }, t('mods|goldSpeedrun|metrics|scaleMode')),
+          h('button', {
+            onClick: () => setScaleMode('linear'),
+            style: {
+              background: scaleMode === 'linear' ? COLORS.blue : 'transparent',
+              border: 'none', color: COLORS.text, padding: '3px 8px', borderRadius: '3px',
+              cursor: 'pointer', fontSize: '11px', fontWeight: scaleMode === 'linear' ? 'bold' : 'normal',
+            },
+          }, t('mods|goldSpeedrun|metrics|scaleLinear')),
+          h('button', {
+            onClick: () => setScaleMode('log'),
+            style: {
+              background: scaleMode === 'log' ? COLORS.blue : 'transparent',
+              border: 'none', color: COLORS.text, padding: '3px 8px', borderRadius: '3px',
+              cursor: 'pointer', fontSize: '11px', fontWeight: scaleMode === 'log' ? 'bold' : 'normal',
+            },
+          }, t('mods|goldSpeedrun|metrics|scaleLog')),
+        ]),
+      ]),
+
+      h('div', {
+        key: 'capture-bar',
+        style: {
+          display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', flexWrap: 'wrap',
+          borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: '11px',
+        },
+      }, [
+        h('span', { style: { color: COLORS.dim, fontWeight: 'bold' } }, t('mods|goldSpeedrun|metrics|scopeSwitch')),
+        h('button', {
+          onClick: toggleCaptureScope,
+          disabled: benchState.running,
+          style: {
+            background: eventScope === 'allMatter' ? 'rgba(248, 113, 113, 0.18)' : 'rgba(74, 222, 128, 0.12)',
+            border: `1px solid ${eventScope === 'allMatter' ? '#f87171' : '#4ade80'}`,
+            color: eventScope === 'allMatter' ? '#f87171' : '#4ade80',
+            borderRadius: '4px', padding: '3px 8px', cursor: benchState.running ? 'not-allowed' : 'pointer', fontSize: '11px',
+          },
+        }, eventScope === 'allMatter' ? t('mods|goldSpeedrun|metrics|scopeAllMatter') : t('mods|goldSpeedrun|metrics|scopeBallistic')),
+        isAllMatterCaptureActive()
+          ? h('span', { style: { color: '#f87171', maxWidth: '520px' } }, t('mods|goldSpeedrun|metrics|scopeWarn'))
+          : h('span', { style: { color: COLORS.dim } }, t('mods|goldSpeedrun|metrics|scopeBallistic')),
+        h('button', {
+          onClick: () => setBenchConfirmOpen(true),
+          disabled: benchState.running || isRunning() || gamePaused() || !rawTickSourceReady(),
+          style: {
+            marginLeft: 'auto',
+            background: benchState.running ? 'rgba(251, 191, 36, 0.18)' : 'rgba(255,255,255,0.06)',
+            border: `1px solid ${COLORS.border}`,
+            color: COLORS.text, borderRadius: '4px', padding: '3px 8px',
+            cursor: benchState.running ? 'wait' : 'pointer', fontSize: '11px', fontWeight: 'bold',
+          },
+        }, benchState.running
+          ? t('mods|goldSpeedrun|metrics|benchRunning', {
+            phase: benchProgress ? benchProgress.package : '',
+            totalPhase: benchProgress ? benchProgress.repeat : '',
+            mode: benchProgress ? `${benchProgress.phase} ${benchProgress.seconds}` : '',
+          })
+          : t('mods|goldSpeedrun|metrics|benchBtn')),
+        benchState.running ? h('button', {
+          onClick: cancelMetricBenchmark,
+          style: {
+            background: 'rgba(248, 113, 113, 0.14)', border: '1px solid #f87171',
+            color: '#f87171', borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, t('mods|goldSpeedrun|metrics|benchCancel')) : null,
+        benchState.result ? h('button', {
+          onClick: () => {
+            try {
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(benchState.result.report);
+              }
+            } catch (e) {}
+            benchState.copiedAt = Date.now();
+            setBenchCopied(true);
+            setTimeout(() => setBenchCopied(false), 1500);
+          },
+          style: {
+            background: 'rgba(74, 158, 255, 0.15)', border: `1px solid ${COLORS.blue}`,
+            color: COLORS.blue, borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, benchCopied ? t('mods|goldSpeedrun|metrics|benchCopied') : t('mods|goldSpeedrun|metrics|benchCopy')) : null,
+      ]),
+      benchState.result ? h('div', {
+        key: 'bench-report',
+        style: {
+          background: 'rgba(0,0,0,0.35)', border: `1px solid ${COLORS.border}`, borderRadius: '6px',
+          padding: '8px 12px', fontSize: '11px', color: COLORS.dim, whiteSpace: 'pre-wrap', fontFamily: 'ui-monospace, monospace',
+          maxHeight: '140px', overflowY: 'auto',
+        },
+      }, [
+        h('div', { style: { color: COLORS.gold, fontWeight: 'bold', marginBottom: '4px' } }, t('mods|goldSpeedrun|metrics|benchTitle')),
+        h('div', {}, benchState.result.preview),
+      ]) : null,
+
+      // Map left, graph right
+      h('div', {
+        key: 'main-split',
+        style: {
+          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row',
+          gap: '12px', marginTop: '10px', alignItems: 'stretch',
+        },
+      }, [
+        h('div', {
+          key: 'map-col',
+          style: {
+            flex: '1 1 48%', minWidth: '460px', maxWidth: '850px',
+            minHeight: 0, display: 'flex',
+          },
+        }, [
+          h(ChunkHeatmap, {
+            mode: heatmapMode,
+            onMode: setHeatmapMode,
+            scrubRelMs: (hoverInfo && hoverInfo.item && Number.isFinite(hoverInfo.item.relMs)) ? hoverInfo.item.relMs : scrubRelMs,
+            onScrub: setScrubRelMs,
+            maxRelMs: Math.max(now(), historyBuf.length > 0 ? (historyBuf[historyBuf.length - 1].relMs || 0) : 0),
+            rangeType: range,
+            slowestX: (heatmapMode === 'live' && scrubRelMs === null && !(hoverInfo && hoverInfo.item && Number.isFinite(hoverInfo.item.relMs)))
+              ? (latest && Number.isFinite(latest.slowestX) ? latest.slowestX : -1)
+              : -1,
+            slowestY: (heatmapMode === 'live' && scrubRelMs === null && !(hoverInfo && hoverInfo.item && Number.isFinite(hoverInfo.item.relMs)))
+              ? (latest && Number.isFinite(latest.slowestY) ? latest.slowestY : -1)
+              : -1,
+          }),
+        ]),
+      // Chart area with floating hover tooltip
+      h('div', {
+        key: 'chart-container',
+        style: {
+          flex: '1 1 52%', minWidth: '480px', minHeight: 0, position: 'relative',
+          background: 'rgba(0,0,0,0.25)', borderRadius: '6px', padding: '10px',
+          border: '1px solid rgba(255,255,255,0.04)',
+        },
+      }, [
+        h(DualAxisChart, {
+          data: chartData,
+          lookback: chartLookback,
+          enabledLayers,
+          eventScope,
+          rangeType: range,
+          scaleMode,
+          smoothMode,
+          hoverIdx: hoverInfo ? hoverInfo.index : null,
+          pinnedRelMs: scrubRelMs,
+          onHover: setHoverInfo,
+        }),
+        // Floating tooltip card with colored bullets and full metrics
+        activeHoverItem ? h('div', {
+          key: 'hover-tooltip',
+          style: {
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            background: 'rgba(15, 23, 42, 0.95)',
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: '6px',
+            padding: '10px 14px',
+            pointerEvents: 'none',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            fontSize: '11px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '5px',
+            minWidth: '200px',
+            zIndex: 20,
+          },
+        }, [
+          h('div', { style: { fontWeight: 'bold', color: COLORS.text, borderBottom: `1px solid ${COLORS.border}`, paddingBottom: '4px' } },
+            `${t('mods|goldSpeedrun|metrics|samplePoint')} (${activeHoverItem.relMs !== undefined ? formatTime(activeHoverItem.relMs, 'seconds') : ''})`),
+          // UPS
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: '#4ade80' } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80' } }),
+              t('mods|goldSpeedrun|metrics|ttUps'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: '#4ade80' } }, `${activeHoverItem.avg !== undefined ? activeHoverItem.avg : activeHoverItem.ups} (min ${activeHoverItem.min !== undefined ? activeHoverItem.min : activeHoverItem.ups}, max ${activeHoverItem.max !== undefined ? activeHoverItem.max : activeHoverItem.ups})`),
+          ]),
+          ...(() => {
+            const srcIdx = hoverInfo && Number.isFinite(hoverInfo.index) ? chartLookback + hoverInfo.index : -1;
+            const dTicks = srcIdx >= 0 && srcIdx < deficitInfo.d.length ? deficitInfo.d[srcIdx] : NaN;
+            const pTicks = srcIdx >= 0 && srcIdx < deficitInfo.dPerm.length ? deficitInfo.dPerm[srcIdx] : NaN;
+            const inPhase = srcIdx >= 0 && deficitInfo.phaseMask[srcIdx];
+            return [
+              h('div', { key: 'tt-d', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+                h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: METRIC_DEFICIT_COLOR } }, [
+                  h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: METRIC_DEFICIT_COLOR } }),
+                  t('mods|goldSpeedrun|metrics|ttDeficit'),
+                ]),
+                h('span', { style: { fontWeight: 'bold', color: METRIC_DEFICIT_COLOR } }, formatSecSigned(dTicks / TICK_HZ)),
+              ]),
+              h('div', { key: 'tt-dp', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+                h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: METRIC_DEFICIT_COLOR } }, [
+                  h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: METRIC_DEFICIT_COLOR, opacity: 0.55 } }),
+                  t('mods|goldSpeedrun|metrics|ttDeficitPerm'),
+                ]),
+                h('span', { style: { fontWeight: 'bold', color: METRIC_DEFICIT_COLOR } },
+                  formatSecSigned(pTicks / TICK_HZ) + (inPhase ? ' · ' + t('mods|goldSpeedrun|metrics|slowdownIn') : '')),
+              ]),
+            ];
+          })(),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: COLORS.dim } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: eventScope === 'allMatter' ? '#f87171' : '#4ade80' } }),
+              t('mods|goldSpeedrun|metrics|ttScope'),
+            ]),
+            h('span', { style: { fontWeight: 'bold' } }, hoverScopeMissing ? '—' : t(eventScope === 'allMatter' ? 'mods|goldSpeedrun|metrics|scopeAllMatter' : 'mods|goldSpeedrun|metrics|scopeBallistic')),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: '#f87171' } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: '#f87171' } }),
+              t('mods|goldSpeedrun|metrics|ttCollisions'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: '#f87171' } }, hoverWin ? hoverWin.blocks.toLocaleString() : '—'),
+          ]),
+          eventScope === 'allMatter' ? h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: METRIC_SETTLED_COLOR } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: METRIC_SETTLED_COLOR } }),
+              t('mods|goldSpeedrun|metrics|ttSettled'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: METRIC_SETTLED_COLOR } }, (() => {
+              const v = sampleEventCount(activeHoverItem, 'settled', eventScope);
+              return v === null ? '—' : v.toLocaleString();
+            })()),
+          ]) : null,
+          eventScope === 'allMatter' ? h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: METRIC_ACTIVE_COLOR } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: METRIC_ACTIVE_COLOR } }),
+              t('mods|goldSpeedrun|metrics|ttActive'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: METRIC_ACTIVE_COLOR } }, (() => {
+              const v = sampleEventCount(activeHoverItem, 'active', eventScope);
+              return v === null ? '—' : v.toLocaleString();
+            })()),
+          ]) : null,
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: METRIC_MOVES_COLOR } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: METRIC_MOVES_COLOR } }),
+              t('mods|goldSpeedrun|metrics|ttMoves'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: METRIC_MOVES_COLOR } }, hoverWin ? hoverWin.moves.toLocaleString() : '—'),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: COLORS.dim } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: COLORS.dim } }),
+              t('mods|goldSpeedrun|metrics|ttSimUpdates'),
+            ]),
+            h('span', { style: { fontWeight: 'bold' } }, hoverWin ? Math.round(hoverWin.ticks).toLocaleString() : String(Math.round(sampleTicksOf(activeHoverItem, fallbackMs)))),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: METRIC_JAM_SHARE_COLOR } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: METRIC_JAM_SHARE_COLOR } }),
+              t('mods|goldSpeedrun|metrics|ttJamShare'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: METRIC_JAM_SHARE_COLOR } }, hoverWin ? `${(hoverWin.jamShare * 100).toFixed(1)}%` : '—'),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: '#38bdf8' } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8' } }),
+              t('mods|goldSpeedrun|metrics|ttFlightActivity'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: '#38bdf8' } }, hoverWin ? `${hoverWin.flight.toFixed(2)}/u` : '—'),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: METRIC_JAM_LOAD_COLOR } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: METRIC_JAM_LOAD_COLOR } }),
+              t('mods|goldSpeedrun|metrics|ttJamLoad'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: METRIC_JAM_LOAD_COLOR } }, hoverWin ? `${hoverWin.jamLoad.toFixed(2)}/u` : '—'),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8' } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: '#94a3b8' } }),
+              t('mods|goldSpeedrun|metrics|ttDynamic'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: '#94a3b8' } }, (activeHoverItem.live || 0).toLocaleString()),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: '#38bdf8' } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8' } }),
+              t('mods|goldSpeedrun|metrics|ttAwake'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: '#38bdf8' } }, (activeHoverItem.awake || 0).toLocaleString()),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: '#c084fc' } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: '#c084fc' } }),
+              t('mods|goldSpeedrun|metrics|ttSimCompute'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: '#c084fc' } }, `${activeHoverItem.simMs || 0} ms`),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: CAUSE_COMPUTE_COLOR } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: CAUSE_COMPUTE_COLOR } }),
+              t('mods|goldSpeedrun|metrics|ttCompute'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: CAUSE_COMPUTE_COLOR } }, `${roundMs2(activeHoverItem.computeMs)} ms`),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: CAUSE_WAIT_COLOR } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: CAUSE_WAIT_COLOR } }),
+              t('mods|goldSpeedrun|metrics|ttWait'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: CAUSE_WAIT_COLOR } }, `${roundMs2(activeHoverItem.waitMs)} ms`),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: CAUSE_POST_COLOR } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: CAUSE_POST_COLOR } }),
+              t('mods|goldSpeedrun|metrics|ttPost'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: CAUSE_POST_COLOR } }, `${roundMs2(activeHoverItem.postMs)} ms`),
+          ]),
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: '#f43f5e' } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: '#f43f5e' } }),
+              t('mods|goldSpeedrun|metrics|ttSlowest'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: '#f43f5e' } }, formatSlowestRegion(activeHoverItem.slowestX, activeHoverItem.slowestY)),
+          ]),
+        ]) : null,
+      ]),
+      ]),
+
+      // Bottom Diagnostic Guidance Bar
+      h('div', {
+        key: 'footer-guidance',
+        style: {
+          marginTop: '12px', display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '8px',
+          paddingTop: '10px', borderTop: `1px solid ${COLORS.border}`, fontSize: '11px',
+          maxHeight: '170px', overflowY: 'auto',
+        },
+      }, [
+        ...[
+          ['ups', '#4ade80', 'rgba(74, 222, 128, 0.08)', 'rgba(74, 222, 128, 0.25)', 'cardUpsTitle', 'cardUps'],
+          ['blocks', '#f87171', 'rgba(248, 113, 113, 0.08)', 'rgba(248, 113, 113, 0.25)', 'cardBlocksTitle', 'cardBlocks'],
+          ...(eventScope === 'allMatter' ? [
+            ['settled', METRIC_SETTLED_COLOR, 'rgba(251, 191, 36, 0.08)', 'rgba(251, 191, 36, 0.25)', 'cardSettledTitle', 'cardSettled'],
+            ['active', METRIC_ACTIVE_COLOR, 'rgba(251, 113, 133, 0.08)', 'rgba(251, 113, 133, 0.25)', 'cardActiveTitle', 'cardActive'],
+          ] : []),
+          ['moves', METRIC_MOVES_COLOR, 'rgba(45, 212, 191, 0.08)', 'rgba(45, 212, 191, 0.25)', 'cardMovesTitle', 'cardMoves'],
+          ['jamShare', METRIC_JAM_SHARE_COLOR, 'rgba(232, 121, 249, 0.08)', 'rgba(232, 121, 249, 0.25)', 'cardJamShareTitle', 'cardJamShare'],
+          ['jamLoad', METRIC_JAM_LOAD_COLOR, 'rgba(249, 115, 22, 0.08)', 'rgba(249, 115, 22, 0.25)', 'cardJamLoadTitle', 'cardJamLoad'],
+          ['awake', '#38bdf8', 'rgba(56, 189, 248, 0.08)', 'rgba(56, 189, 248, 0.25)', 'cardAwakeTitle', 'cardAwake'],
+          ['simTime', '#c084fc', 'rgba(192, 132, 252, 0.08)', 'rgba(192, 132, 252, 0.25)', 'cardSimTimeTitle', 'cardSimTime'],
+          ['live', '#94a3b8', 'rgba(148, 163, 184, 0.08)', 'rgba(148, 163, 184, 0.25)', 'cardLiveTitle', 'cardLive'],
+          ['deficit', METRIC_DEFICIT_COLOR, 'rgba(244, 63, 94, 0.08)', 'rgba(244, 63, 94, 0.25)', 'cardDeficitTitle', 'cardDeficit'],
+        ].map(([id, color, bg, bd, titleKey, bodyKey]) => h('div', {
+          key: id,
+          style: {
+            background: bg, border: `1px solid ${bd}`, borderRadius: '6px', padding: '8px 10px',
+          },
+        }, [
+          h('div', { style: { color, fontWeight: 'bold', marginBottom: '2px' } }, t(`mods|goldSpeedrun|metrics|${titleKey}`)),
+          h('div', { style: { color: COLORS.dim, lineHeight: 1.4 } }, t(`mods|goldSpeedrun|metrics|${bodyKey}`)),
+        ])),
+      ]),
+      benchConfirmOpen ? h('div', {
+        key: 'bench-confirm',
+        style: {
+          position: 'absolute', inset: 0, background: 'rgba(8, 10, 16, 0.82)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 5, padding: '24px',
+        },
+        onClick: e => { if (e.target === e.currentTarget) setBenchConfirmOpen(false); },
+      }, [
+        h('div', {
+          style: {
+            maxWidth: '640px', width: '100%', background: 'rgba(17, 21, 28, 0.98)',
+            border: `1px solid ${COLORS.gold}`, borderRadius: '10px', padding: '20px 22px',
+            boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
+          },
+          onClick: e => e.stopPropagation(),
+        }, [
+          h('div', { style: { color: COLORS.gold, fontWeight: 'bold', fontSize: '16px', marginBottom: '10px' } }, t('mods|goldSpeedrun|metrics|benchConfirmTitle')),
+          h('div', { style: { color: COLORS.text, marginBottom: '8px', lineHeight: 1.45 } }, t('mods|goldSpeedrun|metrics|benchConfirmLead')),
+          h('div', { style: { color: COLORS.dim, marginBottom: '8px', lineHeight: 1.45, fontSize: '12px' } }, t('mods|goldSpeedrun|metrics|benchConfirmHow')),
+          h('div', { style: { color: COLORS.dim, marginBottom: '8px', lineHeight: 1.45, fontSize: '12px' } }, t('mods|goldSpeedrun|metrics|benchConfirmInterp')),
+          h('div', { style: { color: '#fbbf24', marginBottom: '16px', lineHeight: 1.45, fontSize: '12px' } }, t('mods|goldSpeedrun|metrics|benchConfirmForce')),
+          h('div', { style: { display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' } }, [
+            h('button', {
+              onClick: () => setBenchConfirmOpen(false),
+              style: {
+                cursor: 'pointer', padding: '8px 14px', borderRadius: '6px',
+                border: `1px solid ${COLORS.border}`, background: 'rgba(255,255,255,0.06)',
+                color: COLORS.text, fontSize: '12px',
+              },
+            }, t('mods|goldSpeedrun|metrics|benchConfirmCancel')),
+            h('button', {
+              onClick: () => {
+                setBenchConfirmOpen(false);
+                startMetricBenchmark();
+              },
+              style: {
+                cursor: 'pointer', padding: '8px 14px', borderRadius: '6px',
+                border: `1px solid ${COLORS.gold}`, background: 'rgba(255, 213, 106, 0.16)',
+                color: COLORS.gold, fontSize: '12px', fontWeight: 'bold',
+              },
+            }, t('mods|goldSpeedrun|metrics|benchConfirmStart')),
+          ]),
+        ]),
+      ]) : null,
+    ]),
+  ]);
+  } catch (err) {
+    log('[DEBUG] MetricsOverlayModal crashed: ' + err);
+    return h('div', {
+      style: {
+        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+        background: 'rgba(10, 12, 18, 0.88)',
+        pointerEvents: 'auto', zIndex: 10035,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      },
+      onClick: () => setMetricsOverlayOpen(false),
+    }, [
+      h('div', {
+        style: {
+          background: 'rgba(17, 21, 28, 0.98)', border: `1px solid ${COLORS.border}`,
+          borderRadius: '10px', padding: '20px 24px', color: COLORS.text,
+          font: '500 13px/1.4 system-ui, sans-serif', maxWidth: '420px',
+        },
+        onClick: e => e.stopPropagation(),
+      }, [
+        h('div', { style: { marginBottom: '12px' } }, 'Diagnostics overlay failed to render. Close and try another range.'),
+        h('button', {
+          onClick: () => setMetricsOverlayOpen(false),
+          style: {
+            cursor: 'pointer', padding: '6px 14px', borderRadius: '4px',
+            border: `1px solid ${COLORS.border}`, background: 'rgba(255,255,255,0.06)', color: COLORS.text,
+            fontSize: '12px', fontWeight: 'bold',
+          },
+        }, t('mods|goldSpeedrun|metrics|close')),
+      ]),
+    ]);
+  }
+}
+
 function PanelOverlay() {
   const [, bump] = react.useState(0);
 
@@ -5952,15 +11220,17 @@ function PanelOverlay() {
     const fn = () => bump(n => (n + 1) % 100000);
     panelListeners.add(fn);
     resultListeners.add(fn);
+    metricsListeners.add(fn);
     return () => {
       panelListeners.delete(fn);
       resultListeners.delete(fn);
+      metricsListeners.delete(fn);
     };
   }, []);
 
   if (!modEnabled()) return null;
 
-  const hasModal = !resultDismissed || triggerPanelOpen;
+  const hasModal = !resultDismissed || triggerPanelOpen || metricsOverlayOpen;
   return h('div', {
     style: {
       position: 'fixed',
@@ -5973,37 +11243,15 @@ function PanelOverlay() {
     }
   }, [
     h(ResultScreenSafe, { key: 'result' }),
-    h(TriggerPanel, { key: 'trigger' })
+    h(TriggerPanel, { key: 'trigger' }),
+    h(MetricsOverlayModal, { key: 'metrics' })
   ]);
 }
 api.ui.inject('panel', PanelOverlay);
 
 // --- DE: Tastenkuerzel / EN: Keyboard shortcuts ------------------------------
-// DE: F8 und F10 sind in den Standardbelegungen frei (belegt sind F2, F4, F5, F9).
-// EN: F8 and F10 are free in the default bindings (F2, F4, F5, F9 are taken).
-let lastResetToggle = 0;
-api.input.registerBinding('GoldSpeedrunReset', ['F8'], {
-  displayNameKey: 'mods|goldSpeedrun|resetKey',
-  category: 'mods|goldSpeedrun|name',
-  handlers: {
-    pressed: () => {
-      if (Date.now() - lastResetToggle < 250) return;
-      lastResetToggle = Date.now();
-      api.storage.set(NS, 'startedAt', null);
-      api.storage.set(NS, 'finishedAt', null);
-      api.storage.set(NS, 'splits', []);
-      api.storage.set(NS, 'goldMarkIndex', 0);
-      api.storage.set(NS, 'official', false);
-      api.storage.set(NS, 'officialBroken', false);
-      startClocks();
-      resetHistory();
-      resetEarned();
-      setResultDismissed(true);
-      api.ui.toast({ key: 'mods|goldSpeedrun|reset' });
-    },
-  },
-});
-
+// DE: F10 ist in den Standardbelegungen frei (belegt sind F2, F4, F5, F9).
+// EN: F10 is free in the default bindings (F2, F4, F5, F9 are taken).
 let lastResultToggle = 0;
 api.input.registerBinding('GoldSpeedrunResult', ['F10'], {
   displayNameKey: 'mods|goldSpeedrun|resultKey',
@@ -6035,6 +11283,35 @@ api.input.registerBinding('GoldSpeedrunTriggers', ['F3'], {
     },
   },
 });
+
+let lastMetricsToggle = 0;
+let metricsKeyHeld = false;
+// DE: F7 fuer Simulations- und Leistungsdiagnose
+// EN: F7 for simulation and performance diagnostics
+api.input.registerBinding('GoldSpeedrunMetrics', ['F7'], {
+  displayNameKey: 'mods|goldSpeedrun|metrics|key',
+  category: 'mods|goldSpeedrun|name',
+  handlers: {
+    pressed: () => {
+      if (metricsKeyHeld) return;
+      if (Date.now() - lastMetricsToggle < 250) return;
+      metricsKeyHeld = true;
+      lastMetricsToggle = Date.now();
+      setMetricsOverlayOpen(!metricsOverlayOpen);
+    },
+    released: () => {
+      metricsKeyHeld = false;
+    },
+  },
+});
+try {
+  window.addEventListener('keyup', e => {
+    if (e.key === 'F7') metricsKeyHeld = false;
+  });
+  window.addEventListener('blur', () => {
+    metricsKeyHeld = false;
+  });
+} catch (e) {}
 
 // --- DE: Tutorial ueberspringen / EN: Skipping the tutorial ------------------
 // DE: Beendet das Tutorial genau wie der Knopf im Spiel: die Simulations-Threads
@@ -6114,14 +11391,6 @@ const dismissStoryNotifications = () => {
   return pending.length;
 };
 
-// DE: Wie bei skipTutorialEnabled: im offiziellen Regelwerk laeuft der Anfang ab,
-// DE: egal was in den Schaltern steht.
-// EN: Just like skipTutorialEnabled: under the official ruleset, the opening
-// EN: plays out normally, no matter what the switches say.
-const skipStoryEnabled = () => !officialMode() && api.settings.get('skipStory') !== false;
-
-const skipIntroEnabled = () => !officialMode() && api.settings.get('skipIntro') !== false;
-
 // DE: Eigener Takt in Echtzeit: die Boxen kommen verzoegert und auch mitten im
 // DE: Lauf, das Spiel-Update ist dafuer der falsche Aufhaenger.
 // EN: Its own real-time interval: the boxes arrive with a delay, and also
@@ -6132,25 +11401,20 @@ setInterval(() => {
   try { dismissStoryNotifications(); } catch (e) { /* DE: naechster Takt / EN: try again next tick */ }
 }, 500);
 
-// DE: Solange eine Textbox oder der Intro-Bildschirm im Weg steht, spielt niemand -
-// DE: ein Klick oder Tastendruck dagegen darf den Timer nicht anwerfen. Bei
-// DE: eingeschaltetem Wegblenden sind die Boxen binnen einer halben Sekunde weg,
-// DE: es blockiert also nichts dauerhaft.
-// EN: As long as a text box or the intro screen is in the way, nobody is
-// EN: playing - a click or key press against it must not start the timer.
-// EN: With auto-dismiss enabled, the boxes are gone within half a second, so
-// EN: nothing blocks permanently.
+// DE: Nur der Intro-Bildschirm ist wirklich modal: dort ist keine Spielhandlung
+// DE: moeglich. Story-Boxen und Dialoge blockieren den Start nicht mehr - ein
+// DE: echter Klick im Feld (action:intercept mit payload.action) ist Beweis
+// DE: genug, dass gespielt wird. Wegklicken einer Box startet den Timer
+// DE: weiterhin nicht, weil es keinen action-Payload hat.
+// EN: Only the intro screen is truly modal: no in-game action is possible
+// EN: there. Story boxes and dialogs no longer block the start - a real
+// EN: click in the field (action:intercept with payload.action) is proof
+// EN: enough that the player is playing. Dismissing a box still does not
+// EN: start the timer, because it has no action payload.
 const uiBlocksStart = () => {
   try {
-    const session = sandkit.state.session;
-    if (session.ui && session.ui.introScreen && session.ui.introScreen.visible) return true;
-    if (Array.isArray(session.ui && session.ui.dialogs) && session.ui.dialogs.length > 0) return true;
-    // DE: Auch ohne Wegblenden: solange eine Box im Bild steht, spielt niemand,
-    // DE: und der Klick, der sie wegmacht, ist keine Spielhandlung.
-    // EN: Even without auto-dismiss: as long as a box is on screen, nobody is
-    // EN: playing, and the click that dismisses it isn't an in-game action.
-    const list = storyNotifications();
-    if (list && list.length > 0) return true;
+    const intro = sandkit.state.session && sandkit.state.session.ui && sandkit.state.session.ui.introScreen;
+    return !!(intro && intro.visible);
   } catch (e) { /* DE: Sitzung noch nicht vollstaendig / EN: session not fully initialized yet */ }
   return false;
 };
@@ -6167,8 +11431,7 @@ const skipIntro = () => {
   // DE: der Aufrufer.
   // EN: Same guard as with the tutorial: the setting decides, not the caller.
   if (!skipIntroEnabled()) {
-    log('Intro-Skip abgelehnt - die Einstellung steht auf aus'
-      + (officialMode() ? ' (offizielles Regelwerk)' : ''));
+    log('Intro-Skip abgelehnt - die Einstellung steht auf aus');
     return false;
   }
 
@@ -6241,16 +11504,15 @@ const grantTutorialUnlocks = () => {
 
 const skipTutorial = () => {
   // DE: Letzter Riegel vor der Tuer: egal, wer hier hereinkommt - steht der
-  // DE: Schalter auf aus oder gilt das offizielle Regelwerk, wird nichts
-  // DE: uebersprungen. Der Waechter prueft das schon, aber diese Funktion
-  // DE: beendet das Tutorial unwiderruflich; ein zweiter Riegel kostet nichts.
+  // DE: Schalter auf aus, wird nichts uebersprungen. Der Waechter prueft das
+  // DE: schon, aber diese Funktion beendet das Tutorial unwiderruflich; ein
+  // DE: zweiter Riegel kostet nichts.
   // EN: One last gate before the door: no matter who walks in here, if the
-  // EN: switch is off or the official ruleset applies, nothing gets skipped.
-  // EN: The guard already checks this, but this function ends the tutorial
-  // EN: irreversibly; a second gate costs nothing.
+  // EN: switch is off, nothing gets skipped. The guard already checks this, but
+  // EN: this function ends the tutorial irreversibly; a second gate costs
+  // EN: nothing.
   if (!skipTutorialEnabled()) {
-    log('Tutorial-Skip abgelehnt - die Einstellung steht auf aus'
-      + (officialMode() ? ' (offizielles Regelwerk)' : ''));
+    log('Tutorial-Skip abgelehnt - die Einstellung steht auf aus');
     return false;
   }
 
@@ -6351,7 +11613,7 @@ try {
   api.settings.onChange(() => {
     if (!modEnabled()) return;
     syncActiveFromPresetSetting();
-    if (syncOfficialSettings()) refreshSettingsUi();
+    applyMonitoringMask();
   });
 } catch (e) { log('Einstellungen nicht beobachtbar:', e); }
 
@@ -6371,10 +11633,14 @@ api.events.on('game:ready', () => {
   // EN: Always restore the clocks, even if the mod is currently off - a run
   // EN: in progress keeps counting in the background and must not restart at
   // EN: 0 after a load.
+  if (benchState.running) cancelMetricBenchmark();
   resumeClocks();
   loadHistoryFromSave();
+  syncAllMatterCaptureControl();
+  restoreHeatmapFromSave();
   maybeAdoptFinishedAsBest();
   sanitizeLoadedRun();
+  installBlueprintHooks();
 
   if (!modEnabled()) return;
   if (bootTimer !== null) {
@@ -6405,14 +11671,11 @@ api.events.on('game:ready', () => {
     });
   } catch (e) { log('Startzustand nicht lesbar:', e); }
 
-  // DE: Vor allem anderen: die 2.9-Umstellung auf Hard Mode zuruecknehmen, dann
-  // DE: - falls das offizielle Regelwerk steht - dessen Werte anwenden.
-  // EN: Before anything else: undo the 2.9 Hard Mode switch, then - if the
-  // EN: official ruleset is set - apply its values.
-  if (undoGoldModeHardMigrate()) refreshSettingsUi();
+  // DE: Einmalig auf die gültigen Speedrun-Vorgaben umstellen.
+  // EN: Switch once to the valid speedrun defaults.
+  if (enforceValidDefaults()) refreshSettingsUi();
   migrateKeyStability();
   purgeFromPbRoutes();
-  syncOfficialSettings();
   syncActiveFromPresetSetting();
 
   // DE: Sofort versuchen, nicht erst beim naechsten Waechter-Takt.
