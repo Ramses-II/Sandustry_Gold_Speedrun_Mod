@@ -155,6 +155,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|metric|thinkMult': 'Thinking multiplier',
   'mods|goldSpeedrun|metric|wrProbe': 'Play-clock − pause aware real time (W−R)',
   'mods|goldSpeedrun|metric|dash': 'waiting for the run to start',
+  'mods|goldSpeedrun|metric|goldPerSec': 'Gold/s',
 
   // DE: Verlaufsgrafik / EN: History graph
   'mods|goldSpeedrun|graph|title': 'UPS over the whole run',
@@ -591,6 +592,7 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|metric|thinkMult': 'Denk-Faktor',
   'mods|goldSpeedrun|metric|wrProbe': 'Spielzeit-Uhr minus pausenbewusste Echtzeit (W−R)',
   'mods|goldSpeedrun|metric|dash': 'wartet auf den Laufstart',
+  'mods|goldSpeedrun|metric|goldPerSec': 'Gold/s',
 
   // DE: Verlaufsgrafik / EN: History graph
   'mods|goldSpeedrun|graph|title': 'UPS über den ganzen Lauf',
@@ -1285,6 +1287,18 @@ const resetEarned = () => {
 // DE: Der Goldwert, der in der Split-Tabelle steht - dieselbe Messweise wie das Ziel.
 // EN: The gold value shown in the split table - same measurement as the goal.
 const goldProgress = () => (goldMode() === 'balance' ? getGold() : sampleEarned());
+
+// DE: Gold pro Sekunde (pausenbewusste Echtzeit). Nur waehrend eines laufenden Laufs
+// DE: sinnvoll; gibt 0 zurueck, solange der Lauf noch nicht gestartet oder
+// DE: weniger als 1 Sekunde vergangen ist (Nulldivision vermieden).
+// EN: Gold per second (pause-aware real time). Only meaningful during an active run;
+// EN: returns 0 before the run starts or when less than 1 second has elapsed
+// EN: (avoids division by zero on the very first frames).
+const goldPerSec = () => {
+  const sec = elapsed() / 1000;
+  if (sec < 1) return 0;
+  return goldProgress() / sec;
+};
 
 // DE: Der Wert, gegen den das Ziel der Kategorie geprueft wird.
 // EN: The value the category's goal is checked against.
@@ -5924,7 +5938,9 @@ function SpeedrunHud() {
   } else if (cat.kind === 'factory') {
     progressText = t('mods|goldSpeedrun|factory', { current: current, target: target });
   } else {
-    progressText = `${formatGold(current)} / ${formatGold(target)}`;
+    const gps = goldPerSec();
+    const gpsText = (!waiting && gps > 0) ? ` · ${gps.toFixed(1)} g/s` : '';
+    progressText = `${formatGold(current)} / ${formatGold(target)}${gpsText}`;
   }
 
   const headlineMs = mode === 'sim' ? simTime : mode === 'play' ? playTime : rTime;
@@ -6255,6 +6271,12 @@ function SpeedrunHud() {
         value: jamText,
         color: jamColor,
       }),
+      cat.kind === 'gold' ? h(MetricLine, {
+        key: 'gps',
+        label: t('mods|goldSpeedrun|metric|goldPerSec'),
+        value: waiting ? '—' : `${goldPerSec().toFixed(2)} g/s`,
+        color: COLORS.dim,
+      }) : null,
     ]),
     advanced && !waiting
       ? h('div', {
