@@ -155,6 +155,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|metric|thinkMult': 'Thinking multiplier',
   'mods|goldSpeedrun|metric|wrProbe': 'Play-clock − pause aware real time (W−R)',
   'mods|goldSpeedrun|metric|dash': 'waiting for the run to start',
+  'mods|goldSpeedrun|metric|goldPerSec': 'Gold/s',
 
   // DE: Verlaufsgrafik / EN: History graph
   'mods|goldSpeedrun|graph|title': 'UPS over the whole run',
@@ -591,6 +592,7 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|metric|thinkMult': 'Denk-Faktor',
   'mods|goldSpeedrun|metric|wrProbe': 'Spielzeit-Uhr minus pausenbewusste Echtzeit (W−R)',
   'mods|goldSpeedrun|metric|dash': 'wartet auf den Laufstart',
+  'mods|goldSpeedrun|metric|goldPerSec': 'Gold/s',
 
   // DE: Verlaufsgrafik / EN: History graph
   'mods|goldSpeedrun|graph|title': 'UPS über den ganzen Lauf',
@@ -1285,6 +1287,50 @@ const resetEarned = () => {
 // DE: Der Goldwert, der in der Split-Tabelle steht - dieselbe Messweise wie das Ziel.
 // EN: The gold value shown in the split table - same measurement as the goal.
 const goldProgress = () => (goldMode() === 'balance' ? getGold() : sampleEarned());
+
+// DE: Ringspeicher fuer den gleitenden Gold/s-Durchschnitt (letzte 60 Sekunden pausenbewusste Echtzeit).
+// EN: Ring buffer for rolling gold/s average over the last 60 seconds of pause-aware real time.
+let goldRateSamples = []; // { t: number, g: number }[]
+let lastGoldRateSampleTime = 0;
+
+const sampleGoldRate = () => {
+  const run = readRun();
+  if (typeof run.startedAt !== 'number' || typeof run.finishedAt === 'number') {
+    if (goldRateSamples.length > 0) goldRateSamples = [];
+    lastGoldRateSampleTime = 0;
+    return;
+  }
+  const t = elapsed();
+  if (t - lastGoldRateSampleTime < 250) return;
+  lastGoldRateSampleTime = t;
+  const g = goldProgress();
+  goldRateSamples.push({ t, g });
+  const cutoff = t - 60000;
+  while (goldRateSamples.length > 2 && goldRateSamples[0].t < cutoff) {
+    goldRateSamples.shift();
+  }
+};
+
+// DE: Gleitender Durchschnitt Gold pro Sekunde der letzten 60 Sekunden (pausenbewusste Echtzeit).
+// DE: Unter 60 s Laufzeit wird der Durchschnitt seit Laufstart genutzt.
+// EN: Rolling average gold per second over the last 60 seconds (pause-aware real time).
+// EN: Under 60 s elapsed, uses the average since run start.
+const goldPerSec = () => {
+  const run = readRun();
+  if (typeof run.startedAt !== 'number') return 0;
+  sampleGoldRate();
+  if (goldRateSamples.length < 2) {
+    const sec = elapsed() / 1000;
+    if (sec < 1) return 0;
+    return Math.max(0, goldProgress()) / sec;
+  }
+  const oldest = goldRateSamples[0];
+  const latest = goldRateSamples[goldRateSamples.length - 1];
+  const dt = (latest.t - oldest.t) / 1000;
+  if (dt < 1) return 0;
+  const dg = latest.g - oldest.g;
+  return Math.max(0, dg) / dt;
+};
 
 // DE: Der Wert, gegen den das Ziel der Kategorie geprueft wird.
 // EN: The value the category's goal is checked against.
@@ -4960,6 +5006,7 @@ api.events.on('frame:render', () => {
   // EN: Sampled every frame so quick back-to-back earning and spending
   // EN: doesn't fall through the cracks. Costs only a number comparison.
   if (goldMode() === 'earned') sampleEarned();
+  sampleGoldRate();
 
   const stamp = now();
 
@@ -5924,7 +5971,9 @@ function SpeedrunHud() {
   } else if (cat.kind === 'factory') {
     progressText = t('mods|goldSpeedrun|factory', { current: current, target: target });
   } else {
-    progressText = `${formatGold(current)} / ${formatGold(target)}`;
+    const gps = goldPerSec();
+    const gpsText = (!waiting && gps > 0) ? ` · ${gps.toFixed(1)} g/s` : '';
+    progressText = `${formatGold(current)} / ${formatGold(target)}${gpsText}`;
   }
 
   const headlineMs = mode === 'sim' ? simTime : mode === 'play' ? playTime : rTime;
@@ -6255,6 +6304,12 @@ function SpeedrunHud() {
         value: jamText,
         color: jamColor,
       }),
+      cat.kind === 'gold' ? h(MetricLine, {
+        key: 'gps',
+        label: t('mods|goldSpeedrun|metric|goldPerSec'),
+        value: waiting ? '—' : `${goldPerSec().toFixed(2)} g/s`,
+        color: COLORS.dim,
+      }) : null,
     ]),
     advanced && !waiting
       ? h('div', {
