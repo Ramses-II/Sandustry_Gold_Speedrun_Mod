@@ -36,7 +36,7 @@ const KEY_STABILITY_MIGRATE_KEY = 'goldSpeedrun.migratedKeyStability.v1';
 const ENFORCE_VALID_DEFAULTS_KEY = 'goldSpeedrun.enforceValidDefaultsV1';
 const PB_RUN_ID = '__pb__';
 
-const MOD_VERSION = '3.10.0';
+const MOD_VERSION = '3.11.0';
 const log = (...a) => console.log(`[${MOD_ID} v${MOD_VERSION}]`, ...a);
 
 // --- DE: Schalter der Mod-Verwaltung / EN: Mod-manager switch ---------------
@@ -154,6 +154,9 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|metric|idealTicks': 'Ideal ticks (60×R)',
   'mods|goldSpeedrun|metric|thinkMult': 'Thinking multiplier',
   'mods|goldSpeedrun|metric|wrProbe': 'Play-clock − pause aware real time (W−R)',
+  'mods|goldSpeedrun|metric|goldPerSec': 'Gold/s',
+  'mods|goldSpeedrun|metric|goldReq': '(req {rate} g/s)',
+  'mods|goldSpeedrun|metric|goldBehindPb': '(behind PB)',
   'mods|goldSpeedrun|metric|dash': 'waiting for the run to start',
 
   // DE: Verlaufsgrafik / EN: History graph
@@ -284,12 +287,19 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|rules|skipTutorial': 'Skip the tutorial automatically',
   'mods|goldSpeedrun|rules|mods': 'Other mods enabled',
   'mods|goldSpeedrun|rules|modsNone': 'none',
+  'mods|goldSpeedrun|rules|debugMode': 'Debug mode',
+  'mods|goldSpeedrun|rules|cinematicMode': 'Cinematic mode',
+  'mods|goldSpeedrun|btn|deactivateDebug': 'Deactivate debug',
+  'mods|goldSpeedrun|toast|debugDeactivated': 'Debug and cinematic mode deactivated. This run stays invalid.',
+  'mods|goldSpeedrun|toast|debugEnabled': 'Debug mode on. This save will not count as a speedrun.',
+  'mods|goldSpeedrun|cfg|debugMode': 'Debug mode',
+  'mods|goldSpeedrun|cfg|debugMode|desc': 'Turns on the in-game debug panel without the console command. WARNING: debug mode invalidates every speedrun. Turning it off also clears cinematic mode and the other disallowed engine states. A save that had either on before the goal stays flagged.',
   'mods|goldSpeedrun|mods|clean': 'No additional mods',
   'mods|goldSpeedrun|mods|count': '{count} other mods',
   'mods|goldSpeedrun|cfg|showRuleset': 'Show ruleset badge',
-  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Marks on the timer and on the result screen whether the settings are speedrun-legal: gold ruleset Hard Mode, intro/story/tutorial skips off, and no other mod enabled. Invalid settings show a red INVALID RUN banner naming what is wrong.',
+  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Marks on the timer and on the result screen whether the settings are speedrun-legal: gold ruleset Hard Mode, intro/story/tutorial skips off, no other mod enabled, and debug mode and cinematic mode off. Invalid settings show a red INVALID RUN banner naming what is wrong.',
   'mods|goldSpeedrun|cfg|showAdvancedMetrics': 'Show advanced metrics',
-  'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Adds the raw tick count, average UPS, the ticks a perfect 60 UPS machine would have run by now, the thinking multiplier (how many real seconds each simulated second cost) and the gap between play-clock and pause aware real time.',
+  'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Adds average UPS under the timer. Tick count, ideal ticks, the thinking multiplier and the play-clock gap stay on the dashboard.',
   'mods|goldSpeedrun|cfg|monitoringMode': 'Simulation monitoring',
   'mods|goldSpeedrun|cfg|monitoringMode|desc': 'Off: no simulation hooks and no UPS graph. Standard: ballistic (thrown) particles plus passive reads — light overhead. Full: intercepts every moving CA pixel (settled vs active collisions) — measurable sim cost, for diagnostics only.',
   'mods|goldSpeedrun|cfg|monitoringMode|off': 'Disabled (zero overhead)',
@@ -317,6 +327,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|metrics|layerBlocksSettled': 'Collisions (Settled)',
   'mods|goldSpeedrun|metrics|layerBlocksActive': 'Collisions (Active)',
   'mods|goldSpeedrun|metrics|layerDeficit': 'Lost time (s)',
+  'mods|goldSpeedrun|metrics|layerGold': 'Gold',
   'mods|goldSpeedrun|metrics|scaleLinear': 'Linear',
   'mods|goldSpeedrun|metrics|scaleLog': 'Logarithmic',
   'mods|goldSpeedrun|metrics|scaleMode': 'Scale:',
@@ -379,6 +390,7 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|metrics|ttActive': 'Active collisions:',
   'mods|goldSpeedrun|metrics|samplePoint': 'Sample Point',
   'mods|goldSpeedrun|metrics|ttUps': 'UPS:',
+  'mods|goldSpeedrun|metrics|ttGold': 'Gold:',
   'mods|goldSpeedrun|metrics|ttCollisions': 'Collisions:',
   'mods|goldSpeedrun|metrics|ttMoves': 'Moves:',
   'mods|goldSpeedrun|metrics|ttSimUpdates': 'Sim Updates:',
@@ -456,8 +468,14 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|cat|kind|gold': 'Gold',
   'mods|goldSpeedrun|cat|kind|artifacts': 'Artifacts',
   'mods|goldSpeedrun|cat|kind|factory': 'Factory rank',
+  'mods|goldSpeedrun|cat|kind|fluxite': 'Fluxite',
+  'mods|goldSpeedrun|cat|kind|energy': 'Energy',
+  'mods|goldSpeedrun|cat|kind|aura': 'Aura',
+  'mods|goldSpeedrun|cat|kind|combined': 'Combined',
+  'mods|goldSpeedrun|cat|templateFactoryGold': 'Factory 6 + 100k Gold',
   'mods|goldSpeedrun|cat|target': 'Target',
   'mods|goldSpeedrun|cat|goldMode': 'Gold ruleset',
+  'mods|goldSpeedrun|cat|countMode': 'Counting',
   'mods|goldSpeedrun|cat|create': 'Create',
   'mods|goldSpeedrun|cat|rename': 'Rename',
   'mods|goldSpeedrun|cat|delete': 'Delete',
@@ -590,6 +608,9 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|metric|idealTicks': 'Soll-Schritte (60×R)',
   'mods|goldSpeedrun|metric|thinkMult': 'Denk-Faktor',
   'mods|goldSpeedrun|metric|wrProbe': 'Spielzeit-Uhr minus pausenbewusste Echtzeit (W−R)',
+  'mods|goldSpeedrun|metric|goldPerSec': 'Gold/s',
+  'mods|goldSpeedrun|metric|goldReq': '(benötigt {rate} g/s)',
+  'mods|goldSpeedrun|metric|goldBehindPb': '(hinter PB)',
   'mods|goldSpeedrun|metric|dash': 'wartet auf den Laufstart',
 
   // DE: Verlaufsgrafik / EN: History graph
@@ -717,12 +738,19 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|rules|skipTutorial': 'Tutorial automatisch überspringen',
   'mods|goldSpeedrun|rules|mods': 'Andere Mods aktiv',
   'mods|goldSpeedrun|rules|modsNone': 'keine',
+  'mods|goldSpeedrun|rules|debugMode': 'Debug-Modus',
+  'mods|goldSpeedrun|rules|cinematicMode': 'Cinematik-Modus',
+  'mods|goldSpeedrun|btn|deactivateDebug': 'Debug deaktivieren',
+  'mods|goldSpeedrun|toast|debugDeactivated': 'Debug- und Cinematik-Modus deaktiviert. Dieser Lauf bleibt ungültig.',
+  'mods|goldSpeedrun|toast|debugEnabled': 'Debug-Modus an. Dieser Spielstand zählt nicht als Speedrun.',
+  'mods|goldSpeedrun|cfg|debugMode': 'Debug-Modus',
+  'mods|goldSpeedrun|cfg|debugMode|desc': 'Schaltet das Debug-Menü ein, ohne den Konsolenbefehl. ACHTUNG: Debug-Modus macht jeden Speedrun ungültig. Ausschalten räumt auch den Cinematik-Modus und die anderen nicht erlaubten Motor-Zustände ab. Ein Spielstand, in dem eines von beiden vor dem Ziel an war, bleibt markiert.',
   'mods|goldSpeedrun|mods|clean': 'Keine weiteren Mods',
   'mods|goldSpeedrun|mods|count': '{count} weitere Mods',
   'mods|goldSpeedrun|cfg|showRuleset': 'Regelwerk-Abzeichen zeigen',
-  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Zeigt am Timer und im Ergebnisfenster, ob die Einstellungen speedrun-tauglich sind: Gold-Regelwerk Hard Mode, Intro-/Story-/Tutorial-Skip aus, und kein anderer Mod aktiv. Ungültige Einstellungen zeigen ein rotes UNGÜLTIGER LAUF mit der abweichenden Option.',
+  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Zeigt am Timer und im Ergebnisfenster, ob die Einstellungen speedrun-tauglich sind: Gold-Regelwerk Hard Mode, Intro-/Story-/Tutorial-Skip aus, kein anderer Mod aktiv, und Debug- sowie Cinematik-Modus aus. Ungültige Einstellungen zeigen ein rotes UNGÜLTIGER LAUF mit der abweichenden Option.',
   'mods|goldSpeedrun|cfg|showAdvancedMetrics': 'Erweiterte Messwerte zeigen',
-  'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Zeigt zusätzlich die rohe Schrittzahl, die mittleren UPS, die Schritte, die eine perfekte 60-UPS-Maschine inzwischen gelaufen wäre, den Denk-Faktor (wie viele reale Sekunden jede simulierte Sekunde kostete) und den Abstand zwischen Spielzeit-Uhr und pausenbewusster Echtzeit.',
+  'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Zeigt die mittleren UPS unter dem Timer. Schrittzahl, Soll-Schritte, Denk-Faktor und der Abstand der Spielzeit-Uhr bleiben im Dashboard.',
   'mods|goldSpeedrun|cfg|monitoringMode': 'Simulationsüberwachung',
   'mods|goldSpeedrun|cfg|monitoringMode|desc': 'Aus: keine Simulations-Hooks und keine UPS-Grafik. Standard: Wurfpartikel plus passive Werte — geringer Overhead. Voll: fängt jedes bewegte CA-Pixel ab (ruhend vs. aktiv) — messbare Sim-Kosten, nur zur Diagnose.',
   'mods|goldSpeedrun|cfg|monitoringMode|off': 'Aus (kein Overhead)',
@@ -750,6 +778,7 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|metrics|layerBlocksSettled': 'Kollisionen (Ruhend)',
   'mods|goldSpeedrun|metrics|layerBlocksActive': 'Kollisionen (Aktiv)',
   'mods|goldSpeedrun|metrics|layerDeficit': 'Verlorene Zeit (s)',
+  'mods|goldSpeedrun|metrics|layerGold': 'Gold',
   'mods|goldSpeedrun|metrics|scaleLinear': 'Linear',
   'mods|goldSpeedrun|metrics|scaleLog': 'Logarithmisch',
   'mods|goldSpeedrun|metrics|scaleMode': 'Skala:',
@@ -812,6 +841,7 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|metrics|ttActive': 'Aktive Kollisionen:',
   'mods|goldSpeedrun|metrics|samplePoint': 'Messpunkt',
   'mods|goldSpeedrun|metrics|ttUps': 'UPS:',
+  'mods|goldSpeedrun|metrics|ttGold': 'Gold:',
   'mods|goldSpeedrun|metrics|ttCollisions': 'Kollisionen:',
   'mods|goldSpeedrun|metrics|ttMoves': 'Bewegungen:',
   'mods|goldSpeedrun|metrics|ttSimUpdates': 'Sim-Schritte:',
@@ -888,8 +918,14 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|cat|kind|gold': 'Gold',
   'mods|goldSpeedrun|cat|kind|artifacts': 'Artefakte',
   'mods|goldSpeedrun|cat|kind|factory': 'Fabrikrang',
+  'mods|goldSpeedrun|cat|kind|fluxite': 'Fluxit',
+  'mods|goldSpeedrun|cat|kind|energy': 'Energie',
+  'mods|goldSpeedrun|cat|kind|aura': 'Aura',
+  'mods|goldSpeedrun|cat|kind|combined': 'Kombiniert',
+  'mods|goldSpeedrun|cat|templateFactoryGold': 'Fabrik 6 + 100k Gold',
   'mods|goldSpeedrun|cat|target': 'Zielwert',
   'mods|goldSpeedrun|cat|goldMode': 'Gold-Regelwerk',
+  'mods|goldSpeedrun|cat|countMode': 'Zählweise',
   'mods|goldSpeedrun|cat|create': 'Anlegen',
   'mods|goldSpeedrun|cat|rename': 'Umbenennen',
   'mods|goldSpeedrun|cat|delete': 'Löschen',
@@ -1073,19 +1109,34 @@ const presetCategoryFromId = id => {
   return { id: resolved, kind: 'factory', target: def.target, custom: false };
 };
 
-const categoryFromCustom = custom => {
-  const kind = custom.kind === 'artifacts' || custom.kind === 'factory' ? custom.kind : 'gold';
-  let target = Number(custom.target);
-  if (kind === 'artifacts') target = target > 0 ? Math.floor(target) : artifactTotal();
-  else if (kind === 'factory') target = target > 0 ? Math.floor(target) : 6;
+const GOAL_KINDS = ['gold', 'artifacts', 'factory', 'fluxite', 'energy', 'aura'];
+
+const normalizeStoredGoal = raw => {
+  if (!raw || typeof raw !== 'object') return null;
+  const kind = GOAL_KINDS.indexOf(raw.kind) >= 0 ? raw.kind : null;
+  if (!kind) return null;
+  let target = Number(raw.target);
+  if (kind === 'artifacts') target = target > 0 ? Math.floor(target) : 0;
+  else if (kind === 'factory') target = target > 0 ? Math.min(MAX_FACTORY_LEVEL, Math.floor(target)) : 6;
+  else if (kind === 'aura') target = target > 0 ? Math.floor(target) : 10000;
+  else if (kind === 'fluxite' || kind === 'energy') target = target > 0 ? Math.floor(target) : 1000;
   else target = target > 0 ? Math.floor(target) : 100000;
-  const gm = custom.goldMode === 'earned' ? 'earned' : 'balance';
+  return { kind, target };
+};
+
+const categoryFromCustom = custom => {
+  const name = typeof custom.name === 'string' && custom.name.trim() ? custom.name.trim() : custom.id;
+  if (custom.kind === 'combined' && Array.isArray(custom.goals)) {
+    const goals = custom.goals.map(normalizeStoredGoal).filter(Boolean);
+    return { id: custom.id, kind: 'combined', goals, target: 0, name, custom: true };
+  }
+  const kind = GOAL_KINDS.indexOf(custom.kind) >= 0 ? custom.kind : 'gold';
+  const goal = normalizeStoredGoal({ kind, target: custom.target });
   return {
     id: custom.id,
     kind,
-    target,
-    goldMode: gm,
-    name: typeof custom.name === 'string' && custom.name.trim() ? custom.name.trim() : custom.id,
+    target: goal ? goal.target : 100000,
+    name,
     custom: true,
   };
 };
@@ -1171,15 +1222,7 @@ const getFactoryLevel = () => {
 let earnedTotal = null;   // DE: Laufsumme im Speicher / EN: running total, in memory
 let lastBalance = null;
 
-const goldMode = () => {
-  try {
-    const cat = category();
-    if (cat && cat.custom) {
-      return cat.goldMode === 'earned' ? 'earned' : 'balance';
-    }
-  } catch (e) { /* DE: Kategorie noch nicht bereit / EN: category not ready yet */ }
-  return api.settings.get('goldMode') === 'earned' ? 'earned' : 'balance';
-};
+const goldMode = () => (api.settings.get('goldMode') === 'earned' ? 'earned' : 'balance');
 
 const skipTutorialEnabled = () => api.settings.get('skipTutorial') === true;
 const skipStoryEnabled = () => api.settings.get('skipStory') === true;
@@ -1286,12 +1329,239 @@ const resetEarned = () => {
 // EN: The gold value shown in the split table - same measurement as the goal.
 const goldProgress = () => (goldMode() === 'balance' ? getGold() : sampleEarned());
 
+const getFluxite = () => {
+  try {
+    const v = sandkit.state.store.resources.fluxite;
+    return Number.isFinite(v) ? v : 0;
+  } catch (e) {
+    return 0;
+  }
+};
+
+let fluxiteEarnedTotal = null;
+let lastFluxiteBalance = null;
+
+const readFluxiteEarned = () => {
+  const v = api.storage.get(NS, 'fluxiteEarned');
+  return Number.isFinite(v) ? v : 0;
+};
+
+const sampleFluxiteEarned = () => {
+  const balance = getFluxite();
+  if (fluxiteEarnedTotal === null) {
+    fluxiteEarnedTotal = readFluxiteEarned();
+    lastFluxiteBalance = balance;
+    return fluxiteEarnedTotal;
+  }
+  if (balance > lastFluxiteBalance) fluxiteEarnedTotal += balance - lastFluxiteBalance;
+  lastFluxiteBalance = balance;
+  return fluxiteEarnedTotal;
+};
+
+const resetFluxiteEarned = () => {
+  fluxiteEarnedTotal = 0;
+  lastFluxiteBalance = getFluxite();
+  api.storage.set(NS, 'fluxiteEarned', 0);
+};
+
+const getAura = () => {
+  try {
+    const sc = sandkit.engine && sandkit.engine.api && sandkit.engine.api.swarmConsole;
+    if (sc && typeof sc.getCrystalMined === 'function') {
+      const v = sc.getCrystalMined(sandkit.state);
+      if (Number.isFinite(v)) return v;
+    }
+  } catch (e) { /* DE: Swarm-API fehlt / EN: swarm API missing */ }
+  try {
+    const sh = sandkit.engine && sandkit.engine.api && sandkit.engine.api.workers && sandkit.engine.api.workers.shared;
+    if (sh && typeof sh.get === 'function') {
+      const buf = sh.get(sandkit.state, 'swarmConsole.crystalMined');
+      if (buf) return Atomics.load(buf, 0) || 0;
+    }
+  } catch (e) { /* DE: gemeinsamer Puffer fehlt / EN: shared buffer missing */ }
+  return 0;
+};
+
+const categoryGoals = cat => {
+  if (!cat) return [];
+  if (cat.kind === 'combined' && Array.isArray(cat.goals)) return cat.goals.filter(Boolean);
+  const goal = { kind: cat.kind || 'gold', target: cat.target };
+  return [goal];
+};
+
+const goldGoalOf = cat => categoryGoals(cat).find(g => g && g.kind === 'gold') || null;
+
+const goalTargetOf = goal => {
+  if (!goal) return 0;
+  if (goal.kind === 'artifacts') {
+    const stored = Number(goal.target);
+    if (stored > 0) return stored;
+    return artifactTotal();
+  }
+  const t = Number(goal.target);
+  return Number.isFinite(t) ? t : 0;
+};
+
+const fluxiteProgress = () => (goldMode() === 'earned' ? sampleFluxiteEarned() : getFluxite());
+
+const getEnergy = () => {
+  try {
+    const v = sandkit.state.store.resources.energy;
+    return Number.isFinite(v) ? v : 0;
+  } catch (e) {
+    return 0;
+  }
+};
+
+let energyEarnedTotal = null;
+let lastEnergyBalance = null;
+
+const readEnergyEarned = () => {
+  const v = api.storage.get(NS, 'energyEarned');
+  return Number.isFinite(v) ? v : 0;
+};
+
+const sampleEnergyEarned = () => {
+  const balance = getEnergy();
+  if (energyEarnedTotal === null) {
+    energyEarnedTotal = readEnergyEarned();
+    lastEnergyBalance = balance;
+    return energyEarnedTotal;
+  }
+  if (balance > lastEnergyBalance) energyEarnedTotal += balance - lastEnergyBalance;
+  lastEnergyBalance = balance;
+  return energyEarnedTotal;
+};
+
+const resetEnergyEarned = () => {
+  energyEarnedTotal = 0;
+  lastEnergyBalance = getEnergy();
+  api.storage.set(NS, 'energyEarned', 0);
+};
+
+const energyProgress = () => (goldMode() === 'earned' ? sampleEnergyEarned() : getEnergy());
+
+const progressOfGoal = goal => {
+  if (!goal) return 0;
+  if (goal.kind === 'gold') return goldProgress();
+  if (goal.kind === 'fluxite') return fluxiteProgress();
+  if (goal.kind === 'energy') return energyProgress();
+  if (goal.kind === 'aura') return getAura();
+  if (goal.kind === 'artifacts') return getArtifactsFound();
+  return getFactoryLevel();
+};
+
+const goalMet = goal => {
+  const target = goalTargetOf(goal);
+  if (!(target > 0)) return false;
+  return progressOfGoal(goal) >= target;
+};
+
+const allGoalsMet = cat => {
+  const goals = categoryGoals(cat);
+  return goals.length > 0 && goals.every(goalMet);
+};
+
+const goldAlreadyStocked = cat => {
+  const gold = goldGoalOf(cat);
+  if (!gold) return false;
+  const target = goalTargetOf(gold);
+  return target > 0 && getGold() >= target;
+};
+
 // DE: Der Wert, gegen den das Ziel der Kategorie geprueft wird.
 // EN: The value the category's goal is checked against.
 const progressOf = cat => {
+  const goals = categoryGoals(cat);
+  if (goals.length === 1) return progressOfGoal(goals[0]);
   if (cat.kind === 'gold') return goldProgress();
   if (cat.kind === 'artifacts') return getArtifactsFound();
+  if (cat.kind === 'fluxite') return getFluxite();
+  if (cat.kind === 'energy') return getEnergy();
+  if (cat.kind === 'aura') return getAura();
   return getFactoryLevel();
+};
+
+let goldRateSamples = [];
+let lastGoldRateSampleTime = 0;
+
+const resetGoldRate = () => {
+  goldRateSamples = [];
+  lastGoldRateSampleTime = 0;
+};
+
+const sampleGoldRate = () => {
+  const run = readRun();
+  if (typeof run.startedAt !== 'number') {
+    resetGoldRate();
+    return;
+  }
+  if (typeof run.finishedAt === 'number') return;
+  const t = elapsed();
+  if (t - lastGoldRateSampleTime < 250) return;
+  lastGoldRateSampleTime = t;
+  goldRateSamples.push({ t, g: goldProgress() });
+  const cutoff = t - 60000;
+  while (goldRateSamples.length > 2 && goldRateSamples[0].t < cutoff) goldRateSamples.shift();
+};
+
+// DE: null, solange noch kein echtes Intervall da ist. Vorzeichen bleibt:
+// DE: Hard Mode darf negativ werden, Total Earned nicht, weil nur Zugewinne zaehlen.
+// EN: null until a real interval exists. The sign is kept: Hard Mode may go
+// EN: negative, Total Earned does not, because only gains are counted.
+const goldPerSec = () => {
+  const run = readRun();
+  if (typeof run.startedAt !== 'number') return null;
+  if (goldRateSamples.length < 2) return null;
+  const oldest = goldRateSamples[0];
+  const latest = goldRateSamples[goldRateSamples.length - 1];
+  const dt = (latest.t - oldest.t) / 1000;
+  if (!(dt >= 1)) return null;
+  return (latest.g - oldest.g) / dt;
+};
+
+const formatGoldPerSec = () => {
+  const v = goldPerSec();
+  if (v === null || !Number.isFinite(v)) return '—';
+  const sign = v < 0 ? '-' : '';
+  return `${sign}${Math.abs(v).toFixed(1)} g/s`;
+};
+
+const goldPacingInfo = (best, playTime, waiting, done, cat) => {
+  const g = goldGoalOf(cat);
+  if (!g || best === null || best <= 0 || waiting || done) return null;
+  const cur = progressOfGoal(g);
+  const target = goalTargetOf(g);
+  const remGold = target - cur;
+  if (remGold <= 0) return null;
+  const remSec = (best - playTime) / 1000;
+  if (remSec <= 0) {
+    return {
+      text: t('mods|goldSpeedrun|metric|goldBehindPb'),
+      color: COLORS.red,
+    };
+  }
+  const reqRate = remGold / remSec;
+  const rateFmt = reqRate >= 100 ? reqRate.toFixed(0) : reqRate.toFixed(1);
+  const curRate = goldPerSec();
+  let color = COLORS.dim;
+  if (curRate !== null && Number.isFinite(curRate)) {
+    if (curRate >= reqRate) color = COLORS.green;
+    else if (curRate >= reqRate * 0.85) color = COLORS.gold;
+    else color = COLORS.red;
+  }
+  return {
+    reqRate,
+    text: t('mods|goldSpeedrun|metric|goldReq', { rate: rateFmt }),
+    color,
+  };
+};
+
+const formatGoldPerSecWithReq = (best, playTime, waiting, done, cat) => {
+  const currentStr = waiting ? '—' : formatGoldPerSec();
+  const pacing = goldPacingInfo(best, playTime, waiting, done, cat);
+  if (!pacing) return currentStr;
+  return `${currentStr} ${pacing.text}`;
 };
 
 // DE: Kategoriename fuer HUD und Stream, z.B. "100k Gold % · Hard Mode · Ohne Tutorial".
@@ -1353,29 +1623,50 @@ const handleClipboardSet = (structures, signalLinks) => {
   } catch (e) { /* ignore */ }
 };
 
+const goalPartLabel = goal => {
+  const target = goalTargetOf(goal);
+  if (goal.kind === 'gold') return `${shortGold(target)} Gold %`;
+  if (goal.kind === 'fluxite') return `${shortGold(target)} Fluxite`;
+  if (goal.kind === 'energy') return `${shortGold(target)} Energy`;
+  if (goal.kind === 'aura') return `${shortGold(target)} Aura`;
+  if (goal.kind === 'artifacts') return t('mods|goldSpeedrun|cfg|preset|artifacts');
+  return t(target >= MAX_FACTORY_LEVEL
+    ? 'mods|goldSpeedrun|cfg|preset|factory7'
+    : 'mods|goldSpeedrun|cfg|preset|factory6');
+};
+
 const categoryLabel = () => {
   const cat = category();
   const parts = [];
+  const goals = categoryGoals(cat);
+  const summary = goals.map(goalPartLabel).join(' + ');
 
   if (cat.custom && cat.name) {
     parts.push(cat.name);
-    if (cat.kind === 'gold') {
-      parts.push(`${shortGold(cat.target)} Gold %`);
-      parts.push(t(goldMode() === 'balance'
-        ? 'mods|goldSpeedrun|modeHard'
-        : 'mods|goldSpeedrun|modeNormal'));
-    }
+    if (cat.kind === 'combined' && cat.name !== summary) parts.push(summary);
+  } else if (cat.kind === 'combined') {
+    parts.push(summary);
   } else if (cat.kind === 'gold') {
     parts.push(`${shortGold(cat.target)} Gold %`);
-    parts.push(t(goldMode() === 'balance'
-      ? 'mods|goldSpeedrun|modeHard'
-      : 'mods|goldSpeedrun|modeNormal'));
+  } else if (cat.kind === 'fluxite') {
+    parts.push(`${shortGold(cat.target)} Fluxite`);
+  } else if (cat.kind === 'energy') {
+    parts.push(`${shortGold(cat.target)} Energy`);
+  } else if (cat.kind === 'aura') {
+    parts.push(`${shortGold(cat.target)} Aura`);
   } else if (cat.kind === 'artifacts') {
     parts.push(t('mods|goldSpeedrun|cfg|preset|artifacts'));
   } else {
     parts.push(t(cat.target >= MAX_FACTORY_LEVEL
       ? 'mods|goldSpeedrun|cfg|preset|factory7'
       : 'mods|goldSpeedrun|cfg|preset|factory6'));
+  }
+
+  const countsBalance = goals.some(g => g && (g.kind === 'gold' || g.kind === 'fluxite' || g.kind === 'energy'));
+  if (countsBalance) {
+    parts.push(t(goldMode() === 'balance'
+      ? 'mods|goldSpeedrun|modeHard'
+      : 'mods|goldSpeedrun|modeNormal'));
   }
 
   if (skipTutorialEnabled()) {
@@ -1393,16 +1684,12 @@ const categoryLabel = () => {
 // EN: Best-time key: kept separate per category and ruleset, otherwise 1M
 // EN: times would sit next to 100k times.
 // EN: The best time is the play-clock (W) - the official community metric.
-const goldModeFor = cat => {
-  if (cat && cat.custom) {
-    return cat.goldMode === 'earned' ? 'earned' : 'balance';
-  }
-  return goldMode();
-};
+const goldModeFor = () => goldMode();
 
 const bestKeyFor = (cat, mode, bpOverride) => {
   const c = cat || category();
-  const gm = c.kind === 'gold' ? (mode || goldModeFor(c)) : 'x';
+  const countsBalance = categoryGoals(c).some(g => g && (g.kind === 'gold' || g.kind === 'fluxite' || g.kind === 'energy'));
+  const gm = countsBalance ? (mode || goldMode()) : 'x';
   const useBp = bpOverride !== undefined ? bpOverride : runUsesBlueprints();
   const bp = useBp ? '.bp' : '';
   if (c.custom) return `${BEST_PREFIX}.custom.${c.id}.${gm}${bp}`;
@@ -1758,6 +2045,37 @@ const readComparisonSplits = () => {
     ? activeRoute.splits
     : readBestSplits();
   return Array.isArray(list) ? list : [];
+};
+
+// DE: Ergebnis und PNG vergleichen einen neuen Rekord mit der vorherigen Bestzeit.
+// DE: Die Live-Anzeige waehrend des Laufs bleibt bei der stehenden Bestzeit.
+// EN: The result screen and PNG compare a new record with the previous best.
+// EN: The live HUD during a run keeps using the standing best.
+const readResultComparison = () => {
+  const store = readRoutesStore();
+  const activeRoute = store.routes.find(r => r.id === store.activeRouteId);
+  const hasRoute = !!(activeRoute && Array.isArray(activeRoute.splits) && activeRoute.splits.length > 0);
+  const standing = readBest();
+  const run = readRun();
+  const finished = typeof run.finishedAt === 'number';
+  let scored = null;
+  if (finished) {
+    try { scored = scoredTime(); } catch (e) { scored = null; }
+  }
+  const isStoredPb = finished && standing !== null && Number.isFinite(scored) && Math.abs(scored - standing) <= 50;
+  if (!isStoredPb) {
+    return {
+      time: standing,
+      splits: hasRoute ? activeRoute.splits : readBestSplits(),
+    };
+  }
+  const prev = readPbHistory(category())[0];
+  const prevTime = prev && Number.isFinite(prev.time) ? prev.time : null;
+  const prevSplits = prev && Array.isArray(prev.splits) ? prev.splits : [];
+  return {
+    time: prevTime,
+    splits: hasRoute ? activeRoute.splits : prevSplits,
+  };
 };
 
 // --- DE: Zeitformat / EN: Time format ---------------------------------------
@@ -3679,9 +3997,11 @@ const thinkingMultiplier = () => {
 const wMinusR = () => elapsedPlay() - elapsed();
 
 // DE: Wurde im Spielstand jemals ein Cheat benutzt, ist der Lauf wertlos. Das Flag
-// DE: setzt das Spiel selbst und nimmt es nie zurueck.
+// DE: setzt das Spiel selbst (Max-Everything) und nimmt es nie zurueck. Dieser Mod
+// DE: setzt dasselbe Flag, wenn vor dem Ziel Debug- oder Cinematik-Modus an war.
 // EN: If a cheat was ever used in the save file, the run is worthless. The
-// EN: game sets this flag itself and never clears it.
+// EN: game sets this flag itself (Max Everything) and never clears it. This mod
+// EN: sets the same flag when debug or cinematic mode was on before the goal.
 const cheatsUsed = () => {
   try {
     return sandkit.state.store.integrity.cheatsUsed === true;
@@ -3977,22 +4297,24 @@ const rankIds = () => {
 const goldMarks = cat => {
   const mode = api.settings.get('splitGold');
   if (!mode || mode === 'off') return [];
+  const gold = goldGoalOf(cat);
+  const target = gold ? goalTargetOf(gold) : 0;
 
   if (mode === '10k' || mode === '100k') {
     const step = mode === '10k' ? 10000 : 100000;
     const out = [];
-    // DE: Die Marke auf dem Ziel selbst faellt weg - dort endet der Lauf ohnehin.
-    // EN: The mark right on the goal itself is dropped - the run ends there anyway.
-    for (let v = step; v < cat.target; v += step) out.push({ value: v, label: shortGold(v) });
+    const cap = target > 0 ? target : 0;
+    if (!(cap > step)) return [];
+    for (let v = step; v < cap; v += step) out.push({ value: v, label: shortGold(v) });
     return out;
   }
 
-  if (cat.kind !== 'gold' || cat.target <= 0) return [];
+  if (!gold || target <= 0) return [];
   const shares = mode === 'tenths'
     ? [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
     : [0.25, 0.5, 0.75];
   return shares.map(f => ({
-    value: Math.ceil(cat.target * f),
+    value: Math.ceil(target * f),
     label: t('mods|goldSpeedrun|split|gold', { percent: Math.round(f * 100) }),
   }));
 };
@@ -4002,7 +4324,9 @@ const goldMarks = cat => {
 let markCache = { key: null, list: [] };
 
 const currentGoldMarks = cat => {
-  const key = `${cat.id}|${cat.target}|${api.settings.get('splitGold')}`;
+  const gold = goldGoalOf(cat);
+  const target = gold ? goalTargetOf(gold) : 0;
+  const key = `${cat.id}|${target}|${api.settings.get('splitGold')}`;
   if (markCache.key !== key) markCache = { key, list: goldMarks(cat) };
   return markCache.list;
 };
@@ -4071,7 +4395,7 @@ const upcomingSplits = (cat, done) => {
 
   if (triggerEnabled('artifact', 'any', splitOn('splitArtifact'))) {
     const found = getArtifactsFound();
-    const last = artifactTotal() > 0 ? artifactTotal() : (cat.kind === 'artifacts' ? cat.target : 0);
+    const last = artifactTotal() > 0 ? artifactTotal() : (cat.kind === 'artifacts' ? goalTargetOf(categoryGoals(cat)[0]) : 0);
     for (let n = found + 1; n <= last; n++) {
       push('artifact', t('mods|goldSpeedrun|split|artifact', { index: n }), `artifact:${n}`);
     }
@@ -4186,6 +4510,70 @@ const graceFor = ms => {
   eventGraceUntil = Math.max(eventGraceUntil, Date.now() + ms);
 };
 
+// --- DE: Debug- und Cinematik-Modus / EN: Debug and cinematic mode -----------
+// DE: session.debug existiert immer (Standard-Pinsel). Allein die Anwesenheit
+// DE: ist kein Signal. Gezaehlt wird, was der Motor wirklich scharf schaltet:
+// DE: config.debug, localStorage, der Debug-Pinsel im Inventar, und der
+// DE: Cinematik-Zustand. Cinematik ist das experimentelle Video-Werkzeug
+// DE: (Freecam, Zeitlupe), nicht Intro, Drohnen oder Tooltips.
+// EN: session.debug always exists (the default brush). Its mere presence is
+// EN: not a signal. What counts is what the engine actually arms: config.debug,
+// EN: localStorage, the debug brush in the inventory, and the cinematic state.
+// EN: Cinematic mode is the experimental video tool (freecam, time scale), not
+// EN: the intro, drones, or tooltips.
+const DEBUG_BRUSH_ID = 'debugPaintBrush';
+// DE: Worker-Nachricht in Sandustry 0.5.6. tools/verify-engine.js prueft den Wert.
+// EN: Worker message in Sandustry 0.5.6. tools/verify-engine.js checks the value.
+const SIM_SPEED_MESSAGE = 68;
+
+const legacyConfig = () => {
+  try {
+    const cfgApi = sandkit.engine && sandkit.engine.api && sandkit.engine.api.config;
+    if (cfgApi && typeof cfgApi.getLegacy === 'function') return cfgApi.getLegacy();
+  } catch (e) { /* DE: Engine-Config fehlt / EN: engine config missing */ }
+  return null;
+};
+
+const localFlag = key => {
+  try { return localStorage.getItem(key) === 'true'; } catch (e) { return false; }
+};
+
+const debugBrushInInventory = () => {
+  try {
+    const inv = sandkit.state.store.player.inventory;
+    return Array.isArray(inv) && inv.some(item => item && item.id === DEBUG_BRUSH_ID);
+  } catch (e) {
+    return false;
+  }
+};
+
+const isDebugActive = () => {
+  try {
+    const cfg = legacyConfig();
+    const debug = cfg && cfg.debug;
+    if (debug && (debug.active === true || debug.drawChunks === true)) return true;
+  } catch (e) { /* DE: Config nicht lesbar / EN: config not readable */ }
+  if (localFlag('debug.active') || localFlag('debug.drawChunks')) return true;
+  if (debugBrushInInventory()) return true;
+  try {
+    const items = sandkit.state.sandkit && sandkit.state.sandkit.mods && sandkit.state.sandkit.mods.items;
+    if (items && items[DEBUG_BRUSH_ID]) return true;
+  } catch (e) { /* DE: Mod-Item-Liste fehlt / EN: mod item list missing */ }
+  try {
+    const brush = sandkit.state.session.debug && sandkit.state.session.debug.brush;
+    if (brush && (brush.overwrite === true || brush.skipPhysics === 1)) return true;
+  } catch (e) { /* DE: session.debug fehlt / EN: session.debug missing */ }
+  return false;
+};
+
+const isCinematicActive = () => {
+  try {
+    const cinematic = sandkit.state.session.cinematic;
+    if (cinematic && typeof cinematic === 'object') return true;
+  } catch (e) { /* DE: keine Session / EN: no session */ }
+  return localFlag('cinematic.enabled');
+};
+
 // DE: Der Timer startet immer bei der ersten echten Spielhandlung: Bewegung,
 // DE: Graben, Bauen, Forschen, und auch Fortschritt ohne eigenen Klick
 // DE: (Drohnen, Foerderbaender). Das ist die offizielle Speedrun-Vorgabe.
@@ -4195,10 +4583,11 @@ const graceFor = ms => {
 
 // --- DE: Offizielles Regelwerk / EN: Official ruleset -----------------------
 // DE: Gueltig ist ein Lauf nur, wenn Gold nach Kontostand zaehlt, Intro,
-// DE: Story und Tutorial nicht uebersprungen werden, und ausser diesem Mod
-// DE: nichts aktiv ist.
+// DE: Story und Tutorial nicht uebersprungen werden, ausser diesem Mod nichts
+// DE: aktiv ist, und weder Debug- noch Cinematik-Modus an ist.
 // EN: A run is valid only when gold counts by balance, intro, story and
-// EN: tutorial are not skipped, and nothing but this mod is active.
+// EN: tutorial are not skipped, nothing but this mod is active, and neither
+// EN: debug mode nor cinematic mode is on.
 const OFFICIAL_RULES = [
   {
     id: 'goldMode',
@@ -4225,6 +4614,18 @@ const OFFICIAL_RULES = [
     labelKey: 'mods|goldSpeedrun|rules|skipStory',
     valueKey: 'mods|goldSpeedrun|cfg|splitGold|off',
     ok: () => !skipStoryEnabled(),
+  },
+  {
+    id: 'debugMode',
+    labelKey: 'mods|goldSpeedrun|rules|debugMode',
+    valueKey: 'mods|goldSpeedrun|cfg|splitGold|off',
+    ok: () => !isDebugActive(),
+  },
+  {
+    id: 'cinematicMode',
+    labelKey: 'mods|goldSpeedrun|rules|cinematicMode',
+    valueKey: 'mods|goldSpeedrun|cfg|splitGold|off',
+    ok: () => !isCinematicActive(),
   },
 ];
 
@@ -4326,6 +4727,152 @@ const dropOfficial = () => {
   log('Regelwerk waehrend des Laufs verstellt - der Lauf gilt nicht mehr als offiziell');
 };
 
+// DE: Debug oder Cinematik vor dem Ziel markiert den Spielstand dauerhaft.
+// DE: store.integrity.cheatsUsed schreibt das Spiel mit in die Datei und nimmt
+// DE: es nie zurueck. Nach dem Ziel wird nichts mehr nachgetragen.
+// EN: Debug or cinematic mode before the goal marks the save for good.
+// EN: store.integrity.cheatsUsed is what the game writes into the file, and it
+// EN: never clears it. Nothing is applied after the goal has already been reached.
+const flagSaveForDisallowedEngine = () => {
+  if (!isDebugActive() && !isCinematicActive()) return;
+  const run = readRun();
+  if (typeof run.finishedAt === 'number') return;
+
+  try {
+    const store = sandkit.state && sandkit.state.store;
+    if (store) {
+      if (!store.integrity || typeof store.integrity !== 'object') {
+        store.integrity = { cheatsUsed: false, modsUsed: false };
+      }
+      if (store.integrity.cheatsUsed !== true) {
+        store.integrity.cheatsUsed = true;
+        log('Debug- oder Cinematik-Modus vor dem Ziel - Spielstand als Cheats markiert');
+      }
+    }
+  } catch (e) { /* DE: Spielstand noch nicht da / EN: save not loaded yet */ }
+
+  try {
+    api.storage.ensure(NS);
+    if (api.storage.get(NS, 'debugUsed') !== true) api.storage.set(NS, 'debugUsed', true);
+  } catch (e) { /* DE: Speicher fehlt / EN: storage missing */ }
+
+  if (isRunning() && runIsOfficial()) dropOfficial();
+};
+
+let debugSettingApplied = null;
+
+const activateDebugMode = () => {
+  const already = isDebugActive();
+  try { localStorage.setItem('debug.active', 'true'); } catch (e) { /* DE: kein localStorage / EN: no localStorage */ }
+  try {
+    const cfg = legacyConfig();
+    if (cfg && cfg.debug) cfg.debug.active = true;
+  } catch (e) { /* DE: Config nicht schreibbar / EN: config not writable */ }
+  rulesCache = null;
+  if (already) return;
+  log('Debug-Modus ueber die Mod-Einstellung eingeschaltet');
+  try { api.ui.toast({ key: 'mods|goldSpeedrun|toast|debugEnabled' }); } catch (e) { /* ignore */ }
+};
+
+// DE: Schaltet Debug aus und raeumt dabei jeden nicht erlaubten Motor-Zustand
+// DE: mit ab (Chunk-Gitter, Debug-Pinsel, Cinematik, Kamera, Sim-Geschwindigkeit).
+// DE: Der Lauf wird davon nicht wieder gueltig.
+// EN: Turns debug off and clears every disallowed engine state along with it
+// EN: (chunk grid, debug brush, cinematic mode, camera, sim speed).
+// EN: That does not make the run valid again.
+const deactivateDisallowedEngineStates = () => {
+  const wasActive = isDebugActive() || isCinematicActive();
+  debugSettingApplied = false;
+
+  try { localStorage.setItem('debug.active', 'false'); } catch (e) { /* ignore */ }
+  try { localStorage.setItem('debug.drawChunks', 'false'); } catch (e) { /* ignore */ }
+  try { localStorage.setItem('cinematic.enabled', 'false'); } catch (e) { /* ignore */ }
+
+  try {
+    const cfg = legacyConfig();
+    if (cfg && cfg.debug) {
+      cfg.debug.active = false;
+      cfg.debug.drawChunks = false;
+    }
+  } catch (e) { /* DE: Config nicht schreibbar / EN: config not writable */ }
+
+  try {
+    const session = sandkit.state && sandkit.state.session;
+    if (session) {
+      const brush = session.debug && session.debug.brush;
+      if (brush) {
+        brush.overwrite = false;
+        brush.skipPhysics = 0;
+      }
+      session.overrideCamera = false;
+      session.lerpCamera = false;
+      if (session.cinematic && typeof session.cinematic === 'object') {
+        try {
+          if (session.cinematic.speed) session.cinematic.speed.multiplier = 1;
+        } catch (e) { /* DE: Zeitfaktor nicht schreibbar / EN: time scale not writable */ }
+        try {
+          if (session.settings) session.settings.videoZoom = 1;
+        } catch (e) { /* DE: Zoom nicht schreibbar / EN: zoom not writable */ }
+      }
+      session.cinematic = undefined;
+    }
+  } catch (e) { /* DE: Session fehlt / EN: session missing */ }
+
+  try {
+    const inv = sandkit.state.store.player.inventory;
+    if (Array.isArray(inv)) {
+      sandkit.state.store.player.inventory = inv.filter(item => !item || item.id !== DEBUG_BRUSH_ID);
+    }
+  } catch (e) { /* DE: Inventar fehlt / EN: inventory missing */ }
+
+  try {
+    const items = sandkit.state.sandkit && sandkit.state.sandkit.mods && sandkit.state.sandkit.mods.items;
+    if (items && items[DEBUG_BRUSH_ID]) delete items[DEBUG_BRUSH_ID];
+  } catch (e) { /* DE: Mod-Items nicht angefasst / EN: mod items left as they are */ }
+
+  try {
+    const manager = sandkit.state.environment
+      && sandkit.state.environment.multithreading
+      && sandkit.state.environment.multithreading.simulation
+      && sandkit.state.environment.multithreading.simulation.manager;
+    if (manager && typeof manager.postMessage === 'function') {
+      manager.postMessage([SIM_SPEED_MESSAGE, 1]);
+    }
+  } catch (e) { /* DE: Simulations-Thread nicht erreichbar / EN: simulation thread not reachable */ }
+
+  try { writeSetting('debugMode', false); } catch (e) { /* ignore */ }
+  rulesCache = null;
+
+  if (wasActive) {
+    log('Debug- und Cinematik-Zustand ausgeschaltet - der Lauf bleibt ungueltig');
+    try { api.ui.toast({ key: 'mods|goldSpeedrun|toast|debugDeactivated' }); } catch (e) { /* ignore */ }
+  }
+
+  for (const id of ['Options', 'CinematicPanel', 'Root', 'Menu', 'ModsScreen']) {
+    try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* DE: Komponente inaktiv / EN: component not active */ }
+  }
+  try { notifyResult(); } catch (e) { /* DE: Dashboard noch nicht da / EN: dashboard not ready yet */ }
+};
+
+// DE: Die Mod-Einstellung schaltet nur Debug. Aus raeumt zusaetzlich Cinematik
+// DE: und die anderen nicht erlaubten Zustaende ab. Der erste Blick (Standard
+// DE: aus) schaltet einen schon laufenden Debug-Modus nicht still ab - dafuer
+// DE: ist der Knopf im HUD.
+// EN: The mod setting toggles debug only. Off also clears cinematic mode and
+// EN: the other disallowed states. The first look (default off) does not
+// EN: silently kill a debug mode that is already running - the HUD button is
+// EN: there for that.
+const syncDebugSetting = () => {
+  let want = false;
+  try { want = api.settings.get('debugMode') === true; } catch (e) { return; }
+  if (debugSettingApplied === want) return;
+  const prev = debugSettingApplied;
+  debugSettingApplied = want;
+  if (prev === null && !want) return;
+  if (want) activateDebugMode();
+  else deactivateDisallowedEngineStates();
+};
+
 // DE: Was HUD und Ergebnisfenster anzeigen: vor dem Lauf die aktuellen
 // DE: Einstellungen, waehrend und nach dem Lauf das, womit er begonnen hat.
 // EN: What the HUD and result screen show: before the run, the current
@@ -4380,9 +4927,7 @@ const startRun = reason => {
   // EN: Saves that already beat the goal (creative, 1M gold, finished map)
   // EN: must not start a run - otherwise it ends in milliseconds and disturbs the PB.
   const cat = category();
-  const alreadyDone = progressOf(cat) >= cat.target
-    || (cat.kind === 'gold' && getGold() >= cat.target);
-  if (alreadyDone) {
+  if (allGoalsMet(cat) || goldAlreadyStocked(cat)) {
     log('Ziel bereits erreicht - Lauf wird nicht gestartet');
     return false;
   }
@@ -4406,6 +4951,10 @@ const startRun = reason => {
     api.storage.set(NS, 'blueprintsUsed', false);
   }
   resetEarned();
+  resetFluxiteEarned();
+  resetEnergyEarned();
+  resetGoldRate();
+  api.storage.set(NS, 'goalHits', []);
   setResultDismissed(true);
   requestHeatmapReset();
 
@@ -4753,6 +5302,9 @@ const discardRun = reason => {
   startClocks();
   resetHistory();
   resetEarned();
+  resetFluxiteEarned();
+  resetEnergyEarned();
+  resetGoldRate();
   setResultDismissed(true);
   log(reason);
 };
@@ -4769,7 +5321,7 @@ const sanitizeLoadedRun = () => {
   }
   if (typeof run.startedAt === 'number' && typeof run.finishedAt !== 'number') {
     const cat = category();
-    if (cat.target > 0 && progressOf(cat) >= cat.target) {
+    if (allGoalsMet(cat)) {
       discardRun('Beim Laden erkannt: ungueltiger Lauf verworfen');
     }
   }
@@ -4897,9 +5449,30 @@ const finishRun = cat => {
     splits: splits.map(s =>
       `${formatTime(s.t, 'millis')}  (sim ${formatTime(Number.isFinite(s.sim) ? s.sim : s.t, 'millis')})  ${displaySplitLabel(s, splits)}  ${s.gold} Gold`),
     cheatsUsed: cheatsUsed(),
+    debugUsed: (() => {
+      try { return api.storage.get(NS, 'debugUsed') === true; } catch (e) { return false; }
+    })(),
     blueprintsUsed: runUsesBlueprints(),
     mods,
   });
+};
+
+const goalHitId = goal => `${goal.kind}:${goalTargetOf(goal)}`;
+
+const notePartialGoalHits = cat => {
+  if (allGoalsMet(cat)) return;
+  let hits = api.storage.get(NS, 'goalHits');
+  if (!Array.isArray(hits)) hits = [];
+  let changed = false;
+  categoryGoals(cat).forEach(goal => {
+    if (!goal || goal.kind === 'factory' || !goalMet(goal)) return;
+    const id = goalHitId(goal);
+    if (hits.indexOf(id) >= 0) return;
+    hits.push(id);
+    changed = true;
+    addSplit(goal.kind, goalPartLabel(goal), id);
+  });
+  if (changed) api.storage.set(NS, 'goalHits', hits);
 };
 
 const checkGoal = () => {
@@ -4908,13 +5481,12 @@ const checkGoal = () => {
   if (typeof run.finishedAt === 'number') return; // DE: schon durch / EN: already finished
 
   const cat = category();
-  if (cat.target <= 0) return;                    // DE: Ziel noch unbekannt / EN: goal not known yet
-
-  const current = progressOf(cat);
+  const goals = categoryGoals(cat);
+  if (goals.length === 0 || goals.every(g => !(goalTargetOf(g) > 0))) return;
 
   // DE: Ziel schon in den ersten Momenten = bereits geschaffter Spielstand, kein Lauf.
   // EN: Goal already met in the first moments = already-beaten save, not a run.
-  if (current >= cat.target && elapsedPlay() < LOAD_ARTIFACT_MS) {
+  if (allGoalsMet(cat) && elapsedPlay() < LOAD_ARTIFACT_MS) {
     discardRun('Ziel schon beim Start erreicht (Load-Artefakt)');
     return;
   }
@@ -4939,7 +5511,8 @@ const checkGoal = () => {
     if (moved) api.storage.set(NS, 'goldMarkIndex', index);
   }
 
-  if (current >= cat.target) finishRun(cat);
+  notePartialGoalHits(cat);
+  if (allGoalsMet(cat)) finishRun(cat);
 };
 
 api.events.on('frame:render', () => {
@@ -4960,6 +5533,9 @@ api.events.on('frame:render', () => {
   // EN: Sampled every frame so quick back-to-back earning and spending
   // EN: doesn't fall through the cracks. Costs only a number comparison.
   if (goldMode() === 'earned') sampleEarned();
+  sampleFluxiteEarned();
+  sampleEnergyEarned();
+  sampleGoldRate();
 
   const stamp = now();
 
@@ -4976,6 +5552,7 @@ api.events.on('frame:render', () => {
   // EN: While the run is going, nothing about the ruleset may change anymore.
   // EN: rulesetStatus() caches its result briefly, so this costs nothing.
   if (isRunning() && runIsOfficial() && !rulesetStatus().ok) dropOfficial();
+  flagSaveForDisallowedEngine();
 
   // DE: Laufsumme gedrosselt in den Spielstand schreiben.
   // EN: Write the running total to the save, throttled.
@@ -4987,6 +5564,8 @@ api.events.on('frame:render', () => {
   syncActiveFromPresetSetting();
 
   if (earnedTotal !== null) api.storage.set(NS, 'earned', earnedTotal);
+  if (fluxiteEarnedTotal !== null) api.storage.set(NS, 'fluxiteEarned', fluxiteEarnedTotal);
+  if (energyEarnedTotal !== null) api.storage.set(NS, 'energyEarned', energyEarnedTotal);
 });
 
 // DE: Die Uhren haengen nicht am Bild. requestAnimationFrame steht still, sobald
@@ -5175,7 +5754,7 @@ function SplitRow({ split, previous, fmt, wide, pb, bests, current, liveDelta, s
 }
 
 function SplitTable({ splits, fmt, wide, pbSplits, scalePx }) {
-  const pbs = Array.isArray(pbSplits) && pbSplits.length > 0 ? pbSplits : readComparisonSplits();
+  const pbs = Array.isArray(pbSplits) ? pbSplits : readComparisonSplits();
   const bests = readGlobalBests();
   let anchorIdx = -1;
   if (!wide) {
@@ -5267,6 +5846,7 @@ const loadHistoryFromSave = () => {
         slowestMs: Number.isFinite(b.slowestMs) ? b.slowestMs : 0,
         slowestX: Number.isFinite(b.slowestX) ? b.slowestX : -1,
         slowestY: Number.isFinite(b.slowestY) ? b.slowestY : -1,
+        gold: Number.isFinite(b.gold) ? b.gold : null,
         hits: Array.isArray(b.hits) ? b.hits : null,
       };
     })
@@ -5373,6 +5953,7 @@ const downsampleHistory = () => {
       awake: Math.max(a.awake || 0, b.awake || 0),
       live: Math.max(a.live || 0, b.live || 0),
       simMs: Math.max(a.simMs || 0, b.simMs || 0),
+      gold: Number.isFinite(b.gold) ? b.gold : (Number.isFinite(a.gold) ? a.gold : null),
       ...mergeCausePreferHotter(a, b),
       hits: mergeHits(a.hits, b.hits),
     });
@@ -5439,6 +6020,7 @@ const sampleHistoryTick = () => {
       // EN: store.meta.time), not the speedrun clock. After the goal, a save, and
       // EN: a reload it continues at the world's play-clock, not at finishedAt.
       const relMs = now();
+      const goldSample = Math.floor(goldProgress());
 
       highResBuffer.push({
         timeMs: atMs,
@@ -5457,6 +6039,7 @@ const sampleHistoryTick = () => {
         allBlocksActive: dAllBlocksActive,
         awake,
         live,
+        gold: goldSample,
         simMs,
         ...cause,
       });
@@ -5532,6 +6115,7 @@ const sampleHistoryTick = () => {
           slowestMs: cause.slowestMs,
           slowestX: cause.slowestX,
           slowestY: cause.slowestY,
+          gold: goldSample,
         };
       } else {
         if (ups < bucketAccum.min) bucketAccum.min = ups;
@@ -5562,6 +6146,7 @@ const sampleHistoryTick = () => {
         bucketAccum.slowestMs = hotter.slowestMs;
         bucketAccum.slowestX = hotter.slowestX;
         bucketAccum.slowestY = hotter.slowestY;
+        bucketAccum.gold = goldSample;
       }
       if (atMs - bucketAccum.startMs >= HISTORY_BUCKET_MS) {
         const chunkHits = [];
@@ -5599,6 +6184,7 @@ const sampleHistoryTick = () => {
           slowestMs: roundMs2(bucketAccum.slowestMs),
           slowestX: bucketAccum.slowestX,
           slowestY: bucketAccum.slowestY,
+          gold: Number.isFinite(bucketAccum.gold) ? bucketAccum.gold : null,
           hits: chunkHits.length > 0 ? chunkHits : null,
         });
         bucketAccum = null;
@@ -5812,11 +6398,29 @@ const RulesBadge = ({ rules, fontSize }) => {
       : t('mods|goldSpeedrun|rules|invalid'));
 };
 
+const DeactivateDebugButton = ({ fontSize }) => h('button', {
+  onClick: () => deactivateDisallowedEngineStates(),
+  style: {
+    marginTop: '6px',
+    pointerEvents: 'auto',
+    cursor: 'pointer',
+    background: 'rgba(224, 82, 82, 0.28)',
+    border: '1px solid rgba(224, 82, 82, 0.75)',
+    color: '#ffd0d0',
+    fontWeight: 700,
+    fontSize: fontSize || '11px',
+    padding: '3px 8px',
+    borderRadius: '4px',
+  },
+}, t('mods|goldSpeedrun|btn|deactivateDebug'));
+
 const InvalidRunBanner = ({ view, fontSize }) => {
-  if (!view || view.ok || view.broken) return null;
-  const items = Array.isArray(view.items) ? view.items.filter(i => !i.ok) : [];
+  const engineOn = isDebugActive() || isCinematicActive();
+  const showList = !!(view && !view.ok && !view.broken);
+  if (!showList && !engineOn) return null;
+  const items = showList && Array.isArray(view.items) ? view.items.filter(i => !i.ok) : [];
   return h('div', {
-    style: {
+    style: showList ? {
       marginTop: '4px',
       padding: '4px 6px',
       borderRadius: '4px',
@@ -5827,13 +6431,14 @@ const InvalidRunBanner = ({ view, fontSize }) => {
       fontWeight: 800,
       letterSpacing: '0.02em',
       lineHeight: 1.25,
-    },
+    } : { marginTop: '4px' },
   }, [
-    h('div', { key: 'h' }, t('mods|goldSpeedrun|rules|invalidBanner')),
+    showList ? h('div', { key: 'h' }, t('mods|goldSpeedrun|rules|invalidBanner')) : null,
     ...items.map(i => h('div', {
       key: i.id,
       style: { fontWeight: 600, fontSize: '10px', color: '#ffc0c0', marginTop: '2px' },
     }, `${i.label} — ${t('mods|goldSpeedrun|rules|need', { value: i.value })}`)),
+    engineOn ? h(DeactivateDebugButton, { key: 'deactivateDebug', fontSize }) : null,
   ]);
 };
 
@@ -5872,6 +6477,73 @@ const BlueprintBadge = ({ fontSize }) => {
   }, `[${t('mods|goldSpeedrun|category|blueprints').toUpperCase()}]`);
 };
 
+const goalLine = goal => {
+  const cur = progressOfGoal(goal);
+  const target = goalTargetOf(goal);
+  const met = target > 0 && cur >= target;
+  const prefix = met ? '✓ ' : '';
+  if (goal.kind === 'artifacts') {
+    return prefix + t('mods|goldSpeedrun|artifacts', {
+      current: cur,
+      target: target > 0 ? target : '?',
+    });
+  }
+  if (goal.kind === 'factory') {
+    return prefix + t('mods|goldSpeedrun|factory', { current: cur, target });
+  }
+  const unit = goal.kind === 'fluxite' ? ' Fluxite'
+    : goal.kind === 'energy' ? ' Energy'
+    : goal.kind === 'aura' ? ' Aura' : '';
+  return prefix + `${formatGold(cur)} / ${formatGold(target)}${unit}`;
+};
+
+const GOAL_ACCENT_COLORS = {
+  gold: '#f0c040',       // Gold
+  fluxite: '#a855f7',    // Deep Purple
+  energy: '#f59e0b',     // Amber
+  aura: '#38bdf8',       // Light Blue
+  factory: '#34d399',    // Emerald Green
+  artifacts: '#f43f5e',  // Ruby Rose
+};
+
+const goalAccentColor = kind => GOAL_ACCENT_COLORS[kind] || COLORS.blue;
+
+const goalProgressNodes = goals => {
+  const parts = [];
+  (goals || []).forEach((goal, i) => {
+    if (i > 0) {
+      parts.push(h('span', { key: 'sep' + i, style: { color: COLORS.dim, margin: '0 4px' } }, '·'));
+    }
+    const color = goalAccentColor(goal && goal.kind);
+    parts.push(h('span', { key: 'g' + i, style: { color } }, goalLine(goal)));
+  });
+  return parts;
+};
+
+const goalBarNodes = (goals, doneFlag) => h('div', {
+  key: 'bars',
+  style: { marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' },
+}, (goals || []).map((goal, i) => {
+  const cur = progressOfGoal(goal);
+  const target = goalTargetOf(goal);
+  const pct = target > 0 ? Math.min(100, (cur / target) * 100) : 0;
+  const met = target > 0 && cur >= target;
+  const accent = goalAccentColor(goal && goal.kind);
+  return h('div', {
+    key: 'bar' + i,
+    style: {
+      height: '4px', borderRadius: '2px',
+      background: 'rgba(255,255,255,0.14)', overflow: 'hidden',
+    },
+  }, h('div', {
+    style: {
+      width: `${pct}%`, height: '100%',
+      background: accent,
+      boxShadow: (doneFlag || met) ? `0 0 4px ${accent}` : undefined,
+    },
+  }));
+}));
+
 function SpeedrunHud() {
   const fmt = timeFormat();
   useTick(fmt);
@@ -5886,9 +6558,7 @@ function SpeedrunHud() {
   const horizontal = hudLayout() === 'horizontal';
 
   const cat = category();
-  const current = progressOf(cat);
-  const target = cat.target;
-  const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
+  const goals = categoryGoals(cat);
   const cornerKey = api.settings.get('corner') || 'topCenter';
   const corner = CORNERS[cornerKey] || CORNERS.topCenter;
   const isBottomRight = cornerKey === 'bottomRight';
@@ -5915,17 +6585,7 @@ function SpeedrunHud() {
   const showSplits = api.settings.get('showSplits') !== false && visible.length > 0;
   const pbSplits = readComparisonSplits();
 
-  let progressText;
-  if (cat.kind === 'artifacts') {
-    progressText = t('mods|goldSpeedrun|artifacts', {
-      current: current,
-      target: target > 0 ? target : '?',
-    });
-  } else if (cat.kind === 'factory') {
-    progressText = t('mods|goldSpeedrun|factory', { current: current, target: target });
-  } else {
-    progressText = `${formatGold(current)} / ${formatGold(target)}`;
-  }
+  let progressText = goals.map(goalLine).join(' · ');
 
   const headlineMs = mode === 'sim' ? simTime : mode === 'play' ? playTime : rTime;
   const headlineText = waiting ? dashTime(fmt) : formatTime(headlineMs, fmt);
@@ -5957,26 +6617,34 @@ function SpeedrunHud() {
   const jamShareVal = jamSharePercent();
   const jamText = waiting || !ready ? '—' : `${jamLoadVal.toFixed(2)}/u (${jamShareVal.toFixed(1)}%)`;
   const jamColor = waiting || !ready ? COLORS.dim : jamShareVal >= 10 || jamLoadVal >= 1.0 ? COLORS.red : jamShareVal >= 2 || jamLoadVal >= 0.2 ? COLORS.gold : COLORS.green;
+  const slowVal = waiting || !ready ? '—' : `${fmtSigned(slowdown, 2)}%`;
+  const slowColor = waiting || !ready ? COLORS.dim : slowdown <= -5 ? COLORS.red : slowdown <= -1 ? COLORS.gold : COLORS.green;
+  const defVal = waiting || !ready ? '—' : `${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s)`;
+  const defColor = waiting || !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green;
+  const pacing = goldPacingInfo(best, playTime, waiting, done, cat);
+  const modsExtra = modsInfo.items && modsInfo.items.find(i => i.id === 'mods')
+    ? modsInfo.items.find(i => i.id === 'mods').extra
+    : [];
 
-  if (streamerModeOn()) {
-    const splitPx = spx('split');
-    const metaPx = npx('meta');
-    const badgePx = npx('badge') + 'px';
-    const footPx = npx('footer') + 'px';
-    const defPx = npx('deficit') + 'px';
+  const isStreamer = streamerModeOn();
+  const splitPx = isStreamer ? spx('split') : 11;
+  const metaPx = isStreamer ? npx('meta') : 11;
+  const badgePx = (isStreamer ? npx('badge') : 10) + 'px';
+  const footPx = (isStreamer ? npx('footer') : 11) + 'px';
+  const defPx = (isStreamer ? npx('deficit') : 11) + 'px';
+
+  // --- 1. Timing Block (Clock, Comparison, Metrics, Splits) ---
+  const timingChildren = [];
+
+  if (isStreamer) {
     const ahead = waiting ? null : totalAheadDelta(allSplits, upcoming, pbSplits);
     const aheadText = ahead === null
       ? '—'
       : (ahead >= 0 ? '+' : '-') + formatShort(Math.abs(ahead), fmt);
     const aheadColor = ahead === null ? COLORS.dim : ahead <= 0 ? COLORS.green : COLORS.red;
-    const slowVal = waiting || !ready ? '—' : `${fmtSigned(slowdown, 2)}%`;
-    const slowColor = waiting || !ready ? COLORS.dim : slowdown <= -5 ? COLORS.red : slowdown <= -1 ? COLORS.gold : COLORS.green;
     const playText = waiting ? dashTime(fmt) : formatTime(playTime, fmt);
-    const modsExtra = modsInfo.items && modsInfo.items.find(i => i.id === 'mods')
-      ? modsInfo.items.find(i => i.id === 'mods').extra
-      : [];
 
-    const keyBlock = [
+    timingChildren.push(
       h('div', {
         key: 'big',
         style: {
@@ -6003,403 +6671,272 @@ function SpeedrunHud() {
         h('span', { key: 'val' }, aheadText),
       ]),
       h('div', {
-        key: 'slow',
+        key: 'status',
         style: {
           marginTop: '4px',
-          font: sfont('slowdown', 600, 1.2),
-          color: slowColor,
-          fontVariantNumeric: 'tabular-nums',
-          whiteSpace: 'nowrap',
-        },
-      }, `${t('mods|goldSpeedrun|metric|slowdown')} ${slowVal} · ${t('mods|goldSpeedrun|metric|jamLoad')} ${jamText}`),
-    ];
-
-    const splitBlock = showSplits
-      ? h('div', {
-          key: 'splits',
-          style: { minWidth: (splitPx * 16) + 'px' },
-        }, [
-          firstVisible > 0
-            ? h('div', {
-                key: 'more',
-                style: {
-                  color: COLORS.dim, opacity: 0.7, paddingBottom: '2px',
-                  fontSize: metaPx + 'px',
-                },
-              }, `+${firstVisible} …`)
-            : null,
-          h(SplitTable, { key: 'tbl', splits: visible, fmt, wide: false, pbSplits, scalePx: splitPx }),
-        ])
-      : null;
-
-    const btnStyle = {
-      background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.dim}`, color: COLORS.text,
-      padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', pointerEvents: 'auto',
-      fontSize: footPx, marginTop: '6px', width: '100%',
-    };
-
-    const graphBlock = sparkline && !waiting
-      ? h('div', { key: 'spark', style: { marginTop: '4px', minWidth: '120px' } }, [
-          h(UpsEnvelopeGraph, { key: 'g', columns: sparklineColumns(), height: 26 }),
-          h('button', {
-            key: 'metricsBtn',
-            style: { ...btnStyle, marginTop: '3px', padding: '1px 6px', fontSize: '10px' },
-            onClick: () => setMetricsOverlayOpen(true),
-          }, t('mods|goldSpeedrun|metrics|openBtn')),
-        ])
-      : null;
-
-    const miscBlock = [
-      h('div', {
-        key: 'header',
-        style: {
-          font: nfont('meta', 500, 1.3),
-          color: COLORS.dim,
-          fontVariantNumeric: 'tabular-nums',
           display: 'flex',
-          gap: '8px',
-          flexWrap: 'wrap',
+          flexDirection: 'column',
+          gap: '2px',
+          font: sfont('slowdown', 600, 1.2),
+          fontVariantNumeric: 'tabular-nums',
         },
       }, [
-        h('span', { key: 'state', style: { color: rulesLive.broken ? COLORS.red : done ? COLORS.gold : COLORS.text, fontWeight: 'bold' } }, stateStr),
-        h('span', { key: 'seed' }, `Seed: ${seedStr}`),
-        h('span', { key: 'pauses' }, `Pauses: ${pauseCount}`),
-        h('span', { key: 'reloads' }, `Reloads: ${reloadCount}`),
-      ]),
-      !waiting
-        ? h('div', {
-            key: 'others',
-            style: {
-              marginTop: '2px', display: 'flex', gap: '10px',
-              font: nfont('meta', 600, 1.2), color: COLORS.dim,
-              fontVariantNumeric: 'tabular-nums',
-            },
-          }, ['real', 'sim'].map(k => h('span', { key: k }, otherClock(k))))
-        : null,
+        h('div', { key: 'row1', style: { display: 'flex', alignItems: 'baseline', gap: '6px' } }, [
+          h('span', { key: 'slow', style: { color: slowColor } }, `${t('mods|goldSpeedrun|metric|slowdown')} ${slowVal}`),
+          h('span', { key: 'sep', style: { color: COLORS.dim } }, '·'),
+          h('span', { key: 'def', style: { color: defColor } }, `${t('mods|goldSpeedrun|metric|deficit')} ${defVal}`),
+        ]),
+        h('div', { key: 'row2' }, [
+          h('span', { key: 'jam', style: { color: jamColor } }, `${t('mods|goldSpeedrun|metric|jamLoad')} ${jamText}`),
+        ]),
+        goldGoalOf(cat) ? h('div', { key: 'row3', style: { display: 'flex', alignItems: 'baseline', gap: '6px' } }, [
+          h('span', { key: 'gps', style: { color: COLORS.gold } }, `${t('mods|goldSpeedrun|metric|goldPerSec')} ${waiting ? '—' : formatGoldPerSec()}`),
+          pacing ? h('span', { key: 'req', style: { color: pacing.color, fontSize: '0.9em', fontWeight: 600 } }, pacing.text) : null,
+        ]) : null,
+      ])
+    );
+  } else {
+    timingChildren.push(
       h('div', {
-        key: 'goal',
-        style: { marginTop: '4px', opacity: 0.85, font: nfont('meta', 500, 1.3) },
-      }, waiting
-        ? t('mods|goldSpeedrun|waiting')
-        : progressText),
-      h('div', {
-        key: 'bar',
+        key: 'big',
         style: {
-          marginTop: '4px', height: '4px', borderRadius: '2px',
-          background: 'rgba(255,255,255,0.14)', overflow: 'hidden',
+          font: `700 ${fmt === 'seconds' ? 24 : 22}px/1.1 system-ui, sans-serif`,
+          color: done ? COLORS.gold : waiting ? COLORS.dim : COLORS.text,
+          fontVariantNumeric: 'tabular-nums',
         },
-      }, h('div', {
-        style: { width: `${pct}%`, height: '100%', background: done ? COLORS.gold : COLORS.blue },
-      })),
+      }, headlineText),
+      !waiting ? h('div', {
+        key: 'others',
+        style: {
+          marginTop: '1px', display: 'flex', gap: '10px',
+          font: '600 11px/1.2 system-ui, sans-serif', color: COLORS.dim,
+          fontVariantNumeric: 'tabular-nums',
+        },
+      }, otherClocks.map(k => h('span', { key: k }, otherClock(k)))) : null,
       h('div', {
-        key: 'badges',
-        style: { marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' },
-      }, [
-        h(ModsBadge, { key: 'mods', fontSize: badgePx, extraCount: modsInfo.extraCount, extra: modsExtra }),
-        (showRuleset() || !rulesLive.ok) ? h(RulesBadge, { key: 'rules', rules: rulesLive, fontSize: badgePx }) : null,
-        runUsesBlueprints() ? h(BlueprintBadge, { key: 'bp', fontSize: badgePx }) : null,
-      ]),
-      h(InvalidRunBanner, { key: 'invalid', view: rulesLive, fontSize: badgePx }),
-      h('div', {
-        key: 'always',
-        style: { marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '1px' },
+        key: 'status',
+        style: {
+          marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '1px',
+          fontSize: '11px', fontVariantNumeric: 'tabular-nums',
+        },
       }, [
         h(MetricLine, {
-          key: 'deficit',
-          fontSize: defPx,
-          label: t('mods|goldSpeedrun|metric|deficit'),
-          value: waiting || !ready
-            ? '—'
-            : `${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s)`,
-          color: waiting || !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green,
+          key: 'slowDef',
+          label: `${t('mods|goldSpeedrun|metric|slowdown')} · ${t('mods|goldSpeedrun|metric|deficit')}`,
+          value: waiting || !ready ? '—' : `${slowVal} · ${defVal}`,
+          color: slowColor,
         }),
         h(MetricLine, {
           key: 'jam',
-          fontSize: defPx,
           label: t('mods|goldSpeedrun|metric|jamLoad'),
           value: jamText,
           color: jamColor,
         }),
-      ]),
-      advanced && !waiting
-        ? h('div', {
-            key: 'advanced',
-            style: {
-              marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.08)',
-              display: 'flex', flexDirection: 'column', gap: '1px',
-            },
-          }, [
-            h(MetricLine, { key: 'u', fontSize: defPx, label: t('mods|goldSpeedrun|metric|ticks'), value: ready ? api.i18n.formatNumber(liveU()) : '—' }),
-            h(MetricLine, { key: 'avg', fontSize: defPx, label: t('mods|goldSpeedrun|metric|avgUps'), value: ready ? avgUps().toFixed(1) : '—' }),
-            h(MetricLine, { key: 'ideal', fontSize: defPx, label: t('mods|goldSpeedrun|metric|idealTicks'), value: api.i18n.formatNumber(Math.round(idealTicks())) }),
-            h(MetricLine, { key: 'mult', fontSize: defPx, label: t('mods|goldSpeedrun|metric|thinkMult'), value: ready ? `${thinkingMultiplier().toFixed(2)}×` : '—' }),
-            h(MetricLine, { key: 'wr', fontSize: defPx, label: t('mods|goldSpeedrun|metric|wrProbe'), value: `${fmtSigned(wMinusR(), 0)} ms` }),
-          ])
-        : null,
-      graphBlock,
-      h('div', {
-        key: 'foot',
-        style: {
-          marginTop: '4px', fontSize: footPx, opacity: 0.6,
-          display: 'flex', gap: '10px', justifyContent: 'space-between',
-        },
-      }, [
-        h('span', { key: 'mode', style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 } }, categoryLabel()),
-        best !== null && best > 0 ? h('span', { key: 'pb' }, `PB/Target ${formatTime(best, fmt)}`) : null,
-      ]),
-      isBottomRight
-        ? h('div', {
-            key: 'f10hint',
-            style: { marginTop: '6px', fontSize: footPx, opacity: 0.6, textAlign: 'center', pointerEvents: 'none' },
-          }, t('mods|goldSpeedrun|hud|openDashboard'))
-        : h('button', { key: 'f10btn', onClick: () => setResultDismissed(false), style: btnStyle }, 'Dashboard (F10)'),
-      tainted
-        ? h('div', {
-            key: 'tainted',
-            style: { marginTop: '4px', fontSize: footPx, color: COLORS.red, fontWeight: 700 },
-          }, t('mods|goldSpeedrun|tainted'))
-        : null,
-    ];
-
-    const box = {
-      position: 'absolute',
-      ...corner,
-      width: 'fit-content',
-      maxWidth: '96vw',
-      minWidth: horizontal ? undefined : Math.max(220, spx('bigTime') * 7) + 'px',
-      padding: horizontal ? '8px 10px' : '10px 12px',
-      borderRadius: '6px',
-      border: `1px solid ${tainted || !rulesLive.ok ? COLORS.red : done ? COLORS.gold : waiting ? COLORS.border : '#5a6472'}`,
-      opacity: waiting ? 0.75 : 1,
-      background: COLORS.box,
-      color: COLORS.text,
-      font: nfont('meta', 500, 1.3),
-      pointerEvents: 'none',
-      display: 'flex',
-      flexDirection: horizontal ? 'row' : 'column',
-      alignItems: horizontal ? 'flex-start' : 'stretch',
-      gap: horizontal ? '16px' : '8px',
-      zIndex: 10010,
-    };
-
-    if (horizontal) {
-      return h('div', { style: box }, [
-        col('key', keyBlock, { minWidth: (spx('bigTime') * 7) + 'px' }),
-        col('splits', [splitBlock], { minWidth: showSplits ? (splitPx * 16) + 'px' : undefined }),
-        col('misc', miscBlock, { minWidth: (metaPx * 14) + 'px', maxWidth: (metaPx * 24) + 'px' }),
-      ]);
-    }
-
-    return h('div', { style: box }, [
-      ...keyBlock,
-      splitBlock,
-      ...miscBlock,
-    ]);
+        goldGoalOf(cat) ? h(MetricLine, {
+          key: 'gps',
+          label: t('mods|goldSpeedrun|metric|goldPerSec'),
+          value: [
+            h('span', { key: 'gps', style: { color: COLORS.gold } }, waiting ? '—' : formatGoldPerSec()),
+            pacing ? h('span', { key: 'req', style: { color: pacing.color, marginLeft: '6px', fontSize: '10px', fontWeight: 600 } }, pacing.text) : null,
+          ],
+        }) : null,
+      ])
+    );
   }
 
-  const clockBlock = [
+  if (showSplits) {
+    timingChildren.push(
+      h('div', {
+        key: 'splits',
+        style: {
+          marginTop: '6px',
+          paddingTop: '5px',
+          borderTop: '1px solid rgba(255,255,255,0.10)',
+          minWidth: (splitPx * 16) + 'px',
+        },
+      }, [
+        firstVisible > 0
+          ? h('div', {
+              key: 'more',
+              style: { color: COLORS.dim, opacity: 0.7, paddingBottom: '2px', fontSize: metaPx + 'px' },
+            }, `+${firstVisible} …`)
+          : null,
+        h(SplitTable, { key: 'tbl', splits: visible, fmt, wide: false, pbSplits, scalePx: isStreamer ? splitPx : undefined }),
+      ])
+    );
+  }
+
+  // --- 2. Goal Card (Category + PB, Progress, Bars) ---
+  const goalCard = h('div', {
+    key: 'goalCard',
+    style: {
+      padding: '4px 6px',
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.07)',
+      borderRadius: '4px',
+      marginTop: '4px',
+    },
+  }, [
+    h('div', {
+      key: 'head',
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        gap: '8px',
+        fontSize: footPx,
+        opacity: 0.8,
+        marginBottom: '3px',
+      },
+    }, [
+      h('span', { key: 'cat', style: { fontWeight: 600, color: COLORS.gold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, categoryLabel()),
+      best !== null && best > 0 ? h('span', { key: 'pb', style: { color: COLORS.dim, whiteSpace: 'nowrap' } }, `PB ${formatTime(best, fmt)}`) : null,
+    ]),
+    h('div', {
+      key: 'prog',
+      style: { fontSize: metaPx + 'px', fontWeight: 600, opacity: 0.9 },
+    }, waiting ? t('mods|goldSpeedrun|waiting') : goalProgressNodes(goals)),
+    goalBarNodes(goals, done),
+  ]);
+
+  // --- 3. Diagnostics & Telemetry Block ---
+  const diagChildren = [
     h('div', {
       key: 'header',
       style: {
-        fontSize: '11px', color: COLORS.dim, fontVariantNumeric: 'tabular-nums',
-        marginBottom: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap'
-      }
+        fontSize: metaPx + 'px',
+        color: COLORS.dim,
+        fontVariantNumeric: 'tabular-nums',
+        marginTop: '6px',
+        display: 'flex',
+        gap: '8px',
+        flexWrap: 'wrap',
+      },
     }, [
       h('span', { key: 'state', style: { color: rulesLive.broken ? COLORS.red : done ? COLORS.gold : COLORS.text, fontWeight: 'bold' } }, stateStr),
       h('span', { key: 'seed' }, `Seed: ${seedStr}`),
       h('span', { key: 'pauses' }, `Pauses: ${pauseCount}`),
       h('span', { key: 'reloads' }, `Reloads: ${reloadCount}`),
     ]),
-    h('div', {
-      key: 'time',
+    isStreamer && !waiting ? h('div', {
+      key: 'others',
       style: {
-        font: `700 ${fmt === 'seconds' ? 24 : 22}px/1.1 system-ui, sans-serif`,
-        color: done ? COLORS.gold : waiting ? COLORS.dim : COLORS.text,
+        marginTop: '2px', display: 'flex', gap: '10px',
+        font: nfont('meta', 600, 1.2), color: COLORS.dim,
         fontVariantNumeric: 'tabular-nums',
       },
-    }, headlineText),
-    !waiting
-      ? h('div', {
-          key: 'others',
-          style: {
-            marginTop: '1px', display: 'flex', gap: '10px',
-            font: '600 11px/1.2 system-ui, sans-serif', color: COLORS.dim,
-            fontVariantNumeric: 'tabular-nums',
-          },
-        }, otherClocks.map(k => h('span', { key: k }, otherClock(k))))
-      : null,
+    }, ['real', 'sim'].map(k => h('span', { key: k }, otherClock(k)))) : null,
     h('div', {
-      key: 'always',
-      style: {
-        marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '1px',
-        fontSize: '11px', fontVariantNumeric: 'tabular-nums',
-      },
+      key: 'badges',
+      style: { marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' },
     }, [
-      h(MetricLine, {
-        key: 'slow',
-        label: t('mods|goldSpeedrun|metric|slowdown'),
-        value: waiting || !ready ? '—' : `${fmtSigned(slowdown, 2)}%`,
-        color: waiting || !ready ? COLORS.dim : slowdown <= -5 ? COLORS.red : slowdown <= -1 ? COLORS.gold : COLORS.green,
-      }),
-      h(MetricLine, {
-        key: 'deficit',
-        label: t('mods|goldSpeedrun|metric|deficit'),
-        value: waiting || !ready
-          ? '—'
-          : `${fmtSigned(Math.round(deficit), 0)} (${fmtSigned(deficit * TICK_MS / 1000, 1)} s)`,
-        color: waiting || !ready ? COLORS.dim : deficit >= 300 ? COLORS.red : deficit >= 60 ? COLORS.gold : COLORS.green,
-      }),
-      h(MetricLine, {
-        key: 'jam',
-        label: t('mods|goldSpeedrun|metric|jamLoad'),
-        value: jamText,
-        color: jamColor,
-      }),
+      h(ModsBadge, { key: 'mods', fontSize: badgePx, extraCount: modsInfo.extraCount, extra: modsExtra }),
+      (showRuleset() || !rulesLive.ok) ? h(RulesBadge, { key: 'rules', rules: rulesLive, fontSize: badgePx }) : null,
+      runUsesBlueprints() ? h(BlueprintBadge, { key: 'bp', fontSize: badgePx }) : null,
     ]),
-    advanced && !waiting
-      ? h('div', {
-          key: 'advanced',
-          style: {
-            marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.08)',
-            display: 'flex', flexDirection: 'column', gap: '1px',
-          },
-        }, [
-          h(MetricLine, { key: 'u', label: t('mods|goldSpeedrun|metric|ticks'), value: ready ? api.i18n.formatNumber(liveU()) : '—' }),
-          h(MetricLine, { key: 'avg', label: t('mods|goldSpeedrun|metric|avgUps'), value: ready ? avgUps().toFixed(1) : '—' }),
-          h(MetricLine, { key: 'ideal', label: t('mods|goldSpeedrun|metric|idealTicks'), value: api.i18n.formatNumber(Math.round(idealTicks())) }),
-          h(MetricLine, { key: 'mult', label: t('mods|goldSpeedrun|metric|thinkMult'), value: ready ? `${thinkingMultiplier().toFixed(2)}×` : '—' }),
-          h(MetricLine, { key: 'wr', label: t('mods|goldSpeedrun|metric|wrProbe'), value: `${fmtSigned(wMinusR(), 0)} ms` }),
-        ])
-      : null,
+    h(InvalidRunBanner, { key: 'invalid', view: rulesLive, fontSize: badgePx }),
+    advanced && !waiting ? h(MetricLine, {
+      key: 'avg',
+      fontSize: defPx,
+      label: t('mods|goldSpeedrun|metric|avgUps'),
+      value: ready ? avgUps().toFixed(1) : '—',
+    }) : null,
   ];
 
-  const progressBlock = [
-    h('div', { key: 'goal', style: { marginTop: horizontal ? 0 : '4px', opacity: 0.85, display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' } }, [
-      h('span', {}, waiting
-        ? t('mods|goldSpeedrun|waiting')
-        : progressText),
-      h('span', { key: 'badges', style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' } }, [
-        h(ModsBadge, { key: 'mods', extraCount: modsInfo.extraCount, extra: modsInfo.items && modsInfo.items.find(i => i.id === 'mods') ? modsInfo.items.find(i => i.id === 'mods').extra : [] }),
-        (showRuleset() || !rulesLive.ok) ? h(RulesBadge, { key: 'rules', rules: rulesLive }) : null,
-        runUsesBlueprints() ? h(BlueprintBadge, { key: 'bp' }) : null,
-      ])
-    ]),
-    h(InvalidRunBanner, { key: 'invalid', view: rulesLive }),
-    h('div', {
-      key: 'bar',
-      style: {
-        marginTop: '5px', height: '4px', borderRadius: '2px',
-        background: 'rgba(255,255,255,0.14)', overflow: 'hidden',
-      },
-    }, h('div', {
-      style: {
-        width: `${pct}%`, height: '100%',
-        background: done ? COLORS.gold : COLORS.blue,
-      },
-    })),
-    showSplits
-      ? h('div', {
-          key: 'splits',
-          style: {
-            marginTop: '6px', paddingTop: '5px',
-            borderTop: '1px solid rgba(255,255,255,0.10)',
-            fontSize: '11px',
-          },
-        }, [
-          firstVisible > 0
-            ? h('div', {
-                key: 'more',
-                style: { color: COLORS.dim, opacity: 0.7, paddingBottom: '2px' },
-              }, `+${firstVisible} …`)
-            : null,
-          h(SplitTable, { key: 'tbl', splits: visible, fmt, wide: false, pbSplits }),
-        ])
-      : null,
-  ];
-
-  const btnStyle = {
-    background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.dim}`, color: COLORS.text,
-    padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', pointerEvents: 'auto',
-    fontSize: '11px', marginTop: '6px', width: '100%',
-  };
-
+  // --- 4. Sparkline Graph ---
   const graphBlock = sparkline && !waiting
-    ? h('div', { key: 'spark', style: { marginTop: horizontal ? 0 : '5px', minWidth: horizontal ? '180px' : undefined } }, [
-        h(UpsEnvelopeGraph, {
-          key: 'g',
-          columns: sparklineColumns(),
-          height: horizontal ? 46 : 26,
-        }),
-        h('button', {
-          key: 'metricsBtn',
-          style: { ...btnStyle, marginTop: '3px', padding: '1px 6px', fontSize: '10px' },
-          onClick: () => setMetricsOverlayOpen(true),
-        }, t('mods|goldSpeedrun|metrics|openBtn')),
+    ? h('div', { key: 'spark', style: { marginTop: '6px', minWidth: '120px' } }, [
+        h(UpsEnvelopeGraph, { key: 'g', columns: sparklineColumns(), height: 26 }),
       ])
     : null;
 
-  const infoBlock = [
-    h('div', {
-      key: 'foot',
-      style: {
-        marginTop: graphBlock ? '5px' : 0, fontSize: '11px', opacity: 0.6,
-        display: 'flex', gap: '10px', justifyContent: 'space-between',
-      },
-    }, [
-      h('span', { key: 'mode', style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 } }, categoryLabel()),
-      best !== null && best > 0 ? h('span', { key: 'pb' }, `PB/Target ${formatTime(best, fmt)}`) : null,
-    ]),
-    isBottomRight
-      ? h('div', {
+  // --- 5. Side-by-Side Action Buttons ---
+  const btnStyle = {
+    background: 'rgba(255,255,255,0.05)',
+    border: `1px solid ${COLORS.dim}`,
+    color: COLORS.text,
+    padding: '3px 8px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    pointerEvents: 'auto',
+    fontSize: footPx,
+    boxSizing: 'border-box',
+    width: '100%',
+  };
+
+  const actionButtons = isBottomRight
+    ? h('div', { key: 'actions', style: { marginTop: '6px' } }, [
+        sparkline && !waiting ? h('button', {
+          key: 'metricsBtn',
+          style: { ...btnStyle, marginBottom: '4px', fontSize: '10px', padding: '2px 6px' },
+          onClick: () => setMetricsOverlayOpen(true),
+        }, t('mods|goldSpeedrun|metrics|openBtn')) : null,
+        h('div', {
           key: 'f10hint',
-          style: {
-            marginTop: '6px', fontSize: '11px', opacity: 0.6, textAlign: 'center',
-            pointerEvents: 'none',
-          },
-        }, t('mods|goldSpeedrun|hud|openDashboard'))
-      : h('button', { key: 'f10btn', onClick: () => setResultDismissed(false), style: btnStyle }, 'Dashboard (F10)'),
-    tainted
-      ? h('div', {
-          key: 'tainted',
-          style: { marginTop: '4px', fontSize: '11px', color: COLORS.red, fontWeight: 700 },
-        }, t('mods|goldSpeedrun|tainted'))
-      : null,
-  ];
+          style: { fontSize: footPx, opacity: 0.6, textAlign: 'center', pointerEvents: 'none' },
+        }, t('mods|goldSpeedrun|hud|openDashboard')),
+      ])
+    : h('div', {
+        key: 'actions',
+        style: { display: 'flex', gap: '6px', marginTop: '6px', width: '100%' },
+      }, [
+        sparkline && !waiting ? h('button', {
+          key: 'f7btn',
+          style: { ...btnStyle, flex: 1, marginTop: 0, padding: '2px 6px' },
+          onClick: () => setMetricsOverlayOpen(true),
+        }, t('mods|goldSpeedrun|metrics|openBtn')) : null,
+        h('button', {
+          key: 'f10btn',
+          onClick: () => setResultDismissed(false),
+          style: { ...btnStyle, flex: 1, marginTop: 0, padding: '2px 6px' },
+        }, 'Dashboard (F10)'),
+      ]);
+
+  const taintedBlock = tainted
+    ? h('div', {
+        key: 'tainted',
+        style: { marginTop: '4px', fontSize: footPx, color: COLORS.red, fontWeight: 700 },
+      }, t('mods|goldSpeedrun|tainted'))
+    : null;
 
   const box = {
     position: 'absolute',
     ...corner,
     width: 'fit-content',
-    maxWidth: '92vw',
-    minWidth: horizontal ? undefined : (fmt === 'seconds' ? '210px' : '235px'),
-    padding: horizontal ? '6px 8px' : '8px 10px',
+    maxWidth: '96vw',
+    minWidth: horizontal ? undefined : (isStreamer ? Math.max(220, spx('bigTime') * 7) + 'px' : (fmt === 'seconds' ? '210px' : '235px')),
+    padding: horizontal ? '8px 10px' : '10px 12px',
     borderRadius: '6px',
     border: `1px solid ${tainted || !rulesLive.ok ? COLORS.red : done ? COLORS.gold : waiting ? COLORS.border : '#5a6472'}`,
     opacity: waiting ? 0.75 : 1,
     background: COLORS.box,
     color: COLORS.text,
-    font: '500 13px/1.35 system-ui, sans-serif',
+    font: isStreamer ? nfont('meta', 500, 1.3) : '500 13px/1.35 system-ui, sans-serif',
     pointerEvents: 'none',
     display: 'flex',
     flexDirection: horizontal ? 'row' : 'column',
     alignItems: horizontal ? 'flex-start' : 'stretch',
-    gap: horizontal ? '12px' : 0,
+    gap: horizontal ? '14px' : '6px',
     zIndex: 10010,
   };
 
+  const secondaryCol = [
+    goalCard,
+    ...diagChildren,
+    graphBlock,
+    actionButtons,
+    taintedBlock,
+  ];
+
   if (horizontal) {
     return h('div', { style: box }, [
-      col('left', progressBlock, { minWidth: '210px', maxWidth: '280px' }),
-      col('mid', clockBlock, { minWidth: fmt === 'seconds' ? '200px' : '220px' }),
-      col('right', [graphBlock, ...infoBlock], { minWidth: sparkline ? '180px' : '140px' }),
+      col('timing', timingChildren, { minWidth: isStreamer ? (spx('bigTime') * 7) + 'px' : (fmt === 'seconds' ? '210px' : '220px') }),
+      col('secondary', secondaryCol, { minWidth: '210px', maxWidth: '270px' }),
     ]);
   }
 
   return h('div', { style: box }, [
-    ...clockBlock,
-    graphBlock,
-    ...progressBlock,
-    ...infoBlock,
+    ...timingChildren,
+    ...secondaryCol,
   ]);
 }
 
@@ -6703,7 +7240,8 @@ const shareCardData = () => {
   const deficit = tickDeficit();
   const ready = tickSourceReady();
   const splits = readSplits();
-  const best = readBest();
+  const compared = readResultComparison();
+  const best = compared.time;
   const tainted = cheatsUsed();
   const delta = best !== null ? totalPlay - best : null;
   const rulesLive = rulesetView();
@@ -6712,7 +7250,7 @@ const shareCardData = () => {
   const isWait = typeof run.startedAt !== 'number';
   const isDone = typeof run.finishedAt === 'number';
   const stStr = isBroken ? 'RULES BROKEN' : (isWait ? 'Waiting' : (isDone ? 'Finished' : 'Running'));
-  const pbSplits = readComparisonSplits();
+  const pbSplits = compared.splits;
   const columns = downsampleToColumns(historyBuf, 120, bucketStats);
   const deltaText = best !== null ? (delta <= 0 ? '-' : '+') + formatShort(Math.abs(delta), fmt) : '—';
   const deltaColor = best === null ? COLORS.dim : delta <= 0 ? COLORS.green : COLORS.red;
@@ -7181,7 +7719,35 @@ const pickCsvFile = onText => {
 
 let dashboardTab = 'run';
 let selectedCatId = null;
-let catDraft = { name: '', kind: 'gold', target: '100000', goldMode: 'balance' };
+let catDraft = {
+  name: '',
+  kind: 'gold',
+  target: '100000',
+  goldMode: 'balance',
+  goals: {
+    factory: { on: true, target: '6' },
+    gold: { on: true, target: '100000' },
+    fluxite: { on: false, target: '1000' },
+    energy: { on: false, target: '1000' },
+    aura: { on: false, target: '10000' },
+    artifacts: { on: false, target: '0' },
+  },
+};
+
+const freshCatDraft = () => ({
+  name: '',
+  kind: 'gold',
+  target: '100000',
+  goldMode: 'balance',
+  goals: {
+    factory: { on: true, target: '6' },
+    gold: { on: true, target: '100000' },
+    fluxite: { on: false, target: '1000' },
+    energy: { on: false, target: '1000' },
+    aura: { on: false, target: '10000' },
+    artifacts: { on: false, target: '0' },
+  },
+});
 let routeAddDraft = { splitKey: '', time: '', picked: null };
 let editingTarget = null;
 let pbHistoryOpen = false;
@@ -7712,38 +8278,85 @@ function CategoriesPanel({ fmt }) {
             h('option', { key: 'g', value: 'gold' }, t('mods|goldSpeedrun|cat|kind|gold')),
             h('option', { key: 'a', value: 'artifacts' }, t('mods|goldSpeedrun|cat|kind|artifacts')),
             h('option', { key: 'f', value: 'factory' }, t('mods|goldSpeedrun|cat|kind|factory')),
+            h('option', { key: 'fx', value: 'fluxite' }, t('mods|goldSpeedrun|cat|kind|fluxite')),
+            h('option', { key: 'en', value: 'energy' }, t('mods|goldSpeedrun|cat|kind|energy')),
+            h('option', { key: 'au', value: 'aura' }, t('mods|goldSpeedrun|cat|kind|aura')),
+            h('option', { key: 'c', value: 'combined' }, t('mods|goldSpeedrun|cat|kind|combined')),
           ]),
         ]),
-        field('target', t('mods|goldSpeedrun|cat|target'), catDraft.target, e => { catDraft = { ...catDraft, target: e.target.value }; notifyResult(); }),
-        catDraft.kind === 'gold'
-          ? h('label', { key: 'gm', style: { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: COLORS.dim, marginTop: '6px' } }, [
-              h('span', { key: 'l' }, t('mods|goldSpeedrun|cat|goldMode')),
-              h('select', {
-                key: 's',
-                value: catDraft.goldMode,
-                onChange: e => { catDraft = { ...catDraft, goldMode: e.target.value }; notifyResult(); },
-                style: { padding: '6px 8px', borderRadius: '4px', background: '#000', color: COLORS.text, border: `1px solid ${COLORS.border}` },
-              }, [
-                h('option', { key: 'e', value: 'earned' }, t('mods|goldSpeedrun|cfg|mode|earned')),
-                h('option', { key: 'b', value: 'balance' }, t('mods|goldSpeedrun|cfg|mode|balance')),
-              ]),
+        catDraft.kind === 'combined'
+          ? h('div', { key: 'combo', style: { marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' } }, [
+              dashBtn('tpl', t('mods|goldSpeedrun|cat|templateFactoryGold'), () => {
+                const goals = freshCatDraft().goals;
+                goals.factory.on = true;
+                goals.gold.on = true;
+                goals.fluxite.on = false;
+                goals.aura.on = false;
+                goals.artifacts.on = false;
+                const auto = t('mods|goldSpeedrun|cat|templateFactoryGold');
+                catDraft = { ...catDraft, kind: 'combined', goals, name: catDraft.name || auto };
+                notifyResult();
+              }),
+              ['factory', 'gold', 'fluxite', 'energy', 'aura', 'artifacts'].map(kind => {
+                const row = catDraft.goals[kind];
+                return h('div', {
+                  key: kind,
+                  style: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: COLORS.text },
+                }, [
+                  h('input', {
+                    key: 'ck',
+                    type: 'checkbox',
+                    checked: row.on === true,
+                    onChange: e => {
+                      catDraft = { ...catDraft, goals: { ...catDraft.goals, [kind]: { ...row, on: e.target.checked } } };
+                      notifyResult();
+                    },
+                  }),
+                  h('span', { key: 'lb', style: { minWidth: '96px', flexShrink: 0 } }, t('mods|goldSpeedrun|cat|kind|' + kind)),
+                  h('input', {
+                    key: 'tg',
+                    value: row.target,
+                    onChange: e => {
+                      catDraft = { ...catDraft, goals: { ...catDraft.goals, [kind]: { ...row, target: e.target.value } } };
+                      notifyResult();
+                    },
+                    style: { width: '90px', padding: '4px 6px', borderRadius: '4px', background: '#000', color: COLORS.text, border: `1px solid ${COLORS.border}` },
+                  }),
+                ]);
+              }),
             ])
-          : null,
+          : field('target', t('mods|goldSpeedrun|cat|target'), catDraft.target, e => { catDraft = { ...catDraft, target: e.target.value }; notifyResult(); }),
         h('div', { key: 'go', style: { marginTop: '8px' } }, dashBtn('create', t('mods|goldSpeedrun|cat|create'), () => {
-          const name = (catDraft.name || '').trim();
-          if (!name) return;
-          const target = Number(catDraft.target);
-          const custom = {
-            id: newCustomId(),
-            name,
-            kind: catDraft.kind,
-            target: Number.isFinite(target) && target > 0 ? target : (catDraft.kind === 'factory' ? 6 : 100000),
-            goldMode: catDraft.goldMode === 'balance' ? 'balance' : 'earned',
-          };
+          let name = (catDraft.name || '').trim();
+          let custom;
+          if (catDraft.kind === 'combined') {
+            const goals = ['factory', 'gold', 'fluxite', 'energy', 'aura', 'artifacts'].filter(k => catDraft.goals[k] && catDraft.goals[k].on).map(k => {
+              const row = catDraft.goals[k];
+              return { kind: k, target: Number(row.target) };
+            });
+            if (goals.length === 0) return;
+            if (!name) {
+              name = goals.map(g => goalPartLabel({ ...g, target: g.target > 0 ? g.target : (g.kind === 'factory' ? 6 : g.kind === 'aura' ? 10000 : g.kind === 'artifacts' ? 0 : 1000) })).join(' + ');
+            }
+            custom = { id: newCustomId(), name, kind: 'combined', goals };
+          } else {
+            if (!name) return;
+            const target = Number(catDraft.target);
+            const fallback = catDraft.kind === 'factory' ? 6
+              : catDraft.kind === 'aura' ? 10000
+              : catDraft.kind === 'fluxite' || catDraft.kind === 'energy' ? 1000
+              : 100000;
+            custom = {
+              id: newCustomId(),
+              name,
+              kind: catDraft.kind,
+              target: Number.isFinite(target) && target > 0 ? target : (catDraft.kind === 'artifacts' ? 0 : fallback),
+            };
+          }
           writeCustomCategories(readCustomCategories().concat([custom]));
           selectedCatId = custom.id;
           activateManagedCategory(custom.id);
-          catDraft = { name: '', kind: 'gold', target: '100000', goldMode: 'balance' };
+          catDraft = freshCatDraft();
         })),
       ]),
     ]),
@@ -7773,6 +8386,7 @@ function CategoriesPanel({ fmt }) {
           setTriggerPanelOpen(true);
         }),
       ]),
+      h('div', { key: 'goalsum', style: { fontSize: '12px', color: COLORS.dim } }, categoryGoals(selected).map(goalLine).join(' · ')),
       h('div', { key: 'runs', style: { background: 'rgba(0,0,0,0.25)', borderRadius: '8px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' } }, [
         h('div', { key: 'rh', style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } }, [
           h('div', { key: 't', style: { flex: 1, font: '800 13px/1 system-ui, sans-serif', color: COLORS.gold, letterSpacing: '0.04em' } },
@@ -7963,7 +8577,8 @@ function ResultScreen() {
     const deficit = tickDeficit();
     const ready = tickSourceReady();
     const splits = readSplits();
-    const best = readBest();
+    const compared = readResultComparison();
+    const best = compared.time;
     const tainted = cheatsUsed();
     const delta = best !== null ? totalPlay - best : null;
     const rulesLive = rulesetView();
@@ -8244,7 +8859,7 @@ function ResultScreen() {
           marginTop: '4px',
         }
       }, splits.length > 0
-        ? h(SplitTable, { splits, fmt, wide: true, pbSplits: readComparisonSplits() })
+        ? h(SplitTable, { splits, fmt, wide: true, pbSplits: compared.splits })
         : h('div', { style: { color: COLORS.dim, padding: '20px 0', textAlign: 'center' } },
             t('mods|goldSpeedrun|result|noSplits')))
     ]);
@@ -8976,6 +9591,17 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
     maxDeficitSec += pad;
   }
 
+  // 7. Gold level (saved on each history bucket). Absent on old saves.
+  let maxGold = 0;
+  if (enabledLayers.gold) {
+    for (let i = 0; i < visible.length; i++) {
+      const g = visible[i].gold;
+      if (Number.isFinite(g) && g > maxGold) maxGold = g;
+    }
+  }
+  const goldWanted = Boolean(enabledLayers.gold) && maxGold > 0;
+  if (goldWanted) maxGold = niceMax(maxGold, 10);
+
   const rightRails = [];
   if (enabledLayers.moves || enabledLayers.blocks) rightRails.push('counts');
   if (enabledLayers.awake) rightRails.push('awake');
@@ -8983,6 +9609,7 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   if (jamWanted) rightRails.push('jamLoad');
   if (enabledLayers.jamRate) rightRails.push('jamShare');
   if (deficitWanted) rightRails.push('deficit');
+  if (goldWanted) rightRails.push('gold');
   const padRight = 12 + rightRails.length * 52;
   const plotW = W - padLeft - padRight;
   const plotH = H - padTop - padBottom;
@@ -9000,6 +9627,11 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   };
   const getYForAwake = v => yBottom - (Math.max(0, Math.min(maxAwake, v)) / maxAwake) * plotH;
   const getYForLive = v => yBottom - (Math.max(0, Math.min(maxLive, v)) / maxLive) * plotH;
+  const getYForGold = v => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || !(maxGold > 0)) return NaN;
+    return yBottom - (Math.max(0, Math.min(maxGold, n)) / maxGold) * plotH;
+  };
   const getYForJamLoad = v => yBottom - (Math.max(0, Math.min(maxJamLoad, v)) / maxJamLoad) * plotH;
   const getYForJamShare = v => yBottom - Math.max(0, Math.min(1, v)) * plotH;
   const deficitRange = maxDeficitSec - minDeficitSec;
@@ -9436,6 +10068,26 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
     }
   }
 
+  const goldElements = [];
+  if (goldWanted && data.length > 0) {
+    const getY = getYForGold;
+    const stats = computeCausalStats(c => (Number.isFinite(c.gold) ? c.gold : NaN));
+    const rawPts = makeRawPoints(stats.raw, getY);
+    const avgPts = makeAlignedSmoothPoints(stats.avg, getY);
+    if (smoothMode === 'off' || smoothMode === 'bands') {
+      if (rawPts.length > 1) {
+        goldElements.push(h('polyline', { key: 'gold-line', points: rawPts.join(' '), fill: 'none', stroke: COLORS.gold, strokeWidth: 1.5 }));
+      }
+    } else if (smoothMode === 'rolling') {
+      if (rawPts.length > 1) {
+        goldElements.push(h('polyline', { key: 'gold-raw', points: rawPts.join(' '), fill: 'none', stroke: COLORS.gold, strokeWidth: 1.0, opacity: 0.28 }));
+      }
+      if (avgPts.length > 1) {
+        goldElements.push(h('polyline', { key: 'gold-avg', points: avgPts.join(' '), fill: 'none', stroke: COLORS.gold, strokeWidth: 1.5 }));
+      }
+    }
+  }
+
   // Grid lines (Solid lines, no dashed shimmer)
   const gridLines = [];
   const upsTickStep = maxUps <= 120 ? 15 : (maxUps <= 240 ? 30 : Math.max(50, niceMax(maxUps / 4, 50)));
@@ -9512,6 +10164,13 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
       })(),
       getY: getYForDeficit,
       fmt: v => formatSecSigned(v).replace(' s', ''),
+    },
+    gold: {
+      color: COLORS.gold,
+      title: 'Gold',
+      ticks: [0, Math.round(maxGold / 2), maxGold],
+      getY: getYForGold,
+      fmt: v => formatGold(v),
     },
   };
 
@@ -9747,6 +10406,9 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
       // UPS series
       ...upsElements,
 
+      // Gold level (own right rail)
+      ...goldElements,
+
       // Lost-time series
       ...deficitElements,
 
@@ -9928,60 +10590,79 @@ function ChunkHeatmap({ mode = 'sum', onMode, scrubRelMs = null, onScrub, maxRel
 
   react.useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const wrap = wrapperRef.current;
+    if (!canvas || !wrap) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    canvas.width = gridW;
-    canvas.height = gridH;
-    ctx.fillStyle = '#080c16';
-    ctx.fillRect(0, 0, gridW, gridH);
-    if (!cells) return;
-    const img = ctx.createImageData(gridW, gridH);
-    const dataImg = img.data;
-    const peak = Math.max(1, viewPeak);
-    for (let gy = 0; gy < gridH; gy++) {
-      const srcRow = gy * HEATMAP_MAX;
-      for (let gx = 0; gx < gridW; gx++) {
-        const v = cells[srcRow + gx] | 0;
-        const o = (gy * gridW + gx) * 4;
-        if (v <= 0) {
-          dataImg[o] = 8;
-          dataImg[o + 1] = 12;
-          dataImg[o + 2] = 22;
+    const rect = wrap.getBoundingClientRect();
+    const cssW = Math.max(1, rect.width);
+    const cssH = Math.max(1, rect.height);
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    const bw = Math.max(1, Math.round(cssW * dpr));
+    const bh = Math.max(1, Math.round(cssH * dpr));
+    if (canvas.width !== bw) canvas.width = bw;
+    if (canvas.height !== bh) canvas.height = bh;
+
+    const off = document.createElement('canvas');
+    off.width = Math.max(1, gridW);
+    off.height = Math.max(1, gridH);
+    const octx = off.getContext('2d');
+    if (!octx) return;
+    octx.fillStyle = '#080c16';
+    octx.fillRect(0, 0, off.width, off.height);
+    if (cells) {
+      const img = octx.createImageData(gridW, gridH);
+      const dataImg = img.data;
+      const peak = Math.max(1, viewPeak);
+      for (let gy = 0; gy < gridH; gy++) {
+        const srcRow = gy * HEATMAP_MAX;
+        for (let gx = 0; gx < gridW; gx++) {
+          const v = cells[srcRow + gx] | 0;
+          const o = (gy * gridW + gx) * 4;
+          if (v <= 0) {
+            dataImg[o] = 8;
+            dataImg[o + 1] = 12;
+            dataImg[o + 2] = 22;
+            dataImg[o + 3] = 255;
+            continue;
+          }
+          const rgb = heatMsColor(Math.sqrt(v / peak));
+          dataImg[o] = rgb[0];
+          dataImg[o + 1] = rgb[1];
+          dataImg[o + 2] = rgb[2];
           dataImg[o + 3] = 255;
-          continue;
         }
-        const rgb = heatMsColor(Math.sqrt(v / peak));
-        dataImg[o] = rgb[0];
-        dataImg[o + 1] = rgb[1];
-        dataImg[o + 2] = rgb[2];
-        dataImg[o + 3] = 255;
+      }
+      octx.putImageData(img, 0, 0);
+
+      if (mode === 'live' && scrubRelMs === null && meta && Number.isFinite(slowestX) && slowestX >= 0) {
+        const px = Math.floor(((slowestX + 0.5) / meta.chunkWidth) * gridW);
+        octx.strokeStyle = '#f8fafc';
+        octx.lineWidth = 1;
+        if (!Number.isFinite(slowestY) || slowestY < 0) {
+          octx.beginPath();
+          octx.moveTo(px + 0.5, 0);
+          octx.lineTo(px + 0.5, gridH);
+          octx.stroke();
+        } else {
+          const py = Math.floor(((slowestY + 0.5) / meta.chunkHeight) * gridH);
+          octx.strokeRect(px - 1.5, py - 1.5, 3, 3);
+        }
+      }
+
+      if (hoverCell) {
+        octx.strokeStyle = '#38bdf8';
+        octx.lineWidth = 1;
+        octx.strokeRect(hoverCell.gx - 0.5, hoverCell.gy - 0.5, 2, 2);
       }
     }
-    ctx.putImageData(img, 0, 0);
 
-    // Draw slowest region (only in live mode without scrub)
-    if (mode === 'live' && scrubRelMs === null && meta && Number.isFinite(slowestX) && slowestX >= 0) {
-      const px = Math.floor(((slowestX + 0.5) / meta.chunkWidth) * gridW);
-      ctx.strokeStyle = '#f8fafc';
-      ctx.lineWidth = 1;
-      if (!Number.isFinite(slowestY) || slowestY < 0) {
-        ctx.beginPath();
-        ctx.moveTo(px + 0.5, 0);
-        ctx.lineTo(px + 0.5, gridH);
-        ctx.stroke();
-      } else {
-        const py = Math.floor(((slowestY + 0.5) / meta.chunkHeight) * gridH);
-        ctx.strokeRect(px - 1.5, py - 1.5, 3, 3);
-      }
-    }
-
-    // Draw hovered cell indicator
-    if (hoverCell) {
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(hoverCell.gx - 0.5, hoverCell.gy - 0.5, 2, 2);
-    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#080c16';
+    ctx.fillRect(0, 0, cssW, cssH);
+    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, pan.x * dpr, pan.y * dpr);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(off, 0, 0, cssW, cssH);
   });
 
   const btn = (id, label) => h('button', {
@@ -10194,15 +10875,10 @@ function ChunkHeatmap({ mode = 'sum', onMode, scrubRelMs = null, onScrub, maxRel
       }, [
         h('canvas', {
           ref: canvasRef,
-          width: gridW,
-          height: gridH,
           style: {
             width: '100%',
             height: '100%',
             display: 'block',
-            imageRendering: 'pixelated',
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transformOrigin: '0 0',
             pointerEvents: 'none',
           },
         }),
@@ -10253,7 +10929,7 @@ function ChunkHeatmap({ mode = 'sum', onMode, scrubRelMs = null, onScrub, maxRel
 
 function MetricsOverlayModal() {
   const [, bump] = react.useState(0);
-  const [range, setRange] = react.useState('60s'); // '60s' | '180s' | 'full'
+  const [range, setRange] = react.useState('full'); // '60s' | '180s' | 'full'
   const [scaleMode, setScaleMode] = react.useState('linear'); // 'linear' | 'log'
   const [smoothMode, setSmoothMode] = react.useState('rolling'); // 'off' | 'rolling' | 'bands'
   const [layers, setLayers] = react.useState({
@@ -10269,10 +10945,11 @@ function MetricsOverlayModal() {
     blocksSettled: false,
     blocksActive: true,
     deficit: true,
+    gold: true,
   });
   const [hoverInfo, setHoverInfo] = react.useState(null);
   const [benchCopied, setBenchCopied] = react.useState(false);
-  const [heatmapMode, setHeatmapMode] = react.useState('sum');
+  const [heatmapMode, setHeatmapMode] = react.useState('exp');
   const [scrubRelMs, setScrubRelMs] = react.useState(null);
   const [benchConfirmOpen, setBenchConfirmOpen] = react.useState(false);
   const benchConfirmOpenRef = react.useRef(false);
@@ -10595,6 +11272,19 @@ function MetricsOverlayModal() {
         }, [
           h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80' } }),
           t('mods|goldSpeedrun|metrics|layerUps'),
+        ]),
+        h('button', {
+          onClick: () => toggleLayer('gold'),
+          style: {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: layers.gold ? 'rgba(240, 192, 64, 0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${layers.gold ? COLORS.gold : COLORS.border}`,
+            color: layers.gold ? COLORS.gold : COLORS.dim,
+            borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px',
+          },
+        }, [
+          h('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: COLORS.gold } }),
+          t('mods|goldSpeedrun|metrics|layerGold'),
         ]),
         // Collisions toggle
         h('button', {
@@ -10953,6 +11643,13 @@ function MetricsOverlayModal() {
             ]),
             h('span', { style: { fontWeight: 'bold', color: '#4ade80' } }, `${activeHoverItem.avg !== undefined ? activeHoverItem.avg : activeHoverItem.ups} (min ${activeHoverItem.min !== undefined ? activeHoverItem.min : activeHoverItem.ups}, max ${activeHoverItem.max !== undefined ? activeHoverItem.max : activeHoverItem.ups})`),
           ]),
+          Number.isFinite(activeHoverItem.gold) ? h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: COLORS.gold } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: COLORS.gold } }),
+              t('mods|goldSpeedrun|metrics|ttGold'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: COLORS.gold } }, formatGold(activeHoverItem.gold)),
+          ]) : null,
           ...(() => {
             const srcIdx = hoverInfo && Number.isFinite(hoverInfo.index) ? chartLookback + hoverInfo.index : -1;
             const dTicks = srcIdx >= 0 && srcIdx < deficitInfo.d.length ? deficitInfo.d[srcIdx] : NaN;
@@ -11614,6 +12311,7 @@ try {
     if (!modEnabled()) return;
     syncActiveFromPresetSetting();
     applyMonitoringMask();
+    syncDebugSetting();
   });
 } catch (e) { log('Einstellungen nicht beobachtbar:', e); }
 
@@ -11674,6 +12372,8 @@ api.events.on('game:ready', () => {
   // DE: Einmalig auf die gültigen Speedrun-Vorgaben umstellen.
   // EN: Switch once to the valid speedrun defaults.
   if (enforceValidDefaults()) refreshSettingsUi();
+  flagSaveForDisallowedEngine();
+  syncDebugSetting();
   migrateKeyStability();
   purgeFromPbRoutes();
   syncActiveFromPresetSetting();

@@ -148,6 +148,14 @@ const CHECKS = [
          + 'Mods trotzdem. Nur der Hinweis im CHANGELOG waere veraltet.',
     optional: true,
   },
+  {
+    id: 'simspeed',
+    was: 'Worker-Nachricht SetSimulationSpeed hat den Wert 68',
+    re: /SetSimulationSpeed=68/,
+    folge: 'SIM_SPEED_MESSAGE in main.js muss auf den neuen Wert. Sonst setzt '
+         + '"Debug deaktivieren" die Simulationsgeschwindigkeit nicht zurueck.',
+    kritisch: true,
+  },
 ];
 
 let kritischOffen = 0;

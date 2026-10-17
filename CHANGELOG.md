@@ -1,5 +1,65 @@
 # Changelog
 
+## 3.11.0 — combined goals, gold curve, previous best
+
+### Added
+
+* Custom categories can combine several goals. The run finishes when every
+  goal is met. F10 includes a Factory 6 + 100k Gold template. Gold, Fluxite,
+  Energy, Aura, artifacts and factory rank each work alone or inside a
+  combination. Aura is crystals mined at the swarm console.
+* The HUD shows a rolling 60-second gold per second on its own line when the
+  category has a gold goal. Hard Mode uses the balance, so spending can read
+  negative. The rate stays blank until two samples cover at least one second,
+  and it is kept on the result until the next run is armed. Beside it, the
+  timer shows the gold per second still required to match the standing
+  personal best from the gold left and the time left. That figure is green
+  when the live rate is at least that high, gold when it is within 15 percent,
+  and red when it is further behind or the best time has already passed.
+* F7 draws the gold level on its own axis. Each saved history bucket stores
+  that level, so the line comes back after a reload. Saves from older
+  versions have no gold samples until new ones are recorded.
+* Debug mode detection and run invalidation, to prevent abuse and cheating.
+  Debug mode and cinematic mode are detected and invalidate a run the same
+  way extra mods do. Either one, before the goal, sets the save's cheat flag,
+  so the run is not stored as a best time even after they are turned off.
+  Turning either on only after the goal does not flag that finished run.
+  While either is on, the timer and the F10 dashboard show a button that
+  turns debug mode off and also clears cinematic mode, the chunk grid, and
+  the debug brush. The mod options have the same debug switch. There is no
+  switch that turns cinematic mode on.
+
+### Changed
+
+* Custom goals no longer carry their own Hard Mode switch. Gold, Fluxite
+  and Energy follow the global gold ruleset. Energy is a goal on its own or
+  inside a combined category, same as the other resources.
+* The timer is two blocks. The clock, the comparison, three metric lines and
+  the splits stay together. Slowdown and tick deficit share the first line,
+  jam load is the second, and gold per second is the third. The category name
+  and the personal best sit with the progress text and the bars. Horizontal
+  layout places those two blocks side by side. Fullscreen Graph (F7) and
+  Dashboard (F10) sit side by side. Tick count, ideal ticks, the thinking
+  multiplier and the play-clock gap leave the timer and stay on the dashboard.
+  A custom category name is shown once, and gold per second is not repeated
+  on the progress line.
+* Each goal has its own colour on the progress text and on its bar: gold,
+  Fluxite deep purple, Energy amber, Aura light blue, factory rank emerald,
+  artifacts rose.
+* The engine check now requires the worker message `SetSimulationSpeed` to
+  stay at 68, the value used when debug mode is turned off and simulation
+  speed is restored.
+* The result screen and the PNG compare a new personal best with the previous
+  best. The first best in a category shows an em dash. A selected comparison
+  route is unchanged, and the live HUD still uses the standing best.
+* F7 opens on the full run and exponential-decay heatmap. The bottleneck map
+  is painted at the display resolution, which removes the static line noise
+  Linux showed when the small grid was scaled with CSS.
+
+### Fixed
+
+* Setting a new personal best no longer reports every split delta as zero.
+
 ## 3.10.0 — unrecovered slowdown line on F7
 
 ### Added

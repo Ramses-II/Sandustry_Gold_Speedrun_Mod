@@ -1,6 +1,6 @@
 # Gold Speedrun Challenge
 
-Aktuelle Version: **3.10.0**. Vollstaendige Aenderungshistorie: [CHANGELOG.md](CHANGELOG.md).
+Aktuelle Version: **3.11.0**. Vollstaendige Aenderungshistorie: [CHANGELOG.md](CHANGELOG.md).
 
 Speedrun-Timer fuer Sandustry. Die Uhr startet mit der ersten Aktion und stoppt,
 sobald das Ziel der gewaehlten Kategorie erreicht ist.
@@ -12,12 +12,41 @@ sobald das Ziel der gewaehlten Kategorie erreicht ist.
 | 100k / 500k / 1M Gold % | Gold-Schwelle |
 | Alle Artefakte % | jedes Artefakt der Karte |
 | Fabrikrang 6 / 7 | Rang erreicht |
-| Eigenes Gold | frei einstellbare Zahl |
+| Eigenes Ziel | Gold, Fluxit, Energie, Aura, Artefakte, Fabrikrang, einzeln oder zusammen |
 
 Bei den Gold-Kategorien gibt es zwei Regelwerke: **Hard Mode** (Standard,
 vorgeschrieben) geht nach dem Kontostand (Forschen wirft zurueck).
 **Total Earned** zaehlt alles eingenommene Gold (Ausgeben kostet keinen
 Fortschritt) und ist **ungueltig fuer Speedruns**.
+
+Eigene Kategorien legt F10 an. **Kombiniert** ist fertig, wenn jedes
+angekreuzte Ziel erreicht ist. Die Vorlage ist Fabrikrang 6 plus 100k Gold.
+Gold, Fluxit und Energie folgen nur dem globalen Regelwerk (Hard Mode oder
+Total Earned), nicht einem Schalter an der Kategorie. Aura ist die Zahl
+abgebaute Kristalle an der Schwarmkonsole (Saettigung bei 10000). Ein
+Gold-Ziel zeigt Gold/s einmal, auf der eigenen Zeile unter der Uhr. Daneben
+steht das Gold/s, das vom aktuellen Stand aus noch noetig ist, um die
+stehende Bestzeit zu erreichen: gruen, wenn das aktuelle Tempo reicht, gold
+bis 15 Prozent darunter, rot wenn es weiter zurueckliegt oder die Bestzeit
+schon vorbei ist. Verzoegerung und Schritt-Rueckstand teilen sich die erste
+Zeile, die Blocklast die zweite. Splits stehen direkt unter der Uhr. Der
+Kategoriename und die Bestzeit stehen bei den Fortschrittsbalken. Waagerecht
+sind das zwei Spalten. F7 und F10 stehen nebeneinander. Jedes Ziel hat seine
+Farbe: Gold, Fluxit tiefviolett, Energie bernstein, Aura hellblau, Fabrikrang
+smaragd, Artefakte rosa. Schrittzahl, Soll-Schritte, Denk-Faktor und W−R
+stehen nur im Dashboard. Der Kategoriename am Timer steht einmal.
+
+F7 zeichnet den Goldstand als eigene Linie auf der rechten Achse. Der Wert
+steckt in jedem gespeicherten UPS-Eimer, alte Spielstaende haben die Linie
+erst nach neuen Messungen. Die Engpasskarte wird in der Aufloesung des
+Fensters gezeichnet, damit sie unter Linux keine Streifen aus der
+CSS-Skalierung zeigt. Bereich und Karte starten auf **kompletter Lauf** und
+**Exp. Abkuehlung**.
+
+Ein neuer Rekord vergleicht Ergebnis und PNG mit der vorherigen Bestzeit.
+Die erste Bestzeit einer Kategorie zeigt einen Strich. Waehrend des Laufs
+bleibt der Vergleich die stehende Bestzeit, eine gewaehlte Vergleichsroute
+ebenfalls.
 
 Das Artefakt-Ziel liest der Mod aus der geladenen Karte - Prefab-Artefakte plus
 die im Gelaende versteckten Sensor-Artefakte. Findet er nichts, laesst sich die
@@ -124,9 +153,10 @@ Zwei getrennte Kennzeichen:
 
 * **Keine weiteren Mods** - immer sichtbar. Gruen, wenn ausser diesem Mod und
   der Mod-Verwaltung nichts laeuft; sonst die Anzahl der anderen Mods.
-* **Offizielles Regelwerk** - gruen, wenn Hard Mode, keine Skips und keine
-  anderen Mods. Ungueltige Einstellungen zeigen immer ein rotes
-  **UNGÜLTIGER LAUF**, auch wenn das Abzeichen abgeschaltet ist.
+* **Offizielles Regelwerk** - gruen, wenn Hard Mode, keine Skips, keine
+  anderen Mods, und Debug- sowie Cinematik-Modus aus sind. Ungueltige
+  Einstellungen zeigen immer ein rotes **UNGÜLTIGER LAUF**, auch wenn das
+  Abzeichen abgeschaltet ist.
 
 ## Intro und Tutorial ueberspringen
 
@@ -160,6 +190,8 @@ prueft sie selbst und zeigt das an:
 | Tutorial automatisch ueberspringen | *aus* |
 | Intro und Landeanflug ueberspringen | *aus* |
 | Story-Textboxen wegblenden | *aus* |
+| Debug-Modus | *aus* |
+| Cinematik-Modus | *aus* |
 
 Die Aufnahme muss im oder vor dem Welt-erstellen-Menue beginnen. Der Timer
 startet immer bei der ersten Aktion inklusive Bewegung.
@@ -168,6 +200,24 @@ Stimmt alles, steht ein gruenes **✓ OFFIZIELLES REGELWERK** unter der Uhr
 und im Ergebnisfenster. Weicht etwas ab, steht dort rot **UNGÜLTIGER LAUF**
 und das HUD sowie das Ergebnisfenster listen auf, welche Einstellung es ist
 und welcher Wert noetig waere.
+
+Debug-Modus und Cinematik-Modus werden erkannt und machen den Lauf ungueltig,
+damit sich damit nicht schummeln oder die Wertung missbrauchen laesst. Sie
+sind derselbe Fall wie ein weiterer aktiver Mod. Cinematik ist das
+experimentelle Video-Werkzeug (freie Kamera, Zeitfaktor), nicht das Intro,
+die Drohnen oder Tooltips. War eines von beiden an, bevor das Ziel erreicht
+ist, setzt der Mod im Spielstand das Cheat-Flag des Spiels. Das bleibt stehen,
+auch wenn der Modus danach aus geht, und die Zeit wird nicht als Bestzeit
+gespeichert. Nach dem Ziel eingeschaltet, markiert es diesen beendeten Lauf
+nicht mehr nachtraeglich.
+
+Solange einer der beiden an ist, steht unter dem roten Banner am Timer und im
+Dashboard (F10) **Debug deaktivieren**. Der Knopf schaltet den Debug-Modus aus
+und raeumt dabei Chunk-Gitter, Debug-Pinsel, Cinematik, Kamera-Override und
+die Simulationsgeschwindigkeit mit ab. Dieselbe Schaltung liegt in den
+Mod-Einstellungen unter *Debug-Modus*. Einen Schalter, der die Cinematik
+einschaltet, gibt es nicht. Abschalten macht den Spielstand nicht wieder
+gueltig.
 
 Die Mod-Verwaltung zaehlt dabei nicht als Mod: sie greift nicht ins Spiel ein
 und ist das Werkzeug, mit dem die anderen Mods abgeschaltet werden. Gezaehlt
@@ -182,9 +232,10 @@ bleibt trotzdem sichtbar.
 
 Mit dem Start haelt der Lauf fest, ob er offiziell begonnen hat, und schreibt
 das in den Spielstand. Ab dann wird jeden Frame nachgeprueft: wird waehrend des
-Laufs am Gold-Regelwerk, an den Skips oder an den aktiven Mods gedreht, faellt
-das Kennzeichen sofort und **kommt nicht zurueck** - auch nicht, wenn die
-Einstellung reumuetig zurueckgedreht wird.
+Laufs am Gold-Regelwerk, an den Skips, an den aktiven Mods, am Debug-Modus
+oder am Cinematik-Modus gedreht, faellt das Kennzeichen sofort und **kommt
+nicht zurueck** - auch nicht, wenn die Einstellung reumuetig zurueckgedreht
+wird.
 
 Statt des gruenen Abzeichens steht dann rot **REGELWERK VERSTELLT** unter der
 Uhr und im Ergebnisfenster, und die Zeit wird nicht als Bestzeit gespeichert -
@@ -273,8 +324,9 @@ HUD- und Ergebniswerte bleiben ballistisch.
 
 ---
 
-F7 opens the fullscreen graph. UPS stays on the left axis; short catch-up
-phases above 60 expand that axis dynamically. Collisions
+F7 opens the fullscreen graph on the full run. UPS stays on the left axis; short catch-up
+phases above 60 expand that axis dynamically. Gold is a separate line on its
+own axis, stored in each saved history bucket. Collisions
 and moves default to **ballistic particles** (`ElementType.Particle`): throwers
 and flying pixels. That is the cheap counter and the comparable figure on the
 HUD and result screen.
@@ -305,7 +357,8 @@ world time. The map header says whether that moment was compute-bound or
 sync/wait-bound — when it is wait-bound, chunk colours are not the cause.
 
 **Bottleneck map (ms).** F7 shows an interactive, zoomable bottleneck map
-per 40x40 chunk. Each tick, every simulation worker reports its slowest chunk
+per 40x40 chunk and opens in exponential decay. The grid is painted at the
+display resolution so Linux does not resample it into static lines. Each tick, every simulation worker reports its slowest chunk
 and that time in milliseconds:
 - **Cumulative:** Sums the total bottleneck milliseconds spent across
   world time for each chunk (heavy factory areas glow amber/red). Totals
