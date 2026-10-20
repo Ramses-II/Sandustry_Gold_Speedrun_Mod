@@ -290,14 +290,14 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|rules|debugMode': 'Debug mode',
   'mods|goldSpeedrun|rules|cinematicMode': 'Cinematic mode',
   'mods|goldSpeedrun|btn|deactivateDebug': 'Deactivate debug',
-  'mods|goldSpeedrun|toast|debugDeactivated': 'Debug and cinematic mode deactivated. This run stays invalid.',
+  'mods|goldSpeedrun|toast|debugDeactivated': 'Debug mode deactivated. This run stays invalid.',
   'mods|goldSpeedrun|toast|debugEnabled': 'Debug mode on. This save will not count as a speedrun.',
   'mods|goldSpeedrun|cfg|debugMode': 'Debug mode',
-  'mods|goldSpeedrun|cfg|debugMode|desc': 'Turns on the in-game debug panel without the console command. WARNING: debug mode invalidates every speedrun. Turning it off also clears cinematic mode and the other disallowed engine states. A save that had either on before the goal stays flagged.',
+  'mods|goldSpeedrun|cfg|debugMode|desc': 'Turns on the in-game debug panel without the console command. WARNING: debug mode invalidates every speedrun. Turning it off clears debug mode only. Cinematic mode stays as it is, and still invalidates a run while it is on. A save that had either on before the goal stays flagged.',
   'mods|goldSpeedrun|mods|clean': 'No additional mods',
   'mods|goldSpeedrun|mods|count': '{count} other mods',
   'mods|goldSpeedrun|cfg|showRuleset': 'Show ruleset badge',
-  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Marks on the timer and on the result screen whether the settings are speedrun-legal: gold ruleset Hard Mode, intro/story/tutorial skips off, no other mod enabled, and debug mode and cinematic mode off. Invalid settings show a red INVALID RUN banner naming what is wrong.',
+  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Marks on the timer and on the result screen whether the settings are speedrun-legal: gold ruleset Hard Mode, intro/story/tutorial skips off, no other mod enabled, and debug mode and cinematic mode off. Invalid settings show a red INVALID RUN banner naming what is wrong. That banner can turn debug mode off. It leaves cinematic mode alone; turn that off in the game\'s own options.',
   'mods|goldSpeedrun|cfg|showAdvancedMetrics': 'Show advanced metrics',
   'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Adds average UPS under the timer. Tick count, ideal ticks, the thinking multiplier and the play-clock gap stay on the dashboard.',
   'mods|goldSpeedrun|cfg|monitoringMode': 'Simulation monitoring',
@@ -331,6 +331,16 @@ api.i18n.register('en', {
   'mods|goldSpeedrun|metrics|scaleLinear': 'Linear',
   'mods|goldSpeedrun|metrics|scaleLog': 'Logarithmic',
   'mods|goldSpeedrun|metrics|scaleMode': 'Scale:',
+  'mods|goldSpeedrun|metrics|zoomReset': 'Reset',
+  'mods|goldSpeedrun|metrics|finishMark': 'Finish',
+  'mods|goldSpeedrun|metrics|derivGold': 'Gold:',
+  'mods|goldSpeedrun|metrics|derivSlow': 'Slowdown:',
+  'mods|goldSpeedrun|metrics|deriv1': 'd/dt',
+  'mods|goldSpeedrun|metrics|deriv2': 'd²/dt²',
+  'mods|goldSpeedrun|metrics|derivGold1': 'Gold/s',
+  'mods|goldSpeedrun|metrics|derivGold2': 'Gold/s²',
+  'mods|goldSpeedrun|metrics|derivSlow1': 'Lost/s',
+  'mods|goldSpeedrun|metrics|derivSlow2': 'Lost/s²',
   'mods|goldSpeedrun|metrics|smooth': 'Smooth:',
   'mods|goldSpeedrun|metrics|smoothOff': 'Off',
   'mods|goldSpeedrun|metrics|smoothRolling': '5s Rolling Avg',
@@ -741,14 +751,14 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|rules|debugMode': 'Debug-Modus',
   'mods|goldSpeedrun|rules|cinematicMode': 'Cinematik-Modus',
   'mods|goldSpeedrun|btn|deactivateDebug': 'Debug deaktivieren',
-  'mods|goldSpeedrun|toast|debugDeactivated': 'Debug- und Cinematik-Modus deaktiviert. Dieser Lauf bleibt ungültig.',
+  'mods|goldSpeedrun|toast|debugDeactivated': 'Debug-Modus deaktiviert. Dieser Lauf bleibt ungültig.',
   'mods|goldSpeedrun|toast|debugEnabled': 'Debug-Modus an. Dieser Spielstand zählt nicht als Speedrun.',
   'mods|goldSpeedrun|cfg|debugMode': 'Debug-Modus',
-  'mods|goldSpeedrun|cfg|debugMode|desc': 'Schaltet das Debug-Menü ein, ohne den Konsolenbefehl. ACHTUNG: Debug-Modus macht jeden Speedrun ungültig. Ausschalten räumt auch den Cinematik-Modus und die anderen nicht erlaubten Motor-Zustände ab. Ein Spielstand, in dem eines von beiden vor dem Ziel an war, bleibt markiert.',
+  'mods|goldSpeedrun|cfg|debugMode|desc': 'Schaltet das Debug-Menü ein, ohne den Konsolenbefehl. ACHTUNG: Debug-Modus macht jeden Speedrun ungültig. Ausschalten räumt nur den Debug-Modus ab. Der Cinematik-Modus bleibt, wie er ist, und macht einen Lauf weiterhin ungültig, solange er an ist. Ein Spielstand, in dem eines von beiden vor dem Ziel an war, bleibt markiert.',
   'mods|goldSpeedrun|mods|clean': 'Keine weiteren Mods',
   'mods|goldSpeedrun|mods|count': '{count} weitere Mods',
   'mods|goldSpeedrun|cfg|showRuleset': 'Regelwerk-Abzeichen zeigen',
-  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Zeigt am Timer und im Ergebnisfenster, ob die Einstellungen speedrun-tauglich sind: Gold-Regelwerk Hard Mode, Intro-/Story-/Tutorial-Skip aus, kein anderer Mod aktiv, und Debug- sowie Cinematik-Modus aus. Ungültige Einstellungen zeigen ein rotes UNGÜLTIGER LAUF mit der abweichenden Option.',
+  'mods|goldSpeedrun|cfg|showRuleset|desc': 'Zeigt am Timer und im Ergebnisfenster, ob die Einstellungen speedrun-tauglich sind: Gold-Regelwerk Hard Mode, Intro-/Story-/Tutorial-Skip aus, kein anderer Mod aktiv, und Debug- sowie Cinematik-Modus aus. Ungültige Einstellungen zeigen ein rotes UNGÜLTIGER LAUF mit der abweichenden Option. Der Hinweis kann den Debug-Modus ausschalten. Den Cinematik-Modus lässt er stehen; den schaltet man in den eigenen Spieleinstellungen aus.',
   'mods|goldSpeedrun|cfg|showAdvancedMetrics': 'Erweiterte Messwerte zeigen',
   'mods|goldSpeedrun|cfg|showAdvancedMetrics|desc': 'Zeigt die mittleren UPS unter dem Timer. Schrittzahl, Soll-Schritte, Denk-Faktor und der Abstand der Spielzeit-Uhr bleiben im Dashboard.',
   'mods|goldSpeedrun|cfg|monitoringMode': 'Simulationsüberwachung',
@@ -782,6 +792,16 @@ api.i18n.register('de', {
   'mods|goldSpeedrun|metrics|scaleLinear': 'Linear',
   'mods|goldSpeedrun|metrics|scaleLog': 'Logarithmisch',
   'mods|goldSpeedrun|metrics|scaleMode': 'Skala:',
+  'mods|goldSpeedrun|metrics|zoomReset': 'Zurücksetzen',
+  'mods|goldSpeedrun|metrics|finishMark': 'Ziel',
+  'mods|goldSpeedrun|metrics|derivGold': 'Gold:',
+  'mods|goldSpeedrun|metrics|derivSlow': 'Verzögerung:',
+  'mods|goldSpeedrun|metrics|deriv1': 'd/dt',
+  'mods|goldSpeedrun|metrics|deriv2': 'd²/dt²',
+  'mods|goldSpeedrun|metrics|derivGold1': 'Gold/s',
+  'mods|goldSpeedrun|metrics|derivGold2': 'Gold/s²',
+  'mods|goldSpeedrun|metrics|derivSlow1': 'Verlust/s',
+  'mods|goldSpeedrun|metrics|derivSlow2': 'Verlust/s²',
   'mods|goldSpeedrun|metrics|smooth': 'Glättung:',
   'mods|goldSpeedrun|metrics|smoothOff': 'Aus',
   'mods|goldSpeedrun|metrics|smoothRolling': '5s Gleit. Schnitt',
@@ -4522,9 +4542,6 @@ const graceFor = ms => {
 // EN: Cinematic mode is the experimental video tool (freecam, time scale), not
 // EN: the intro, drones, or tooltips.
 const DEBUG_BRUSH_ID = 'debugPaintBrush';
-// DE: Worker-Nachricht in Sandustry 0.5.6. tools/verify-engine.js prueft den Wert.
-// EN: Worker message in Sandustry 0.5.6. tools/verify-engine.js checks the value.
-const SIM_SPEED_MESSAGE = 68;
 
 const legacyConfig = () => {
   try {
@@ -4774,19 +4791,18 @@ const activateDebugMode = () => {
   try { api.ui.toast({ key: 'mods|goldSpeedrun|toast|debugEnabled' }); } catch (e) { /* ignore */ }
 };
 
-// DE: Schaltet Debug aus und raeumt dabei jeden nicht erlaubten Motor-Zustand
-// DE: mit ab (Chunk-Gitter, Debug-Pinsel, Cinematik, Kamera, Sim-Geschwindigkeit).
-// DE: Der Lauf wird davon nicht wieder gueltig.
-// EN: Turns debug off and clears every disallowed engine state along with it
-// EN: (chunk grid, debug brush, cinematic mode, camera, sim speed).
-// EN: That does not make the run valid again.
-const deactivateDisallowedEngineStates = () => {
-  const wasActive = isDebugActive() || isCinematicActive();
+// DE: Schaltet nur den Debug-Modus aus: localStorage, Motor-Config, Chunk-Gitter
+// DE: und den Debug-Pinsel. Cinematik, Kamera, Zoom und Sim-Geschwindigkeit
+// DE: bleiben stehen. Der Lauf wird davon nicht wieder gueltig.
+// EN: Turns debug mode off only: localStorage, engine config, the chunk grid
+// EN: and the debug brush. Cinematic mode, the camera, zoom and simulation
+// EN: speed stay as they are. That does not make the run valid again.
+const deactivateDebugMode = () => {
+  const wasActive = isDebugActive();
   debugSettingApplied = false;
 
   try { localStorage.setItem('debug.active', 'false'); } catch (e) { /* ignore */ }
   try { localStorage.setItem('debug.drawChunks', 'false'); } catch (e) { /* ignore */ }
-  try { localStorage.setItem('cinematic.enabled', 'false'); } catch (e) { /* ignore */ }
 
   try {
     const cfg = legacyConfig();
@@ -4798,23 +4814,10 @@ const deactivateDisallowedEngineStates = () => {
 
   try {
     const session = sandkit.state && sandkit.state.session;
-    if (session) {
-      const brush = session.debug && session.debug.brush;
-      if (brush) {
-        brush.overwrite = false;
-        brush.skipPhysics = 0;
-      }
-      session.overrideCamera = false;
-      session.lerpCamera = false;
-      if (session.cinematic && typeof session.cinematic === 'object') {
-        try {
-          if (session.cinematic.speed) session.cinematic.speed.multiplier = 1;
-        } catch (e) { /* DE: Zeitfaktor nicht schreibbar / EN: time scale not writable */ }
-        try {
-          if (session.settings) session.settings.videoZoom = 1;
-        } catch (e) { /* DE: Zoom nicht schreibbar / EN: zoom not writable */ }
-      }
-      session.cinematic = undefined;
+    const brush = session && session.debug && session.debug.brush;
+    if (brush) {
+      brush.overwrite = false;
+      brush.skipPhysics = 0;
     }
   } catch (e) { /* DE: Session fehlt / EN: session missing */ }
 
@@ -4830,47 +4833,56 @@ const deactivateDisallowedEngineStates = () => {
     if (items && items[DEBUG_BRUSH_ID]) delete items[DEBUG_BRUSH_ID];
   } catch (e) { /* DE: Mod-Items nicht angefasst / EN: mod items left as they are */ }
 
-  try {
-    const manager = sandkit.state.environment
-      && sandkit.state.environment.multithreading
-      && sandkit.state.environment.multithreading.simulation
-      && sandkit.state.environment.multithreading.simulation.manager;
-    if (manager && typeof manager.postMessage === 'function') {
-      manager.postMessage([SIM_SPEED_MESSAGE, 1]);
-    }
-  } catch (e) { /* DE: Simulations-Thread nicht erreichbar / EN: simulation thread not reachable */ }
-
   try { writeSetting('debugMode', false); } catch (e) { /* ignore */ }
   rulesCache = null;
 
+  // DE: Checkbox nachziehen. Root und das Hauptmenue bleiben stehen, sonst
+  // DE: verschwinden die Menueknoepfe mitten im Speichern.
+  // EN: Catch the checkbox up. Leave Root and the main menu alone, or the
+  // EN: menu buttons disappear in the middle of Save.
+  for (const id of ['Options', 'ModsScreen']) {
+    try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* DE: Menue noch nicht da / EN: menu not up yet */ }
+  }
+
   if (wasActive) {
-    log('Debug- und Cinematik-Zustand ausgeschaltet - der Lauf bleibt ungueltig');
+    log('Debug-Modus ausgeschaltet - der Lauf bleibt ungueltig');
     try { api.ui.toast({ key: 'mods|goldSpeedrun|toast|debugDeactivated' }); } catch (e) { /* ignore */ }
   }
 
-  for (const id of ['Options', 'CinematicPanel', 'Root', 'Menu', 'ModsScreen']) {
-    try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* DE: Komponente inaktiv / EN: component not active */ }
-  }
   try { notifyResult(); } catch (e) { /* DE: Dashboard noch nicht da / EN: dashboard not ready yet */ }
 };
 
-// DE: Die Mod-Einstellung schaltet nur Debug. Aus raeumt zusaetzlich Cinematik
-// DE: und die anderen nicht erlaubten Zustaende ab. Der erste Blick (Standard
-// DE: aus) schaltet einen schon laufenden Debug-Modus nicht still ab - dafuer
-// DE: ist der Knopf im HUD.
-// EN: The mod setting toggles debug only. Off also clears cinematic mode and
-// EN: the other disallowed states. The first look (default off) does not
-// EN: silently kill a debug mode that is already running - the HUD button is
-// EN: there for that.
+// DE: Der erste Blick schreibt den laufenden Motor-Zustand in die Checkbox
+// DE: und laesst den Motor in Ruhe. Danach ist Speichern eine echte Aenderung:
+// DE: an schaltet Debug ein, aus schaltet nur Debug aus.
+// EN: The first look copies the live engine flag into the checkbox and does
+// EN: not change the engine. After that, Save is a real change: on turns debug
+// EN: on, off turns debug off only.
+const seedDebugSetting = () => {
+  let want = false;
+  try { want = api.settings.get('debugMode') === true; } catch (e) { return; }
+  const live = isDebugActive();
+  if (live !== want && !writeSetting('debugMode', live)) return;
+  debugSettingApplied = live;
+  rulesCache = null;
+  if (live !== want) {
+    for (const id of ['Options', 'ModsScreen']) {
+      try { api.ui.update(enums.ComponentId[id]); } catch (e) { /* DE: Menue noch nicht da / EN: menu not up yet */ }
+    }
+  }
+};
+
 const syncDebugSetting = () => {
   let want = false;
   try { want = api.settings.get('debugMode') === true; } catch (e) { return; }
+  if (debugSettingApplied === null) {
+    seedDebugSetting();
+    return;
+  }
   if (debugSettingApplied === want) return;
-  const prev = debugSettingApplied;
   debugSettingApplied = want;
-  if (prev === null && !want) return;
   if (want) activateDebugMode();
-  else deactivateDisallowedEngineStates();
+  else deactivateDebugMode();
 };
 
 // DE: Was HUD und Ergebnisfenster anzeigen: vor dem Lauf die aktuellen
@@ -6399,7 +6411,7 @@ const RulesBadge = ({ rules, fontSize }) => {
 };
 
 const DeactivateDebugButton = ({ fontSize }) => h('button', {
-  onClick: () => deactivateDisallowedEngineStates(),
+  onClick: () => deactivateDebugMode(),
   style: {
     marginTop: '6px',
     pointerEvents: 'auto',
@@ -6415,12 +6427,15 @@ const DeactivateDebugButton = ({ fontSize }) => h('button', {
 }, t('mods|goldSpeedrun|btn|deactivateDebug'));
 
 const InvalidRunBanner = ({ view, fontSize }) => {
-  const engineOn = isDebugActive() || isCinematicActive();
+  const debugOn = isDebugActive();
   const showList = !!(view && !view.ok && !view.broken);
-  if (!showList && !engineOn) return null;
   const items = showList && Array.isArray(view.items) ? view.items.filter(i => !i.ok) : [];
+  const cinematicNamed = items.some(i => i.id === 'cinematicMode');
+  const showCinematic = isCinematicActive() && !cinematicNamed;
+  const showBox = showList || showCinematic;
+  if (!showBox && !debugOn) return null;
   return h('div', {
-    style: showList ? {
+    style: showBox ? {
       marginTop: '4px',
       padding: '4px 6px',
       borderRadius: '4px',
@@ -6438,7 +6453,11 @@ const InvalidRunBanner = ({ view, fontSize }) => {
       key: i.id,
       style: { fontWeight: 600, fontSize: '10px', color: '#ffc0c0', marginTop: '2px' },
     }, `${i.label} — ${t('mods|goldSpeedrun|rules|need', { value: i.value })}`)),
-    engineOn ? h(DeactivateDebugButton, { key: 'deactivateDebug', fontSize }) : null,
+    showCinematic ? h('div', {
+      key: 'cinematicMode',
+      style: { fontWeight: 600, fontSize: '10px', color: '#ffc0c0', marginTop: '2px' },
+    }, `${t('mods|goldSpeedrun|rules|cinematicMode')} — ${t('mods|goldSpeedrun|rules|need', { value: t('mods|goldSpeedrun|cfg|splitGold|off') })}`) : null,
+    debugOn ? h(DeactivateDebugButton, { key: 'deactivateDebug', fontSize }) : null,
   ]);
 };
 
@@ -9426,10 +9445,190 @@ const METRIC_JAM_LOAD_COLOR = '#f97316';
 const METRIC_SETTLED_COLOR = '#fbbf24';
 const METRIC_ACTIVE_COLOR = '#fb7185';
 const METRIC_DEFICIT_COLOR = '#f43f5e';
+const GOLD_DERIV1_COLOR = '#ffe082';
+const GOLD_DERIV2_COLOR = '#fff3c4';
+const SLOW_DERIV1_COLOR = '#fb7185';
+const SLOW_DERIV2_COLOR = '#fecdd3';
 
-function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scaleMode = 'linear', smoothMode = 'off', lookback = 0, eventScope = 'ballistic', pinnedRelMs = null }) {
+// DE: Erste und zweite Ableitung. dt kommt aus der Weltzeit der Eimer, in Sekunden.
+// EN: First and second derivative. dt comes from each bucket's world time, in seconds.
+const finiteDerivatives = (values, timesMs) => {
+  const n = values.length;
+  const d1 = new Array(n);
+  const d2 = new Array(n);
+  for (let i = 0; i < n; i++) {
+    d1[i] = NaN;
+    d2[i] = NaN;
+  }
+  for (let i = 1; i < n; i++) {
+    const v0 = values[i - 1];
+    const v1 = values[i];
+    const dt = (timesMs[i] - timesMs[i - 1]) / 1000;
+    if (Number.isFinite(v0) && Number.isFinite(v1) && dt > 0) d1[i] = (v1 - v0) / dt;
+  }
+  for (let i = 1; i < n; i++) {
+    const a = d1[i - 1];
+    const b = d1[i];
+    const dt = (timesMs[i] - timesMs[i - 1]) / 1000;
+    if (Number.isFinite(a) && Number.isFinite(b) && dt > 0) d2[i] = (b - a) / dt;
+  }
+  return { d1, d2 };
+};
+
+// DE: Dieselbe kausale Fenster-Mittelung wie die geglaettete Goldlinie.
+// EN: The same causal window average as the smoothed gold line.
+const causalTrailingAverage = (values, window) => {
+  const len = values.length;
+  const avg = new Array(len);
+  const w = Math.max(1, window | 0);
+  for (let i = 0; i < len; i++) {
+    let sum = 0;
+    let count = 0;
+    const start = Math.max(0, i - w + 1);
+    for (let j = start; j <= i; j++) {
+      const v = values[j];
+      if (Number.isFinite(v)) {
+        sum += v;
+        count++;
+      }
+    }
+    avg[i] = count > 0 ? sum / count : values[i];
+  }
+  return avg;
+};
+
+const symmetricAbsLimit = raw => {
+  if (!(raw > 0)) return 1;
+  const padded = raw * 1.08;
+  const mag = Math.pow(10, Math.floor(Math.log10(padded)));
+  const norm = padded / mag;
+  const nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+  return nice * mag;
+};
+
+const formatDerivCompact = n => {
+  if (!Number.isFinite(n)) return '—';
+  const sign = n > 0 ? '+' : n < 0 ? '-' : '';
+  const abs = Math.abs(n);
+  let body;
+  if (abs >= 1000000) body = (abs / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  else if (abs >= 1000) body = (abs / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  else if (abs >= 100) body = String(Math.round(abs));
+  else if (abs >= 10) body = abs.toFixed(1).replace(/\.0$/, '');
+  else body = abs.toFixed(2);
+  return sign + body;
+};
+
+// DE: Skala an die sichtbaren Werte anpassen, damit die Linie die Hoehe nutzt.
+// DE: Nahe bei 0 bleibt die Nulllinie der Boden. Ein einzelner Ausreisser
+// DE: (robust) setzt die Skala nicht allein.
+// EN: Fit the scale to the visible values so the line uses the height.
+// EN: Near zero, the baseline stays zero. One spike (robust) does not set the scale alone.
+const fitScale = (list, opts) => {
+  const o = opts || {};
+  const pad = Number.isFinite(o.pad) ? o.pad : 0.08;
+  const minSpan = Number.isFinite(o.minSpan) ? o.minSpan : 0;
+  const values = [];
+  if (list) {
+    for (let i = 0; i < list.length; i++) {
+      const n = Number(list[i]);
+      if (Number.isFinite(n)) values.push(n);
+    }
+  }
+  if (!values.length) return { lo: 0, hi: Math.max(1, minSpan || 1) };
+  values.sort((a, b) => a - b);
+  const rawMin = values[0];
+  const rawMax = values[values.length - 1];
+  let lo = rawMin;
+  let hi = rawMax;
+  if (o.robust && values.length >= 8) {
+    const iHi = Math.min(values.length - 1, Math.floor((values.length - 1) * 0.98));
+    const iLo = Math.floor((values.length - 1) * 0.02);
+    const pHi = values[iHi];
+    const pLo = values[iLo];
+    if (pHi > 0 && hi > pHi * 2.5) hi = pHi;
+    if (lo >= 0 && pLo > 0 && lo < pLo / 2.5) lo = pLo;
+    else if (lo < 0 && pLo < 0 && lo < pLo * 2.5) lo = pLo;
+  }
+  if (!(hi > lo)) {
+    const mid = (hi + lo) / 2;
+    const half = Math.max(minSpan, Math.abs(mid) * 0.08, 1e-6) / 2;
+    lo = mid - half;
+    hi = mid + half;
+  }
+  let span = hi - lo;
+  if (span < minSpan) {
+    const mid = (hi + lo) / 2;
+    lo = mid - minSpan / 2;
+    hi = mid + minSpan / 2;
+    span = hi - lo;
+  }
+  const grow = span * pad;
+  lo -= grow;
+  hi += grow;
+  if (o.anchorZero && rawMin >= 0 && rawMin <= Math.max(hi, 0) * 0.12) lo = 0;
+  if (rawMin >= 0 && lo < 0) lo = 0;
+  if (!(hi > lo)) hi = lo + 1;
+  return { lo, hi };
+};
+
+const mapScaleY = (v, lo, hi, yBottom, plotH) => {
+  const n = Number(v);
+  if (!Number.isFinite(n) || !(hi > lo)) return NaN;
+  const c = Math.max(lo, Math.min(hi, n));
+  return yBottom - ((c - lo) / (hi - lo)) * plotH;
+};
+
+const scaleTicks = (lo, hi, extra) => {
+  const span = hi - lo;
+  if (!(span > 0)) return [lo, hi];
+  const raw = [lo, (lo + hi) / 2, hi];
+  if (Array.isArray(extra)) {
+    for (let i = 0; i < extra.length; i++) {
+      const e = extra[i];
+      if (e > lo + span * 0.08 && e < hi - span * 0.08) raw.push(e);
+    }
+  }
+  raw.sort((a, b) => a - b);
+  const out = [];
+  for (let i = 0; i < raw.length; i++) {
+    if (!out.length || Math.abs(raw[i] - out[out.length - 1]) > span * 0.06) out.push(raw[i]);
+  }
+  return out;
+};
+
+const ZOOM_MIN_MS = 30000;
+const FINISH_SPAN_MS = 4 * 60 * 1000;
+
+const sampleRelMs = (sample, index, fallbackMs) => {
+  const r = Number(sample && sample.relMs);
+  if (Number.isFinite(r) && r > 0) return r;
+  const step = fallbackMs > 0 ? fallbackMs : 1000;
+  return Math.max(0, index) * step;
+};
+
+// DE: Fenster in Weltzeit. null heisst: der ganze Bereich, Zoom zuruecksetzen.
+// EN: Window in world time. null means the whole domain, which resets the zoom.
+const clampZoomWindow = (start, end, domainStart, domainEnd) => {
+  if (!(domainEnd > domainStart)) return null;
+  const domainSpan = domainEnd - domainStart;
+  let dur = end - start;
+  if (!(dur > 0)) dur = domainSpan;
+  dur = Math.max(Math.min(ZOOM_MIN_MS, domainSpan), Math.min(domainSpan, dur));
+  if (dur >= domainSpan * 0.995) return null;
+  let s = start;
+  let e = s + dur;
+  if (s < domainStart) { s = domainStart; e = s + dur; }
+  if (e > domainEnd) { e = domainEnd; s = Math.max(domainStart, e - dur); }
+  return { durationMs: e - s, endMs: e, follow: e >= domainEnd - 1000 };
+};
+
+function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scaleMode = 'linear', smoothMode = 'off', lookback = 0, eventScope = 'ballistic', pinnedRelMs = null, deriv = null, domainStart = null, domainEnd = null, onZoomWindow = null, onZoomReset = null, finishMs = null, finishLabel = '' }) {
   const svgRef = react.useRef(null);
   const wrapRef = react.useRef(null);
+  const zoomGeom = react.useRef(null);
+  const pendingFinishClick = react.useRef(null);
+  const dragRef = react.useRef(null);
   const [size, setSize] = react.useState({ w: 1000, h: 420 });
   const src = data || [];
   const padCount = Math.max(0, Math.min(lookback || 0, src.length));
@@ -9453,6 +9652,45 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
     ro.observe(el);
     return () => ro.disconnect();
   }, [isEmptyChart]);
+  react.useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return undefined;
+    const onWheel = ev => {
+      const g = zoomGeom.current;
+      const svg = el.querySelector('svg');
+      if (!g || !svg) return;
+      const rect = svg.getBoundingClientRect();
+      if (!(rect.width > 0) || !(rect.height > 0)) return;
+      const svgX = ((ev.clientX - rect.left) / rect.width) * g.W;
+      const svgY = ((ev.clientY - rect.top) / rect.height) * g.H;
+      if (svgX < g.padLeft || svgX > g.padLeft + g.plotW) return;
+      if (svgY < g.padTop || svgY > g.yBottom) return;
+      if (!(g.viewSpan > 0) || !(g.domainSpan > 0)) return;
+      ev.preventDefault();
+      const frac = Math.max(0, Math.min(1, (svgX - g.padLeft) / g.plotW));
+      const t = g.viewT0 + frac * g.viewSpan;
+      const unit = ev.deltaMode === 1 ? 1 : 100;
+      const notches = Math.max(-4, Math.min(4, ev.deltaY / unit));
+      if (Math.abs(notches) < 0.05) return;
+      const factor = Math.pow(1.25, notches);
+      const dur = Math.max(Math.min(ZOOM_MIN_MS, g.domainSpan), Math.min(g.domainSpan, g.viewSpan * factor));
+      const start = t - frac * dur;
+      const next = clampZoomWindow(start, start + dur, g.domainStart, g.domainEnd);
+      if (!next) {
+        if (typeof g.onZoomReset === 'function') g.onZoomReset();
+        return;
+      }
+      if (typeof g.onZoomWindow === 'function') g.onZoomWindow(next);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      if (pendingFinishClick.current) {
+        clearTimeout(pendingFinishClick.current);
+        pendingFinishClick.current = null;
+      }
+    };
+  }, [isEmptyChart]);
   const jamWanted = enabledLayers.jamLoad || enabledLayers.jamIntensity;
   const deficitWanted = Boolean(enabledLayers.deficit);
   const fallbackMs = rangeType === 'full' ? 1000 : 100;
@@ -9460,6 +9698,7 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   const deficit = annotateDeficitSeries(src);
 
   if (visible.length < 2) {
+    zoomGeom.current = null;
     return h('div', {
       ref: wrapRef,
       style: {
@@ -9472,9 +9711,10 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   try {
   const W = size.w;
   const H = size.h;
+  const showStrip = Number.isFinite(domainStart) && Number.isFinite(domainEnd) && domainEnd > domainStart;
   const padLeft = 55;
   const padTop = 32;
-  const padBottom = 35;
+  const padBottom = showStrip ? 58 : 35;
 
   const formatCount = n => {
     if (!Number.isFinite(n)) return '—';
@@ -9485,122 +9725,165 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   };
 
   const isLog = scaleMode === 'log';
-  const niceMax = (raw, floor) => {
-    const v = Math.max(floor || 10, raw || 0);
-    const mag = Math.pow(10, Math.floor(Math.log10(v)));
-    const norm = v / mag;
-    if (norm <= 1) return mag;
-    if (norm <= 2) return 2 * mag;
-    if (norm <= 5) return 5 * mag;
-    return 10 * mag;
-  };
-
-  // 1. Particle Counts Scale (Moves & Collisions) — visible range only
-  let maxParticles = 0;
+  const countVals = [];
+  const awakeVals = [];
+  const liveVals = [];
+  const jamLoadVals = [];
+  const jamShareVals = [];
+  const upsVals = [];
+  const goldVals = [];
+  const simVals = [];
+  let goldPeak = 0;
   for (let i = 0; i < visible.length; i++) {
     const c = visible[i];
-    let sum = 0;
-    const mv = eventOf(c, 'moves');
-    const bl = eventOf(c, 'blocks');
-    if (enabledLayers.moves && mv !== null) sum += mv;
-    if (enabledLayers.blocks && bl !== null) sum += bl;
-    if (sum > maxParticles) maxParticles = sum;
-  }
-  maxParticles = niceMax(maxParticles, 10);
-
-  const logMaxP = Math.log10(Math.max(10, maxParticles) + 1);
-
-  // 2. Awake Chunks Scale
-  let maxAwake = 0;
-  if (visible.length > 0) {
-    const nonZeroAwake = visible.map(c => c.awake || 0).filter(v => v > 0).sort((a, b) => a - b);
-    if (nonZeroAwake.length > 0) {
-      const p98Idx = Math.floor(nonZeroAwake.length * 0.98);
-      const p98 = nonZeroAwake[Math.min(p98Idx, nonZeroAwake.length - 1)];
-      const rawMax = nonZeroAwake[nonZeroAwake.length - 1];
-      if (rawMax > p98 * 2.5 && p98 >= 10) {
-        maxAwake = Math.ceil(p98 * 1.35);
-      } else {
-        maxAwake = rawMax;
+    if (enabledLayers.moves || enabledLayers.blocks) {
+      let sum = 0;
+      let any = false;
+      const mv = eventOf(c, 'moves');
+      const bl = eventOf(c, 'blocks');
+      if (enabledLayers.moves && mv !== null) { sum += mv; any = true; }
+      if (enabledLayers.blocks && bl !== null) { sum += bl; any = true; }
+      if (any) countVals.push(sum);
+    }
+    if (enabledLayers.awake) awakeVals.push(Number(c.awake) || 0);
+    if (enabledLayers.live && Number.isFinite(Number(c.live))) liveVals.push(Number(c.live));
+    if (enabledLayers.gold && Number.isFinite(c.gold)) {
+      goldVals.push(c.gold);
+      if (c.gold > goldPeak) goldPeak = c.gold;
+    }
+    if (enabledLayers.simTime && Number.isFinite(c.simMs)) simVals.push(Math.max(0, c.simMs));
+    if (enabledLayers.ups) {
+      const avg = Number.isFinite(c.avg) ? c.avg : (Number.isFinite(c.ups) ? c.ups : NaN);
+      if (Number.isFinite(avg)) upsVals.push(avg);
+      if (Number.isFinite(c.min)) upsVals.push(c.min);
+      if (Number.isFinite(c.max)) upsVals.push(c.max);
+    }
+    if (jamWanted || enabledLayers.jamRate) {
+      const win = trailingJamWindow(src, padCount + i, eventScope, fallbackMs, JAM_WINDOW_MS);
+      const inst = sampleJamInstant(c, eventScope, fallbackMs);
+      if (jamWanted) {
+        const v = win ? win.jamLoad : (inst ? inst.jamLoad : NaN);
+        if (Number.isFinite(v)) jamLoadVals.push(v);
+      }
+      if (enabledLayers.jamRate) {
+        const s = win ? win.jamShare : (inst ? inst.jamShare : NaN);
+        if (Number.isFinite(s)) jamShareVals.push(s);
       }
     }
   }
-  maxAwake = Math.max(10, Math.ceil((maxAwake || 10) / 20) * 20);
-
-  // 3. Jam Load Scale (blocked attempts per simulation update) — rolling 5s sums
-  let maxJamLoad = 0;
-  if (jamWanted) {
-    for (let i = 0; i < visible.length; i++) {
-      const win = trailingJamWindow(src, padCount + i, eventScope, fallbackMs, JAM_WINDOW_MS);
-      const inst = sampleJamInstant(visible[i], eventScope, fallbackMs);
-      const v = win ? win.jamLoad : (inst ? inst.jamLoad : 0);
-      if (Number.isFinite(v) && v > maxJamLoad) maxJamLoad = v;
-    }
-  }
-  maxJamLoad = niceMax(Math.max(maxJamLoad, 0.1), 0.1);
-
-  // 4. Live Elements Scale
-  let maxLive = 0;
-  if (enabledLayers.live) {
-    for (let i = 0; i < visible.length; i++) {
-      if ((visible[i].live || 0) > maxLive) maxLive = visible[i].live;
-    }
-  }
-  maxLive = niceMax(maxLive, 1000);
-
-  // 5. UPS Scale — keep 60 as a reference, but retain catch-up phases above it.
-  let maxUps = TICK_HZ;
-  if (enabledLayers.ups) {
-    for (let i = 0; i < visible.length; i++) {
-      const c = visible[i];
-      const candidate = Math.max(
-        Number.isFinite(c.max) ? c.max : 0,
-        Number.isFinite(c.avg) ? c.avg : 0,
-        Number.isFinite(c.ups) ? c.ups : 0
-      );
-      if (candidate > maxUps) maxUps = candidate;
-    }
-  }
-  if (maxUps > TICK_HZ) {
-    const step = maxUps <= 120 ? 15 : (maxUps <= 240 ? 30 : Math.max(50, niceMax(maxUps / 4, 50)));
-    maxUps = Math.ceil(maxUps / step) * step;
-  }
-
-  // 6. Signed lost-time scale (seconds) — always includes 0; may go negative (over-run).
-  let minDeficitSec = 0;
-  let maxDeficitSec = 0;
+  const permVals = [];
+  const rawVals = [];
   if (deficitWanted && deficit.d.length > 0) {
     for (let i = padCount; i < deficit.d.length; i++) {
       const a = deficit.d[i] / TICK_HZ;
       const b = deficit.dPerm[i] / TICK_HZ;
-      if (Number.isFinite(a)) {
-        if (a < minDeficitSec) minDeficitSec = a;
-        if (a > maxDeficitSec) maxDeficitSec = a;
-      }
-      if (Number.isFinite(b)) {
-        if (b < minDeficitSec) minDeficitSec = b;
-        if (b > maxDeficitSec) maxDeficitSec = b;
-      }
+      if (Number.isFinite(b)) permVals.push(b);
+      if (Number.isFinite(a)) rawVals.push(a);
     }
   }
-  if (minDeficitSec === 0 && maxDeficitSec === 0) {
-    maxDeficitSec = 1;
-  } else {
-    const pad = Math.max(0.05, (maxDeficitSec - minDeficitSec) * 0.08);
-    minDeficitSec -= pad;
-    maxDeficitSec += pad;
+  const counts = fitScale(countVals, { anchorZero: true, robust: true, minSpan: 8, pad: 0.08 });
+  const awake = fitScale(awakeVals, { anchorZero: true, robust: true, minSpan: 4, pad: 0.08 });
+  const live = fitScale(liveVals, { anchorZero: true, robust: true, minSpan: 20, pad: 0.08 });
+  const jamLoad = fitScale(jamLoadVals, { anchorZero: true, robust: true, minSpan: 0.05, pad: 0.08 });
+  const jamShare = fitScale(jamShareVals, { anchorZero: true, robust: true, minSpan: 0.05, pad: 0.08 });
+  const ups = (enabledLayers.ups && upsVals.length)
+    ? fitScale(upsVals, { anchorZero: false, robust: true, minSpan: 8, pad: 0.1 })
+    : { lo: 0, hi: TICK_HZ };
+  const sim = fitScale(simVals, { anchorZero: true, robust: true, minSpan: 4, pad: 0.08 });
+  let deficitScale = fitScale(permVals.length ? permVals : rawVals, { anchorZero: false, robust: true, minSpan: 0.25, pad: 0.08 });
+  if (permVals.length && rawVals.length) {
+    const rawFit = fitScale(rawVals, { robust: true, minSpan: 0.25, pad: 0 });
+    const span = Math.max(0.25, deficitScale.hi - deficitScale.lo);
+    if (rawFit.hi > deficitScale.hi && rawFit.hi - deficitScale.lo <= span * 2.5) deficitScale = { lo: deficitScale.lo, hi: rawFit.hi };
+    if (rawFit.lo < deficitScale.lo && deficitScale.hi - rawFit.lo <= span * 2.5) deficitScale = { lo: rawFit.lo, hi: deficitScale.hi };
+  }
+  {
+    const span = deficitScale.hi - deficitScale.lo;
+    if (deficitScale.lo > 0 && deficitScale.lo <= span * 0.2) deficitScale = { lo: 0, hi: deficitScale.hi };
+    else if (deficitScale.hi < 0 && -deficitScale.hi <= span * 0.2) deficitScale = { lo: deficitScale.lo, hi: 0 };
+  }
+  const gold = fitScale(goldVals, { anchorZero: true, minSpan: Math.max(10, goldPeak * 0.02), pad: 0.06 });
+  const goldWanted = Boolean(enabledLayers.gold) && goldPeak > 0;
+
+  // DE: Ableitungen der gezeichneten Reihe. Gold folgt der Glaettung, die
+  // DE: Verzoegerungslinie ist D_perm. Die Skala ist vorzeichenbehaftet und
+  // DE: unabhaengig von linear/log.
+  // EN: Derivatives of the series actually drawn. Gold follows the smooth mode,
+  // EN: the slowdown line is D_perm. The scale is signed and ignores linear/log.
+  const derivWant = deriv || {};
+  const wantGold1 = Boolean(derivWant.gold1);
+  const wantGold2 = Boolean(derivWant.gold2);
+  const wantSlow1 = Boolean(derivWant.slow1);
+  const wantSlow2 = Boolean(derivWant.slow2);
+  const windowSamples = rangeType === 'full' ? 5 : 50;
+  const groupDelay = Math.floor((windowSamples - 1) / 2);
+  const relTimes = src.map((sample, i) => {
+    const r = Number(sample && sample.relMs);
+    return Number.isFinite(r) ? r : i * bucketSpanMsOf(sample);
+  });
+  const plottedValues = (arr, aligned) => {
+    const out = [];
+    if (!arr) return out;
+    const delay = aligned ? groupDelay : 0;
+    for (let k = 0; k < visible.length; k++) {
+      const i = padCount + k + delay;
+      if (i >= arr.length) break;
+      const v = arr[i];
+      if (Number.isFinite(v)) out.push(v);
+    }
+    return out;
+  };
+  const fitDerivScale = (arr, aligned) => {
+    const samples = plottedValues(arr, aligned);
+    let peak = 0;
+    for (let i = 0; i < samples.length; i++) peak = Math.max(peak, Math.abs(samples[i]));
+    let sc = fitScale(samples, { robust: true, minSpan: Math.max(peak * 0.08, 1e-4), pad: 0.08 });
+    const span = sc.hi - sc.lo;
+    if (sc.lo > 0 && sc.lo <= span * 0.25) sc = { lo: 0, hi: sc.hi };
+    else if (sc.hi < 0 && -sc.hi <= span * 0.25) sc = { lo: sc.lo, hi: 0 };
+    return sc;
+  };
+
+  let goldDeriv = null;
+  let goldDerivAligned = false;
+  let goldD1 = { lo: -1, hi: 1 };
+  let goldD2 = { lo: -1, hi: 1 };
+  let showGoldD1 = false;
+  let showGoldD2 = false;
+  if ((wantGold1 || wantGold2) && src.length > 1) {
+    const goldRaw = src.map(c => (Number.isFinite(c.gold) ? c.gold : NaN));
+    if (goldRaw.some(v => Number.isFinite(v))) {
+      goldDerivAligned = smoothMode === 'rolling';
+      const drawn = goldDerivAligned ? causalTrailingAverage(goldRaw, windowSamples) : goldRaw;
+      goldDeriv = finiteDerivatives(drawn, relTimes);
+      if (wantGold1 && plottedValues(goldDeriv.d1, goldDerivAligned).length) {
+        goldD1 = fitDerivScale(goldDeriv.d1, goldDerivAligned);
+        showGoldD1 = true;
+      }
+      if (wantGold2 && plottedValues(goldDeriv.d2, goldDerivAligned).length) {
+        goldD2 = fitDerivScale(goldDeriv.d2, goldDerivAligned);
+        showGoldD2 = true;
+      }
+    }
   }
 
-  // 7. Gold level (saved on each history bucket). Absent on old saves.
-  let maxGold = 0;
-  if (enabledLayers.gold) {
-    for (let i = 0; i < visible.length; i++) {
-      const g = visible[i].gold;
-      if (Number.isFinite(g) && g > maxGold) maxGold = g;
+  let slowDeriv = null;
+  let slowD1 = { lo: -1, hi: 1 };
+  let slowD2 = { lo: -1, hi: 1 };
+  let showSlowD1 = false;
+  let showSlowD2 = false;
+  if ((wantSlow1 || wantSlow2) && deficit.dPerm.length > 1) {
+    const permSec = deficit.dPerm.map(v => v / TICK_HZ);
+    slowDeriv = finiteDerivatives(permSec, relTimes);
+    if (wantSlow1 && plottedValues(slowDeriv.d1, false).length) {
+      slowD1 = fitDerivScale(slowDeriv.d1, false);
+      showSlowD1 = true;
+    }
+    if (wantSlow2 && plottedValues(slowDeriv.d2, false).length) {
+      slowD2 = fitDerivScale(slowDeriv.d2, false);
+      showSlowD2 = true;
     }
   }
-  const goldWanted = Boolean(enabledLayers.gold) && maxGold > 0;
-  if (goldWanted) maxGold = niceMax(maxGold, 10);
 
   const rightRails = [];
   if (enabledLayers.moves || enabledLayers.blocks) rightRails.push('counts');
@@ -9610,6 +9893,10 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   if (enabledLayers.jamRate) rightRails.push('jamShare');
   if (deficitWanted) rightRails.push('deficit');
   if (goldWanted) rightRails.push('gold');
+  if (showGoldD1) rightRails.push('goldD1');
+  if (showGoldD2) rightRails.push('goldD2');
+  if (showSlowD1) rightRails.push('slowD1');
+  if (showSlowD2) rightRails.push('slowD2');
   const padRight = 12 + rightRails.length * 52;
   const plotW = W - padLeft - padRight;
   const plotH = H - padTop - padBottom;
@@ -9618,35 +9905,30 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   const getYForParticle = v => {
     const n = Number(v);
     if (!Number.isFinite(n)) return NaN;
-    if (n <= 0) return yBottom;
     if (isLog) {
-      const ratio = Math.log10(n + 1) / logMaxP;
+      const hi = Math.max(counts.hi, 1);
+      if (!(counts.lo > 0)) {
+        const ratio = Math.log10(Math.max(0, n) + 1) / Math.log10(hi + 1);
+        return yBottom - Math.max(0, Math.min(1, ratio)) * plotH;
+      }
+      const lo = counts.lo;
+      const clamped = Math.max(lo, Math.min(hi, n));
+      const ratio = (Math.log10(clamped) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo));
       return yBottom - Math.max(0, Math.min(1, ratio)) * plotH;
     }
-    return yBottom - (Math.min(maxParticles, n) / maxParticles) * plotH;
+    return mapScaleY(n, counts.lo, counts.hi, yBottom, plotH);
   };
-  const getYForAwake = v => yBottom - (Math.max(0, Math.min(maxAwake, v)) / maxAwake) * plotH;
-  const getYForLive = v => yBottom - (Math.max(0, Math.min(maxLive, v)) / maxLive) * plotH;
-  const getYForGold = v => {
-    const n = Number(v);
-    if (!Number.isFinite(n) || !(maxGold > 0)) return NaN;
-    return yBottom - (Math.max(0, Math.min(maxGold, n)) / maxGold) * plotH;
-  };
-  const getYForJamLoad = v => yBottom - (Math.max(0, Math.min(maxJamLoad, v)) / maxJamLoad) * plotH;
-  const getYForJamShare = v => yBottom - Math.max(0, Math.min(1, v)) * plotH;
-  const deficitRange = maxDeficitSec - minDeficitSec;
-  const getYForDeficit = v => {
-    const n = Number(v);
-    if (!Number.isFinite(n) || !(deficitRange > 0)) return yBottom - plotH / 2;
-    return yBottom - ((n - minDeficitSec) / deficitRange) * plotH;
-  };
+  const getYForAwake = v => mapScaleY(v, awake.lo, awake.hi, yBottom, plotH);
+  const getYForLive = v => mapScaleY(v, live.lo, live.hi, yBottom, plotH);
+  const getYForGold = v => mapScaleY(v, gold.lo, gold.hi, yBottom, plotH);
+  const getYForJamLoad = v => mapScaleY(v, jamLoad.lo, jamLoad.hi, yBottom, plotH);
+  const getYForJamShare = v => mapScaleY(v, jamShare.lo, jamShare.hi, yBottom, plotH);
+  const getYForDeficit = v => mapScaleY(v, deficitScale.lo, deficitScale.hi, yBottom, plotH);
+  const getYForUps = v => mapScaleY(v, ups.lo, ups.hi, yBottom, plotH);
+  const getYForSim = v => mapScaleY(v, sim.lo, sim.hi, yBottom, plotH);
 
   const colW = plotW / Math.max(1, visible.length);
   const barW = Math.max(1, colW * 0.88);
-
-  // 5-second causal window (50 samples at 10 Hz, 5 buckets at 1 Hz)
-  const windowSamples = rangeType === 'full' ? 5 : 50;
-  const groupDelay = Math.floor((windowSamples - 1) / 2);
 
   // Causal trailing stats on the full src (includes off-screen lookback)
   const computeCausalStats = (getVal, getMin, getMax) => {
@@ -9758,6 +10040,26 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
       }
       const visIdx = i - padCount;
       const x = padLeft + (visIdx + 0.5) * colW;
+      cur.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    if (cur.length > 1) segs.push(cur);
+    return segs;
+  };
+
+  const makeGappedAlignedPoints = (vals, getY) => {
+    const segs = [];
+    let cur = [];
+    for (let k = 0; k < visible.length; k++) {
+      const srcIdx = padCount + k + groupDelay;
+      if (srcIdx >= vals.length) break;
+      const v = vals[srcIdx];
+      const y = Number.isFinite(v) ? getY(v) : NaN;
+      if (!Number.isFinite(y)) {
+        if (cur.length > 1) segs.push(cur);
+        cur = [];
+        continue;
+      }
+      const x = padLeft + (k + 0.5) * colW;
       cur.push(`${x.toFixed(1)},${y.toFixed(1)}`);
     }
     if (cur.length > 1) segs.push(cur);
@@ -9949,7 +10251,7 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   const awakeElements = [];
   if (enabledLayers.awake && data.length > 0) {
     const getY = getYForAwake;
-    const stats = computeCausalStats(c => Math.max(0, Math.min(maxAwake, c.awake || 0)));
+    const stats = computeCausalStats(c => Math.max(0, c.awake || 0));
     const rawPts = makeRawPoints(stats.raw, getY);
     const avgPts = makeAlignedSmoothPoints(stats.avg, getY);
     if (smoothMode === 'off') {
@@ -9980,7 +10282,7 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   const liveElements = [];
   if (enabledLayers.live && data.length > 0) {
     const getY = getYForLive;
-    const stats = computeCausalStats(c => Math.max(0, Math.min(maxLive, c.live || 0)));
+    const stats = computeCausalStats(c => Math.max(0, c.live || 0));
     const rawPts = makeRawPoints(stats.raw, getY);
     const avgPts = makeAlignedSmoothPoints(stats.avg, getY);
     if (smoothMode === 'off') {
@@ -10006,8 +10308,8 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   // Sim Compute Time Series (Purple #c084fc - Solid line, no dash crawl)
   const simElements = [];
   if (enabledLayers.simTime && data.length > 0) {
-    const getY = v => yBottom - (Math.max(0, Math.min(33.3, v)) / 33.3) * plotH;
-    const stats = computeCausalStats(c => Math.max(0, Math.min(33.3, c.simMs || 0)));
+    const getY = getYForSim;
+    const stats = computeCausalStats(c => Math.max(0, c.simMs || 0));
     const rawPts = makeRawPoints(stats.raw, getY);
     const avgPts = makeAlignedSmoothPoints(stats.avg, getY);
     if (smoothMode === 'off') {
@@ -10033,7 +10335,7 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   // UPS Series (Green #4ade80)
   const upsElements = [];
   if (enabledLayers.ups && data.length > 0) {
-    const getY = v => yBottom - (Math.max(0, Math.min(maxUps, v)) / maxUps) * plotH;
+    const getY = getYForUps;
     const stats = computeCausalStats(
       c => c.avg !== undefined ? c.avg : (c.ups !== undefined ? c.ups : 0),
       c => c.min !== undefined ? c.min : (c.avg !== undefined ? c.avg : (c.ups !== undefined ? c.ups : 0)),
@@ -10090,12 +10392,14 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
 
   // Grid lines (Solid lines, no dashed shimmer)
   const gridLines = [];
-  const upsTickStep = maxUps <= 120 ? 15 : (maxUps <= 240 ? 30 : Math.max(50, niceMax(maxUps / 4, 50)));
-  const leftTickSet = new Set([0, TICK_HZ, maxUps]);
-  for (let val = upsTickStep; val < maxUps; val += upsTickStep) leftTickSet.add(val);
-  const leftTicks = Array.from(leftTickSet).sort((a, b) => a - b);
+  const formatUpsTick = v => {
+    const span = ups.hi - ups.lo;
+    if (span < 20) return (Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, '');
+    return String(Math.round(v));
+  };
+  const leftTicks = scaleTicks(ups.lo, ups.hi, [TICK_HZ]);
   leftTicks.forEach(val => {
-    const y = yBottom - (val / maxUps) * plotH;
+    const y = getYForUps(val);
     gridLines.push(h('line', {
       key: `grid-${val}`,
       x1: padLeft, y1: y, x2: padLeft + plotW, y2: y,
@@ -10108,69 +10412,106 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
       fill: val === TICK_HZ ? '#4ade80' : COLORS.dim,
       fontSize: '11px', textAnchor: 'end', fontFamily: 'ui-monospace, monospace',
       fontWeight: val === TICK_HZ ? 'bold' : 'normal',
-    }, String(val)));
+    }, formatUpsTick(val)));
   });
+
+  const logTickList = (lo, hi) => {
+    const a = Math.max(lo, 1);
+    const b = Math.max(hi, a);
+    const ticks = [];
+    const p0 = Math.floor(Math.log10(a));
+    const p1 = Math.ceil(Math.log10(Math.max(b, a * 1.01)));
+    for (let p = p0; p <= p1; p++) {
+      const v = Math.pow(10, p);
+      if (v >= a * 0.99 && v <= b * 1.01) ticks.push(v);
+    }
+    if (!ticks.length || ticks[0] > a * 1.3) ticks.unshift(a);
+    if (ticks[ticks.length - 1] < b * 0.7) ticks.push(b);
+    return ticks;
+  };
+  const jamShareFmt = v => {
+    const pct = v * 100;
+    if ((jamShare.hi - jamShare.lo) < 0.2) return `${(Math.round(pct * 10) / 10).toFixed(1).replace(/\.0$/, '')}%`;
+    return `${Math.round(pct)}%`;
+  };
 
   const railDefs = {
     counts: {
       color: METRIC_MOVES_COLOR,
       title: isLog ? 'Counts (Log)' : 'Counts',
-      ticks: isLog
-        ? (() => {
-          const powers = [1, 10, 100, 1000, 10000, 100000, 1000000].filter(p => p <= maxParticles);
-          if (powers.length === 0 || powers[0] !== 0) powers.unshift(0);
-          if (maxParticles > powers[powers.length - 1] * 2) powers.push(maxParticles);
-          return powers;
-        })()
-        : [0, Math.round(maxParticles / 2), maxParticles],
+      ticks: isLog ? logTickList(counts.lo, counts.hi) : scaleTicks(counts.lo, counts.hi),
       getY: getYForParticle,
       fmt: formatCount,
     },
     awake: {
       color: '#38bdf8',
       title: 'Chunks',
-      ticks: [0, Math.round(maxAwake / 2), maxAwake],
+      ticks: scaleTicks(awake.lo, awake.hi),
       getY: getYForAwake,
       fmt: formatCount,
     },
     live: {
       color: '#94a3b8',
       title: 'Live pop',
-      ticks: [0, Math.round(maxLive / 2), maxLive],
+      ticks: scaleTicks(live.lo, live.hi),
       getY: getYForLive,
       fmt: formatCount,
     },
     jamLoad: {
       color: METRIC_JAM_LOAD_COLOR,
       title: 'Jam load',
-      ticks: [0, maxJamLoad / 2, maxJamLoad],
+      ticks: scaleTicks(jamLoad.lo, jamLoad.hi),
       getY: getYForJamLoad,
-      fmt: v => (v >= 10 ? formatCount(v) : (Math.round(v * 100) / 100).toFixed(2)),
+      fmt: v => (Math.abs(v) >= 10 ? formatCount(v) : (Math.round(v * 100) / 100).toFixed(2)),
     },
     jamShare: {
       color: METRIC_JAM_SHARE_COLOR,
       title: 'Jam %',
-      ticks: [0, 0.25, 0.5, 0.75, 1],
+      ticks: scaleTicks(jamShare.lo, jamShare.hi),
       getY: getYForJamShare,
-      fmt: v => `${Math.round(v * 100)}%`,
+      fmt: jamShareFmt,
     },
     deficit: {
       color: METRIC_DEFICIT_COLOR,
       title: 'Lost s',
-      ticks: (() => {
-        const ticks = [minDeficitSec, maxDeficitSec];
-        if (minDeficitSec < 0 && maxDeficitSec > 0) ticks.splice(1, 0, 0);
-        return ticks;
-      })(),
+      ticks: scaleTicks(deficitScale.lo, deficitScale.hi, [0]),
       getY: getYForDeficit,
       fmt: v => formatSecSigned(v).replace(' s', ''),
     },
     gold: {
       color: COLORS.gold,
       title: 'Gold',
-      ticks: [0, Math.round(maxGold / 2), maxGold],
+      ticks: scaleTicks(gold.lo, gold.hi),
       getY: getYForGold,
       fmt: v => formatGold(v),
+    },
+    goldD1: {
+      color: GOLD_DERIV1_COLOR,
+      title: t('mods|goldSpeedrun|metrics|derivGold1'),
+      ticks: scaleTicks(goldD1.lo, goldD1.hi, [0]),
+      getY: v => mapScaleY(v, goldD1.lo, goldD1.hi, yBottom, plotH),
+      fmt: formatDerivCompact,
+    },
+    goldD2: {
+      color: GOLD_DERIV2_COLOR,
+      title: t('mods|goldSpeedrun|metrics|derivGold2'),
+      ticks: scaleTicks(goldD2.lo, goldD2.hi, [0]),
+      getY: v => mapScaleY(v, goldD2.lo, goldD2.hi, yBottom, plotH),
+      fmt: formatDerivCompact,
+    },
+    slowD1: {
+      color: SLOW_DERIV1_COLOR,
+      title: t('mods|goldSpeedrun|metrics|derivSlow1'),
+      ticks: scaleTicks(slowD1.lo, slowD1.hi, [0]),
+      getY: v => mapScaleY(v, slowD1.lo, slowD1.hi, yBottom, plotH),
+      fmt: formatDerivCompact,
+    },
+    slowD2: {
+      color: SLOW_DERIV2_COLOR,
+      title: t('mods|goldSpeedrun|metrics|derivSlow2'),
+      ticks: scaleTicks(slowD2.lo, slowD2.hi, [0]),
+      getY: v => mapScaleY(v, slowD2.lo, slowD2.hi, yBottom, plotH),
+      fmt: formatDerivCompact,
     },
   };
 
@@ -10206,6 +10547,7 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
 
   if (enabledLayers.jamRate) {
     [0.25, 0.5, 0.75].forEach(frac => {
+      if (frac <= jamShare.lo || frac >= jamShare.hi) return;
       const y = getYForJamShare(frac);
       gridLines.push(h('line', {
         key: `jam-guide-${frac}`,
@@ -10216,8 +10558,8 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
   }
 
   // 16.6 ms sim compute budget reference line
-  if (enabledLayers.simTime) {
-    const y16 = yBottom - (16.66 / 33.3) * plotH;
+  if (enabledLayers.simTime && sim.lo < 16.66 && sim.hi > 16.66) {
+    const y16 = getYForSim(16.66);
     gridLines.push(h('line', {
       key: 'sim-budget',
       x1: padLeft, y1: y16, x2: padLeft + plotW, y2: y16,
@@ -10230,7 +10572,7 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
     }, '16.6ms (60 UPS Step Budget)'));
   }
 
-  if (deficitWanted && minDeficitSec < 0 && maxDeficitSec > 0) {
+  if (deficitWanted && deficitScale.lo < 0 && deficitScale.hi > 0) {
     const y0 = getYForDeficit(0);
     gridLines.push(h('line', {
       key: 'deficit-zero',
@@ -10238,6 +10580,21 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
       stroke: 'rgba(244, 63, 94, 0.35)', strokeWidth: 1,
     }));
   }
+
+  const pushDerivZero = (sc, on, color, key) => {
+    if (!on || !(sc.lo < 0 && sc.hi > 0)) return;
+    const y = mapScaleY(0, sc.lo, sc.hi, yBottom, plotH);
+    if (!Number.isFinite(y)) return;
+    gridLines.push(h('line', {
+      key: `deriv-zero-${key}`,
+      x1: padLeft, y1: y, x2: padLeft + plotW, y2: y,
+      stroke: color, strokeWidth: 1, opacity: 0.45,
+    }));
+  };
+  pushDerivZero(goldD1, showGoldD1, GOLD_DERIV1_COLOR, 'gd1');
+  pushDerivZero(goldD2, showGoldD2, GOLD_DERIV2_COLOR, 'gd2');
+  pushDerivZero(slowD1, showSlowD1, SLOW_DERIV1_COLOR, 'sd1');
+  pushDerivZero(slowD2, showSlowD2, SLOW_DERIV2_COLOR, 'sd2');
 
   // Slowdown phase bands (always, even if the deficit curve is off)
   const slowdownBandEls = [];
@@ -10280,6 +10637,35 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
     }
   }
 
+  const goldDerivElements = [];
+  if (goldDeriv) {
+    const plot = goldDerivAligned ? makeGappedAlignedPoints : makeGappedRawPoints;
+    if (wantGold1) {
+      pushPolylines(goldDerivElements, 'gold-d1', plot(goldDeriv.d1, v => mapScaleY(v, goldD1.lo, goldD1.hi, yBottom, plotH)), {
+        stroke: GOLD_DERIV1_COLOR, strokeWidth: 1.25, strokeDasharray: '5 3',
+      });
+    }
+    if (wantGold2) {
+      pushPolylines(goldDerivElements, 'gold-d2', plot(goldDeriv.d2, v => mapScaleY(v, goldD2.lo, goldD2.hi, yBottom, plotH)), {
+        stroke: GOLD_DERIV2_COLOR, strokeWidth: 1.15, strokeDasharray: '2 2',
+      });
+    }
+  }
+
+  const slowDerivElements = [];
+  if (slowDeriv) {
+    if (wantSlow1) {
+      pushPolylines(slowDerivElements, 'slow-d1', makeGappedRawPoints(slowDeriv.d1, v => mapScaleY(v, slowD1.lo, slowD1.hi, yBottom, plotH)), {
+        stroke: SLOW_DERIV1_COLOR, strokeWidth: 1.25, strokeDasharray: '5 3',
+      });
+    }
+    if (wantSlow2) {
+      pushPolylines(slowDerivElements, 'slow-d2', makeGappedRawPoints(slowDeriv.d2, v => mapScaleY(v, slowD2.lo, slowD2.hi, yBottom, plotH)), {
+        stroke: SLOW_DERIV2_COLOR, strokeWidth: 1.15, strokeDasharray: '2 2',
+      });
+    }
+  }
+
   // X Axis time labels: evenly spaced with -m:ss format
   const xLabels = [];
   const labelCount = 5;
@@ -10311,7 +10697,7 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
     }
     xLabels.push(h('text', {
       key: `lbl-x-${s}`,
-      x, y: H - 12,
+      x, y: showStrip ? H - 34 : H - 12,
       fill: COLORS.dim, fontSize: '11px', textAnchor: s === 0 ? 'start' : s === labelCount - 1 ? 'end' : 'middle',
       fontFamily: 'system-ui, sans-serif',
     }, label));
@@ -10322,17 +10708,188 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
     if (!svgRef.current || visible.length === 0) return;
     const rect = svgRef.current.getBoundingClientRect();
     const mouseSvgX = ((e.clientX - rect.left) / rect.width) * W;
-    if (mouseSvgX < padLeft || mouseSvgX > padLeft + plotW) {
+    const mouseSvgY = ((e.clientY - rect.top) / rect.height) * H;
+    if (mouseSvgY < padTop || mouseSvgY > yBottom || mouseSvgX < padLeft || mouseSvgX > padLeft + plotW) {
       if (onHover) onHover(null);
       return;
     }
     const idx = Math.min(visible.length - 1, Math.max(0, Math.floor((mouseSvgX - padLeft) / colW)));
-    if (onHover) onHover({ index: idx, item: visible[idx], clientX: e.clientX, clientY: e.clientY });
+    const derivAt = (series, aligned) => {
+      if (!series) return { d1: null, d2: null };
+      const i = padCount + idx + (aligned ? groupDelay : 0);
+      const read = arr => (i >= 0 && i < arr.length && Number.isFinite(arr[i])) ? arr[i] : null;
+      return { d1: read(series.d1), d2: read(series.d2) };
+    };
+    const goldAt = derivAt(goldDeriv, goldDerivAligned);
+    const slowAt = derivAt(slowDeriv, false);
+    const hoverDeriv = {};
+    if (wantGold1) hoverDeriv.gold1 = goldAt.d1;
+    if (wantGold2) hoverDeriv.gold2 = goldAt.d2;
+    if (wantSlow1) hoverDeriv.slow1 = slowAt.d1;
+    if (wantSlow2) hoverDeriv.slow2 = slowAt.d2;
+    if (onHover) onHover({ index: idx, item: visible[idx], clientX: e.clientX, clientY: e.clientY, deriv: hoverDeriv });
   };
 
   const handleMouseLeave = () => {
+    if (dragRef.current) return;
     if (onHover) onHover(null);
   };
+
+  const viewT0 = sampleRelMs(visible[0], 0, fallbackMs);
+  const viewT1 = sampleRelMs(visible[visible.length - 1], visible.length - 1, fallbackMs);
+  const viewSpan = viewT1 - viewT0;
+  const domainSpan = showStrip ? (domainEnd - domainStart) : 0;
+  const stripY = H - 18;
+  const stripH = 10;
+  const xAtDomain = t => padLeft + ((t - domainStart) / domainSpan) * plotW;
+  const timeAtStripX = svgX => {
+    const frac = Math.max(0, Math.min(1, (svgX - padLeft) / plotW));
+    return domainStart + frac * domainSpan;
+  };
+  const boxX1 = showStrip && viewSpan > 0 ? xAtDomain(Math.max(domainStart, Math.min(domainEnd, viewT0))) : padLeft;
+  const boxX2 = showStrip && viewSpan > 0 ? xAtDomain(Math.max(domainStart, Math.min(domainEnd, viewT1))) : padLeft + plotW;
+  const finishOnPlot = Number.isFinite(finishMs) && viewSpan > 0 && finishMs >= viewT0 && finishMs <= viewT1;
+  const finishX = finishOnPlot ? padLeft + ((finishMs - viewT0) / viewSpan) * plotW : null;
+  const finishOnStrip = showStrip && Number.isFinite(finishMs) && finishMs >= domainStart && finishMs <= domainEnd;
+  const finishStripX = finishOnStrip ? xAtDomain(finishMs) : null;
+
+  const svgPoint = e => {
+    const rect = svgRef.current.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * W,
+      y: ((e.clientY - rect.top) / rect.height) * H,
+    };
+  };
+  const emitWindow = (start, end) => {
+    const next = clampZoomWindow(start, end, domainStart, domainEnd);
+    if (!next) {
+      if (typeof onZoomReset === 'function') onZoomReset();
+      return;
+    }
+    if (typeof onZoomWindow === 'function') onZoomWindow(next);
+  };
+  const centerOnFinish = () => {
+    if (!Number.isFinite(finishMs) || !(domainSpan > 0)) return;
+    const dur = Math.min(domainSpan, FINISH_SPAN_MS);
+    emitWindow(finishMs - dur / 2, finishMs + dur / 2);
+  };
+
+  const handlePointerDown = e => {
+    if (!svgRef.current || !(domainSpan > 0)) return;
+    const p = svgPoint(e);
+    const onStrip = showStrip && p.y >= stripY - 6 && p.y <= stripY + stripH + 6 && p.x >= padLeft && p.x <= padLeft + plotW;
+    const onPlot = p.y >= padTop && p.y <= yBottom && p.x >= padLeft && p.x <= padLeft + plotW;
+    if (!onStrip && !onPlot) return;
+    let mode = 'plot';
+    if (onStrip) {
+      const edge = 7;
+      if (p.x >= boxX1 - edge && p.x <= boxX1 + edge) mode = 'west';
+      else if (p.x >= boxX2 - edge && p.x <= boxX2 + edge) mode = 'east';
+      else if (p.x > boxX1 && p.x < boxX2) mode = 'pan';
+      else mode = 'center';
+    }
+    dragRef.current = { mode, x: p.x, viewT0, viewT1, moved: false };
+    if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const handlePointerMove = e => {
+    const d = dragRef.current;
+    if (!d) {
+      handleMouseMove(e);
+      return;
+    }
+    if (!svgRef.current) return;
+    const p = svgPoint(e);
+    if (Math.abs(p.x - d.x) > 3) d.moved = true;
+    if (!d.moved) return;
+    const dur = d.viewT1 - d.viewT0;
+    if (d.mode === 'plot') {
+      const dt = ((p.x - d.x) / plotW) * dur;
+      emitWindow(d.viewT0 - dt, d.viewT1 - dt);
+    } else if (d.mode === 'pan') {
+      const dt = ((p.x - d.x) / plotW) * domainSpan;
+      emitWindow(d.viewT0 + dt, d.viewT1 + dt);
+    } else if (d.mode === 'west') {
+      emitWindow(Math.min(timeAtStripX(p.x), d.viewT1 - ZOOM_MIN_MS), d.viewT1);
+    } else if (d.mode === 'east') {
+      emitWindow(d.viewT0, Math.max(timeAtStripX(p.x), d.viewT0 + ZOOM_MIN_MS));
+    }
+  };
+  const handlePointerUp = e => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (!d || d.moved || !svgRef.current) return;
+    const p = svgPoint(e);
+    if (d.mode === 'center') {
+      if (finishStripX !== null && Math.abs(d.x - finishStripX) <= 8) {
+        centerOnFinish();
+        return;
+      }
+      const t = timeAtStripX(d.x);
+      const dur = d.viewT1 - d.viewT0;
+      emitWindow(t - dur / 2, t + dur / 2);
+      return;
+    }
+    if (d.mode === 'plot' && finishX !== null && Math.abs(p.x - finishX) <= 8) {
+      if (pendingFinishClick.current) clearTimeout(pendingFinishClick.current);
+      pendingFinishClick.current = setTimeout(() => {
+        pendingFinishClick.current = null;
+        centerOnFinish();
+      }, 260);
+    }
+  };
+  const handleDoubleClick = e => {
+    if (!svgRef.current) return;
+    if (pendingFinishClick.current) {
+      clearTimeout(pendingFinishClick.current);
+      pendingFinishClick.current = null;
+    }
+    const p = svgPoint(e);
+    if (p.y >= padTop && p.y <= yBottom && typeof onZoomReset === 'function') onZoomReset();
+  };
+
+  zoomGeom.current = {
+    svg: svgRef.current,
+    W, H, padLeft, padTop, plotW, yBottom,
+    viewT0, viewT1, viewSpan, domainStart, domainEnd, domainSpan,
+    onZoomWindow, onZoomReset,
+  };
+
+  const zoomMarks = [];
+  if (finishX !== null) {
+    const label = `${t('mods|goldSpeedrun|metrics|finishMark')}${finishLabel ? ` ${finishLabel}` : ''}`;
+    const labelX = finishX > padLeft + plotW - 78 ? finishX - 4 : finishX + 4;
+    const anchor = finishX > padLeft + plotW - 78 ? 'end' : 'start';
+    zoomMarks.push(h('line', {
+      key: 'finish-line',
+      x1: finishX, y1: padTop, x2: finishX, y2: yBottom,
+      stroke: '#f8fafc', strokeWidth: 1.25, strokeDasharray: '5 4',
+    }));
+    zoomMarks.push(h('text', {
+      key: 'finish-label',
+      x: labelX, y: padTop + 12,
+      fill: '#fbbf24', fontSize: '10px', textAnchor: anchor, fontWeight: 'bold',
+      fontFamily: 'ui-monospace, monospace',
+    }, label));
+  }
+  if (showStrip) {
+    zoomMarks.push(h('rect', {
+      key: 'strip-bg',
+      x: padLeft, y: stripY, width: Math.max(1, plotW), height: stripH,
+      rx: 2, fill: 'rgba(255,255,255,0.08)',
+    }));
+    zoomMarks.push(h('rect', {
+      key: 'strip-box',
+      x: Math.min(boxX1, boxX2), y: stripY, width: Math.max(4, Math.abs(boxX2 - boxX1)), height: stripH,
+      fill: 'rgba(74, 158, 255, 0.45)', stroke: '#93c5fd', strokeWidth: 1,
+    }));
+    if (finishStripX !== null) {
+      zoomMarks.push(h('line', {
+        key: 'strip-finish',
+        x1: finishStripX, y1: stripY - 3, x2: finishStripX, y2: stripY + stripH + 3,
+        stroke: '#fbbf24', strokeWidth: 2,
+      }));
+    }
+  }
 
   // Crosshair (Solid 45% white line for hover, or dashed gold line for pinned scrub)
   let crosshair = null;
@@ -10363,8 +10920,12 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
 
   return h('div', {
     ref: wrapRef,
-    style: { position: 'relative', width: '100%', height: '100%' },
-    onMouseMove: handleMouseMove,
+    style: { position: 'relative', width: '100%', height: '100%', touchAction: 'none', userSelect: 'none' },
+    onPointerDown: handlePointerDown,
+    onPointerMove: handlePointerMove,
+    onPointerUp: handlePointerUp,
+    onPointerCancel: handlePointerUp,
+    onDoubleClick: handleDoubleClick,
     onMouseLeave: handleMouseLeave,
   }, [
     h('svg', {
@@ -10408,17 +10969,21 @@ function DualAxisChart({ data, enabledLayers, onHover, hoverIdx, rangeType, scal
 
       // Gold level (own right rail)
       ...goldElements,
+      ...goldDerivElements,
 
       // Lost-time series
       ...deficitElements,
+      ...slowDerivElements,
 
       // X labels
       ...xLabels,
+      ...zoomMarks,
       // Hover crosshair
       crosshair,
     ]),
   ]);
   } catch (err) {
+    zoomGeom.current = null;
     log('[DEBUG] DualAxisChart crashed: ' + err);
     return h('div', {
       style: {
@@ -10930,8 +11495,11 @@ function ChunkHeatmap({ mode = 'sum', onMode, scrubRelMs = null, onScrub, maxRel
 function MetricsOverlayModal() {
   const [, bump] = react.useState(0);
   const [range, setRange] = react.useState('full'); // '60s' | '180s' | 'full'
+  const [zoom, setZoom] = react.useState(null); // { durationMs, endMs, follow } | null
   const [scaleMode, setScaleMode] = react.useState('linear'); // 'linear' | 'log'
   const [smoothMode, setSmoothMode] = react.useState('rolling'); // 'off' | 'rolling' | 'bands'
+  const [deriv, setDeriv] = react.useState({ gold1: false, gold2: false, slow1: false, slow2: false });
+  const toggleDeriv = key => setDeriv(prev => ({ ...prev, [key]: !prev[key] }));
   const [layers, setLayers] = react.useState({
     ups: true,
     blocks: true,
@@ -10989,17 +11557,55 @@ function MetricsOverlayModal() {
     return () => window.removeEventListener('keydown', onKey);
   }, [metricsOverlayOpen]);
 
+  react.useEffect(() => {
+    if (!metricsOverlayOpen) {
+      setZoom(null);
+      setRange('full');
+    }
+  }, [metricsOverlayOpen]);
+
   if (!modEnabled() || !metricsOverlayOpen) return null;
 
   try {
   // Process data for the selected range - smooth rolling without compacting flicker
   let chartData = [];
   let chartLookback = 0;
+  let plotRange = range;
+  let domainStart = null;
+  let domainEnd = null;
+  let spanStart = null;
+  let spanEnd = null;
   try {
     const clean = arr => arr.filter(c => c && typeof c === 'object' && (Number.isFinite(c.avg) || Number.isFinite(c.ups)));
-    // 5s window + 5s extra off-screen pad at 10 Hz so the left edge has a full average
+    const fullSeries = historyBuf.length > 0 ? clean(historyBuf) : clean(highResBuffer);
+    if (fullSeries.length > 0) {
+      domainStart = sampleRelMs(fullSeries[0], 0, 1000);
+      domainEnd = sampleRelMs(fullSeries[fullSeries.length - 1], fullSeries.length - 1, 1000);
+    }
     const lookback10Hz = 100;
-    if (range === '60s') {
+    let zoomWindow = null;
+    if (zoom && domainEnd > domainStart) {
+      const end = zoom.follow ? domainEnd : Math.min(zoom.endMs, domainEnd);
+      const start = Math.max(domainStart, end - zoom.durationMs);
+      if (end > start) zoomWindow = { start, end };
+    }
+    if (zoomWindow) {
+      plotRange = 'full';
+      let i0 = fullSeries.length;
+      let i1 = -1;
+      for (let i = 0; i < fullSeries.length; i++) {
+        const r = sampleRelMs(fullSeries[i], i, 1000);
+        if (r >= zoomWindow.start && r <= zoomWindow.end) {
+          if (i < i0) i0 = i;
+          if (i > i1) i1 = i;
+        }
+      }
+      if (i1 >= i0) {
+        const from = Math.max(0, i0 - 5);
+        chartLookback = i0 - from;
+        chartData = fullSeries.slice(from, i1 + 1);
+      }
+    } else if (range === '60s') {
       const src = clean(highResBuffer);
       const visibleLen = Math.min(src.length, 600);
       chartLookback = Math.min(Math.max(0, src.length - visibleLen), lookback10Hz);
@@ -11011,13 +11617,45 @@ function MetricsOverlayModal() {
       chartData = src.slice(src.length - visibleLen - chartLookback);
     } else {
       chartLookback = 0;
-      chartData = historyBuf.length > 0 ? clean(historyBuf) : clean(highResBuffer);
+      chartData = fullSeries;
     }
+    const vis = chartData.length > chartLookback ? chartData[chartLookback] : chartData[0];
+    const last = chartData.length ? chartData[chartData.length - 1] : null;
+    const step = plotRange === 'full' ? 1000 : 100;
+    if (vis) spanStart = sampleRelMs(vis, 0, step);
+    if (last) spanEnd = sampleRelMs(last, Math.max(0, chartData.length - 1), step);
   } catch (e) {
     log('[DEBUG] MetricsOverlay chartData failed: ' + e);
     chartData = [];
     chartLookback = 0;
+    plotRange = range;
+    domainStart = null;
+    domainEnd = null;
   }
+
+  let finishMs = null;
+  let finishLabel = '';
+  try {
+    const run = readRun();
+    if (run && typeof run.finishedAt === 'number') {
+      finishMs = run.finishedAt;
+      const scored = scoredTime();
+      if (scored > 0) finishLabel = formatShort(scored, 'seconds');
+    }
+  } catch (e) { /* DE: Lauf noch nicht da / EN: run not loaded yet */ }
+
+  const selectRange = id => {
+    setZoom(null);
+    setRange(id);
+  };
+  const resetZoom = () => {
+    setZoom(null);
+    setRange('full');
+  };
+  const zoomResetDim = !zoom && range === 'full';
+  const spanLabel = (Number.isFinite(spanStart) && Number.isFinite(spanEnd) && spanEnd > spanStart)
+    ? `${formatShort(spanStart, 'seconds')} – ${formatShort(spanEnd, 'seconds')}`
+    : '';
 
   const eventScope = allMatterCaptureWanted() ? 'allMatter' : 'ballistic';
   const benchProgress = benchmarkProgress();
@@ -11192,27 +11830,44 @@ function MetricsOverlayModal() {
         ]),
         // Range toggles & close
         h('div', { key: 'actions', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+          spanLabel ? h('span', {
+            key: 'span',
+            style: { color: COLORS.dim, fontSize: '11px', fontVariantNumeric: 'tabular-nums', fontFamily: 'ui-monospace, monospace' },
+          }, spanLabel) : null,
+          h('button', {
+            key: 'zoom-reset',
+            onClick: resetZoom,
+            disabled: zoomResetDim,
+            style: {
+              background: zoomResetDim ? 'transparent' : 'rgba(255,255,255,0.08)',
+              border: `1px solid ${COLORS.border}`,
+              color: zoomResetDim ? COLORS.dim : COLORS.text,
+              opacity: zoomResetDim ? 0.45 : 1,
+              padding: '4px 10px', borderRadius: '3px',
+              cursor: zoomResetDim ? 'default' : 'pointer', fontSize: '11px',
+            },
+          }, t('mods|goldSpeedrun|metrics|zoomReset')),
           h('div', {
             style: { display: 'flex', background: 'rgba(0,0,0,0.4)', borderRadius: '4px', padding: '2px', border: `1px solid ${COLORS.border}` },
           }, [
             h('button', {
-              onClick: () => setRange('60s'),
+              onClick: () => selectRange('60s'),
               style: {
-                background: range === '60s' ? COLORS.blue : 'transparent', border: 'none',
+                background: !zoom && range === '60s' ? COLORS.blue : 'transparent', border: 'none',
                 color: COLORS.text, padding: '4px 10px', borderRadius: '3px', cursor: 'pointer', fontSize: '11px',
               },
             }, t('mods|goldSpeedrun|metrics|range60s')),
             h('button', {
-              onClick: () => setRange('180s'),
+              onClick: () => selectRange('180s'),
               style: {
-                background: range === '180s' ? COLORS.blue : 'transparent', border: 'none',
+                background: !zoom && range === '180s' ? COLORS.blue : 'transparent', border: 'none',
                 color: COLORS.text, padding: '4px 10px', borderRadius: '3px', cursor: 'pointer', fontSize: '11px',
               },
             }, t('mods|goldSpeedrun|metrics|range180s')),
             h('button', {
-              onClick: () => setRange('full'),
+              onClick: () => selectRange('full'),
               style: {
-                background: range === 'full' ? COLORS.blue : 'transparent', border: 'none',
+                background: !zoom && range === 'full' ? COLORS.blue : 'transparent', border: 'none',
                 color: COLORS.text, padding: '4px 10px', borderRadius: '3px', cursor: 'pointer', fontSize: '11px',
               },
             }, t('mods|goldSpeedrun|metrics|rangeFull')),
@@ -11485,6 +12140,59 @@ function MetricsOverlayModal() {
             },
           }, t('mods|goldSpeedrun|metrics|scaleLog')),
         ]),
+
+        h('div', {
+          key: 'deriv-gold',
+          style: {
+            display: 'flex', alignItems: 'center',
+            background: 'rgba(0,0,0,0.4)', borderRadius: '4px', padding: '2px',
+            border: `1px solid ${COLORS.border}`, gap: '2px',
+          },
+        }, [
+          h('span', { style: { color: COLORS.gold, fontSize: '11px', padding: '0 6px' } }, t('mods|goldSpeedrun|metrics|derivGold')),
+          h('button', {
+            onClick: () => toggleDeriv('gold1'),
+            style: {
+              background: deriv.gold1 ? COLORS.blue : 'transparent',
+              border: 'none', color: COLORS.text, padding: '3px 8px', borderRadius: '3px',
+              cursor: 'pointer', fontSize: '11px', fontWeight: deriv.gold1 ? 'bold' : 'normal',
+            },
+          }, t('mods|goldSpeedrun|metrics|deriv1')),
+          h('button', {
+            onClick: () => toggleDeriv('gold2'),
+            style: {
+              background: deriv.gold2 ? COLORS.blue : 'transparent',
+              border: 'none', color: COLORS.text, padding: '3px 8px', borderRadius: '3px',
+              cursor: 'pointer', fontSize: '11px', fontWeight: deriv.gold2 ? 'bold' : 'normal',
+            },
+          }, t('mods|goldSpeedrun|metrics|deriv2')),
+        ]),
+        h('div', {
+          key: 'deriv-slow',
+          style: {
+            display: 'flex', alignItems: 'center',
+            background: 'rgba(0,0,0,0.4)', borderRadius: '4px', padding: '2px',
+            border: `1px solid ${COLORS.border}`, gap: '2px',
+          },
+        }, [
+          h('span', { style: { color: METRIC_DEFICIT_COLOR, fontSize: '11px', padding: '0 6px' } }, t('mods|goldSpeedrun|metrics|derivSlow')),
+          h('button', {
+            onClick: () => toggleDeriv('slow1'),
+            style: {
+              background: deriv.slow1 ? COLORS.blue : 'transparent',
+              border: 'none', color: COLORS.text, padding: '3px 8px', borderRadius: '3px',
+              cursor: 'pointer', fontSize: '11px', fontWeight: deriv.slow1 ? 'bold' : 'normal',
+            },
+          }, t('mods|goldSpeedrun|metrics|deriv1')),
+          h('button', {
+            onClick: () => toggleDeriv('slow2'),
+            style: {
+              background: deriv.slow2 ? COLORS.blue : 'transparent',
+              border: 'none', color: COLORS.text, padding: '3px 8px', borderRadius: '3px',
+              cursor: 'pointer', fontSize: '11px', fontWeight: deriv.slow2 ? 'bold' : 'normal',
+            },
+          }, t('mods|goldSpeedrun|metrics|deriv2')),
+        ]),
       ]),
 
       h('div', {
@@ -11605,12 +12313,19 @@ function MetricsOverlayModal() {
           lookback: chartLookback,
           enabledLayers,
           eventScope,
-          rangeType: range,
+          rangeType: plotRange,
           scaleMode,
           smoothMode,
+          deriv,
           hoverIdx: hoverInfo ? hoverInfo.index : null,
           pinnedRelMs: scrubRelMs,
           onHover: setHoverInfo,
+          domainStart,
+          domainEnd,
+          onZoomWindow: setZoom,
+          onZoomReset: resetZoom,
+          finishMs,
+          finishLabel,
         }),
         // Floating tooltip card with colored bullets and full metrics
         activeHoverItem ? h('div', {
@@ -11650,6 +12365,20 @@ function MetricsOverlayModal() {
             ]),
             h('span', { style: { fontWeight: 'bold', color: COLORS.gold } }, formatGold(activeHoverItem.gold)),
           ]) : null,
+          hoverInfo.deriv && 'gold1' in hoverInfo.deriv ? h('div', { key: 'tt-gd1', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: GOLD_DERIV1_COLOR } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: GOLD_DERIV1_COLOR } }),
+              t('mods|goldSpeedrun|metrics|derivGold1'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: GOLD_DERIV1_COLOR } }, formatDerivCompact(hoverInfo.deriv.gold1)),
+          ]) : null,
+          hoverInfo.deriv && 'gold2' in hoverInfo.deriv ? h('div', { key: 'tt-gd2', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: GOLD_DERIV2_COLOR } }, [
+              h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: GOLD_DERIV2_COLOR } }),
+              t('mods|goldSpeedrun|metrics|derivGold2'),
+            ]),
+            h('span', { style: { fontWeight: 'bold', color: GOLD_DERIV2_COLOR } }, formatDerivCompact(hoverInfo.deriv.gold2)),
+          ]) : null,
           ...(() => {
             const srcIdx = hoverInfo && Number.isFinite(hoverInfo.index) ? chartLookback + hoverInfo.index : -1;
             const dTicks = srcIdx >= 0 && srcIdx < deficitInfo.d.length ? deficitInfo.d[srcIdx] : NaN;
@@ -11671,6 +12400,20 @@ function MetricsOverlayModal() {
                 h('span', { style: { fontWeight: 'bold', color: METRIC_DEFICIT_COLOR } },
                   formatSecSigned(pTicks / TICK_HZ) + (inPhase ? ' · ' + t('mods|goldSpeedrun|metrics|slowdownIn') : '')),
               ]),
+              hoverInfo.deriv && 'slow1' in hoverInfo.deriv ? h('div', { key: 'tt-sd1', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+                h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: SLOW_DERIV1_COLOR } }, [
+                  h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: SLOW_DERIV1_COLOR } }),
+                  t('mods|goldSpeedrun|metrics|derivSlow1'),
+                ]),
+                h('span', { style: { fontWeight: 'bold', color: SLOW_DERIV1_COLOR } }, formatDerivCompact(hoverInfo.deriv.slow1)),
+              ]) : null,
+              hoverInfo.deriv && 'slow2' in hoverInfo.deriv ? h('div', { key: 'tt-sd2', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+                h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: SLOW_DERIV2_COLOR } }, [
+                  h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: SLOW_DERIV2_COLOR } }),
+                  t('mods|goldSpeedrun|metrics|derivSlow2'),
+                ]),
+                h('span', { style: { fontWeight: 'bold', color: SLOW_DERIV2_COLOR } }, formatDerivCompact(hoverInfo.deriv.slow2)),
+              ]) : null,
             ];
           })(),
           h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
@@ -12314,6 +13057,12 @@ try {
     syncDebugSetting();
   });
 } catch (e) { log('Einstellungen nicht beobachtbar:', e); }
+
+// DE: Vor dem ersten Spielstand, auch im Hauptmenue: Checkbox an den Motor
+// DE: angleichen, ohne ihn umzuschalten.
+// EN: Before the first save, including the main menu: match the checkbox to
+// EN: the engine without changing it.
+syncDebugSetting();
 
 // --- DE: Start / EN: Startup -------------------------------------------------
 // DE: Handle des Boot-Takts ausserhalb des Handlers: kommt game:ready ein zweites

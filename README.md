@@ -211,13 +211,13 @@ auch wenn der Modus danach aus geht, und die Zeit wird nicht als Bestzeit
 gespeichert. Nach dem Ziel eingeschaltet, markiert es diesen beendeten Lauf
 nicht mehr nachtraeglich.
 
-Solange einer der beiden an ist, steht unter dem roten Banner am Timer und im
-Dashboard (F10) **Debug deaktivieren**. Der Knopf schaltet den Debug-Modus aus
-und raeumt dabei Chunk-Gitter, Debug-Pinsel, Cinematik, Kamera-Override und
-die Simulationsgeschwindigkeit mit ab. Dieselbe Schaltung liegt in den
-Mod-Einstellungen unter *Debug-Modus*. Einen Schalter, der die Cinematik
-einschaltet, gibt es nicht. Abschalten macht den Spielstand nicht wieder
-gueltig.
+Solange der Debug-Modus an ist, steht unter dem roten Banner am Timer und im
+Dashboard (F10) **Debug deaktivieren**. Der Knopf schaltet nur den Debug-Modus
+aus, inklusive Chunk-Gitter und Debug-Pinsel. Cinematik, Kamera und
+Simulationsgeschwindigkeit bleiben, wie sie sind. Dieselbe Schaltung liegt in
+den Mod-Einstellungen unter *Debug-Modus*. Den Cinematik-Modus schaltet man in
+den eigenen Spieleinstellungen aus. Abschalten macht den Spielstand nicht
+wieder gueltig.
 
 Die Mod-Verwaltung zaehlt dabei nicht als Mod: sie greift nicht ins Spiel ein
 und ist das Werkzeug, mit dem die anderen Mods abgeschaltet werden. Gezaehlt
